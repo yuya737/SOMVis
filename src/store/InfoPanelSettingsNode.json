@@ -1,0 +1,35 @@
+[
+        {
+            "type": "text",
+            "id": "diff",
+            "title": "Difference in Unmet Water Demand with respect to baseline",
+            "info": "Negative values implies worse than historical baseline. ",
+            "scales": [
+                {
+                    "variable": "Difference scaled by demand unit area",
+                    "colorRange": [
+                        [192, 38, 126],
+                        [221, 114, 173],
+                        [240, 179, 214],
+                        [250, 221, 237],
+                        [245, 243, 239],
+                        [225, 242, 202],
+                        [182, 222, 135],
+                        [128, 187, 71],
+                        [79, 145, 37],
+                        [39, 100, 25]
+                    
+                    ],
+                    "labels": [
+                        "-1",
+                        "-0.5",
+                        "0",
+                        "0.5",
+                        "1"
+                    ]
+                }
+            ]
+        }
+    
+]
+

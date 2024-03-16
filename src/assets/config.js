@@ -1,0 +1,1 @@
+export const filePrefix =  "/home/yuya/Research/hierarchical_eof/eof_data/local_all_pr_annual_";
