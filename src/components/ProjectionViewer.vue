@@ -32,7 +32,7 @@
             style="display: none"
         ></div>
 
-        <div class="absolute bottom-0 left-0 z-[4] p-4">
+        <div class="absolute bottom-0 left-0 z-[5] p-4">
             <Button
                 class="px-4 py-2"
                 icon="pi pi-calendar-plus"
@@ -51,6 +51,8 @@
         >
             <Slider
                 v-model="timeRange"
+                :format="formatTooltip"
+                @change="drawAllLayers"
                 :min="timeMin"
                 :max="timeMax"
                 class="z-[4] w-3/4"
@@ -60,7 +62,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, computed, watch } from "vue";
+import { onMounted, ref, computed, watch, nextTick } from "vue";
 
 import { Deck, OrthographicViewport } from "@deck.gl/core";
 import { scaleLinear, interpolateBlues } from "d3";
@@ -71,13 +73,13 @@ import {
     PathLayer,
     BitmapLayer,
     PointCloudLayer,
-} from "deck.gl/typed";
+} from "@deck.gl/layers";
 
 import { HeatmapLayer } from "@deck.gl/aggregation-layers";
 
 import API from "@/api/api";
 
-import { LayersList, OrthographicViewState, Layer } from "@deck.gl/core/typed";
+import { LayersList, OrthographicViewState, Layer } from "@deck.gl/core";
 import { AxisLayer } from "./utils/AxisLayer";
 import { useStore } from "@/store/main";
 import InfoPanel from "./ui/InfoPanel.vue";
@@ -87,6 +89,8 @@ import Slider from "@vueform/slider";
 import InfoPanelSettings from "@/store/InfoPanelSettingsProj.json";
 import { filePrefix } from "@/assets/config";
 import { OrthographicView, OrbitView } from "@deck.gl/core";
+import { DataFilterExtension } from "@deck.gl/extensions";
+
 import {
     scalePointsToSquare,
     colorSim,
@@ -97,6 +101,8 @@ import {
     DECKGL_SETTINGS,
     historical_labels,
     ssp585_labels,
+    getModelType,
+    getMonthDividedData,
     // labels,
 } from "./utils/utils";
 const props = defineProps({
@@ -106,6 +112,7 @@ const props = defineProps({
 let labels = props.isHistorical ? historical_labels : ssp585_labels;
 InfoPanelSettings[0].options[0].values = ["All", ...labels];
 
+import { CurveLayer } from "./utils/CurveLayer";
 import { CurveLayerv2 } from "./utils/CurveLayerv2";
 import { NodeClassifyLayer } from "./utils/NodeClassifyLayer";
 import { NodeLayer } from "./utils/NodeLayer";
@@ -117,10 +124,11 @@ let deck: any = null;
 const deckgl_canvas = `deck-canvas-projection-viewer-${Math.random()}`;
 
 const imgSrc = ref("");
-const timeRange = ref([0, 10]);
+const timeRange = ref([0, props.isHistorical ? 64 : 85]);
 const timeMin = 0;
-const timeMax = 100;
+const timeMax = props.isHistorical ? 64 : 85;
 const month = ref(1);
+const selectedModel = ref("All");
 const showPath = ref(false);
 const incrementMonth = () => {
     month.value = month.value + 1;
@@ -143,6 +151,12 @@ let layerList: LayersList = [];
 let settings = {
     drawMonthly: false,
     calsim_variant: "All",
+};
+
+let layerGenerators = [];
+
+const formatTooltip = (d) => {
+    return d + (props.isHistorical ? 1950 : 2015);
 };
 
 const setLayerProps = () => {
@@ -220,43 +234,31 @@ async function initalLayerProps() {
         contour_data,
     );
     let axis = new AxisLayer(-100, 100, 5, true);
-    layerList = [...layerList, ...axis.getLayers()];
 
-    layerList = [...layerList, ...nodelayer.getLayer()];
+    layerGenerators = [nodelayer, nodeclassifylayer, axis];
 
+    let path_data = {};
     const promises = labels.map(async (d, i) => {
         let data = await API.fetchData("path", true, {
             file: d,
             umap: true,
         });
-        // let num_years = data.length / 12;
-        // // Annual center of mass
-        // let annual_com = [];
-        // for (let year = 0; year < num_years; year++) {
-        //     let year_data = data.slice(year * 12, (year + 1) * 12);
-        //     let com = year_data.reduce(
-        //         (acc, cur) => [acc[0] + cur.coords[0], acc[1] + cur.coords[1]],
-        //         [0, 0],
-        //     );
-        //     com = [com[0] / 12, com[1] / 12];
-        //     annual_com.push({ label: d, coords: com.flat(), year: year });
-        // }
-        let temp = new CurveLayerv2(data, d, timeRange);
-
-        watch(timeRange, (newVal) => {
-            let str = `curve-${d}`;
-            layerList = layerList.filter((d) => !d.id.startsWith(str));
-            layerList = [...layerList, ...temp.getLayer()];
-            drawAllLayers();
-        });
-
-        layerList = [...layerList, ...temp.getLayer()];
+        path_data[d] = data;
     });
 
     await Promise.all(promises);
+    let temp = new CurveLayerv2(path_data, timeRange, month, selectedModel);
+    layerGenerators = [...layerGenerators, temp];
 
-    layerList = [...layerList, ...nodeclassifylayer.getLayer()];
+    // layerList = [...layerList, ...nodeclassifylayer.getLayer()];
     // layerList = [...layerList];
+    // layerGenerators = [temp];
+    layerList = layerGenerators
+        .map((g) => {
+            console.log(g);
+            return g.getLayers();
+        })
+        .flat();
     return layerList;
     // // let scaledData = scalePointsToSquare(data);
     // // console.log(scaledData);
@@ -265,86 +267,54 @@ async function initalLayerProps() {
 }
 
 function drawAllLayers() {
-    if (layerList.length == 0) return;
-    layerList = layerList.map((l) => {
-        if (l.id.endsWith("scatter")) {
-            return l.clone({
-                visible: l.props.month == month.value && !showPath.value,
-            });
-        } else if (l.id.endsWith("curve")) {
-            return l.clone({
-                visible: l.props.month == month.value && showPath.value,
-            });
-        } else {
-            return l.clone({});
-        }
-    });
-    // layerList = layerList.map((l) => {
-    //     if (l.id.endsWith("curve")) {
-    //         console.log("drawMonthly", settings.drawMonthly);
-    //         return l.clone({ drawMonthly: settings.drawMonthly });
-    //     } else {
-    //         return l;
-    //     }
-    // });
+    nextTick(() => {
+        layerList = layerGenerators
+            .map((g) => {
+                return g.getLayers();
+            })
+            .flat();
 
-    if (settings?.calsim_variant == "All") {
-        layerList = layerList.map((l) =>
-            l.clone({ visible: l.props.visible && true }),
-        );
-    } else {
-        layerList = layerList.map((l) => {
-            if (
-                l.id.startsWith(settings.calsim_variant) ||
-                l.id.startsWith("grid") ||
-                l.id.startsWith("axis") ||
-                l.id.startsWith("classify") ||
-                l.id.startsWith("image-layer")
-            ) {
-                return l.clone({ visible: l.props.visible && true });
-            } else {
-                return l.clone({ visible: false });
-            }
-        });
-    }
-    setLayerProps();
+        if (layerList.length == 0) return;
+        setLayerProps();
+    });
 }
 
 function settingsChanged(updatedSettings) {
     settings = { ...settings, ...updatedSettings };
+    selectedModel.value = getModelType(updatedSettings?.calsim_variant);
     drawAllLayers();
-    console.log("setting changed", updatedSettings);
+    console.log("setting changed", selectedModel.value);
 }
 
-function handleViewStateChange(viewstate: OrthographicViewState) {
-    const viewport = new OrthographicViewport(viewstate);
+// function handleViewStateChange(viewstate: OrthographicViewState) {
+//     const viewport = new OrthographicViewport(viewstate);
 
-    const topLeft = viewport.unproject([0, 0]);
-    const topRight = viewport.unproject([viewstate.width, 0]);
+//     const topLeft = viewport.unproject([0, 0]);
+//     const topRight = viewport.unproject([viewstate.width, 0]);
 
-    const bottomLeft = viewport.unproject([0, viewstate.height]);
-    const bottomRight = viewport.unproject([viewstate.width, viewstate.height]);
+//     const bottomLeft = viewport.unproject([0, viewstate.height]);
+//     const bottomRight = viewport.unproject([viewstate.width, viewstate.height]);
 
-    let bounds_layer = new PathLayer({
-        id: "viewport-bounds",
-        data: [[topLeft, topRight, bottomRight, bottomLeft, topLeft]],
-        getPath: (d) => d,
-        getColor: [255, 0, 0],
-        getWidth: 2,
-        widthUnits: "pixels",
-    });
+//     let bounds_layer = new PathLayer({
+//         id: "viewport-bounds",
+//         data: [[topLeft, topRight, bottomRight, bottomLeft, topLeft]],
+//         getPath: (d) => d,
+//         getColor: [255, 0, 0],
+//         getWidth: 2,
+//         widthUnits: "pixels",
+//     });
 
-    deck.setProps({
-        layers: [bounds_layer, ...layerList],
-        viewState: {
-            main: viewstate,
-            // minimap: {
-            //     ...viewstate,
-            //     zoom: 2
-            // }
-        },
-    });
-}
+//     deck.setProps({
+//         layers: [bounds_layer, ...layerList],
+//         viewState: {
+//             main: viewstate,
+//             // minimap: {
+//             //     ...viewstate,
+//             //     zoom: 2
+//             // }
+//         },
+//     });
+// }
 </script>
 
 <style scoped></style>

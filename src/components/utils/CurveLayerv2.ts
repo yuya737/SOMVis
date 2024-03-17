@@ -3,17 +3,16 @@ import {
     PathLayer,
     TextLayer,
     CompositeLayer,
-} from "deck.gl/typed";
+} from "@deck.gl/layers";
 import { DataFilterExtension } from "@deck.gl/extensions";
 import { HeatmapLayer } from "@deck.gl/aggregation-layers";
-import type { LayersList } from "deck.gl/typed";
+// import type { LayersList } from "deck.gl/typed";
 import { line, curveNatural } from "d3";
 import { pointsOnPath } from "points-on-path";
 import {
     scalePointsToSquare,
     colorSim,
     getModelType,
-    colorMonth,
     orbitView,
     pointsToCurve,
     addJitter,
@@ -22,58 +21,119 @@ import {
     layerFilter,
     DECKGL_SETTINGS,
     colorMonth,
+    hashString,
 } from "../utils/utils";
 
-import { useCloned } from "@vueuse/core";
-import { watch } from "vue";
+import { get, objectEntries, useCloned } from "@vueuse/core";
+import { h, watch } from "vue";
 
 export class CurveLayerv2 {
-    readonly coords: any;
-    readonly name: string;
-    readonly timeRange: any;
-    readonly temp: any;
-    readonly month_divided_data: any;
+    // readonly coords: any;
+    readonly data: any;
+    // readonly name: string;
+    readonly selectedTimeRange: any;
+    readonly selectedMonthRange: any;
+    readonly selectedModel: any;
+    // readonly temp: any;
+    // readonly month_divided_data: any;
+    readonly modelMonthDict: any;
+    readonly blockedCenterofMassData: any;
+    readonly heatmapData: any;
 
-    constructor(coords, name: string, timeRange: any) {
-        this.coords = coords;
-        this.name = name;
-        this.timeRange = timeRange;
-        // const { cloned } = useCloned(timeRange);
-        // this.timeRange = cloned;
-        // watch(this.temp, () => console.log("Change in CurveLayerv2"));
+    needsToRedraw: boolean = false;
+    layerList: any = null;
 
-        let ret = [];
+    // constructor(coords, name: string, timeRange: any, monthRange: any) {
+    constructor(data, timeRange, monthRange, model) {
+        this.data = data;
+        this.selectedTimeRange = timeRange;
+        this.selectedMonthRange = monthRange;
+        this.selectedModel = model;
 
-        let month_dict = {
-            1: [],
-            2: [],
-            3: [],
-            4: [],
-            5: [],
-            6: [],
-            7: [],
-            8: [],
-            9: [],
-            10: [],
-            11: [],
-            12: [],
-        };
-        this.coords
-            .map((d) => d.coords)
-            .forEach((d, i) => {
-                month_dict[(i % 12) + 1].push(d);
-            });
-        this.month_divided_data = Object.entries(month_dict).map((v) => {
-            return {
-                month: parseInt(v[0]),
-                scatter: v[1].map((d) => [d[0], -d[1]]),
-                coords: pointsToCurve(v[1]).map((d) => [d[0], -d[1]]),
-                name: this.name,
+        let model_month_dict = {};
+        Object.keys(data).forEach((k) => {
+            let month_dict = {
+                1: [],
+                2: [],
+                3: [],
+                4: [],
+                5: [],
+                6: [],
+                7: [],
+                8: [],
+                9: [],
+                10: [],
+                11: [],
+                12: [],
             };
+            data[k]
+                .map((d) => d.coords)
+                .forEach((d, i) => {
+                    month_dict[(i % 12) + 1].push(d);
+                });
+            let month_divided_data = Object.entries(month_dict).map((v) => {
+                return {
+                    month: parseInt(v[0]),
+                    scatter: v[1].map((d) => [d[0], -d[1]]),
+                    coords: pointsToCurve(v[1]).map((d) => [d[0], -d[1]]),
+                    name: k,
+                };
+            });
+            model_month_dict[k] = month_divided_data;
         });
+        this.modelMonthDict = model_month_dict;
+
+        this.blockedCenterofMassData = Object.entries(this.modelMonthDict)
+            .map(([model, month_divided_data]) =>
+                month_divided_data.map((d) => {
+                    return {
+                        month: d.month,
+                        name: getModelType(model),
+                        message: getModelType(model),
+                        path: this.blockedCenterOfMass(
+                            d.month,
+                            d.scatter,
+                            10,
+                            model,
+                        ).map((d) => d.coords),
+                    };
+                }),
+            )
+            .flat();
+
+        (this.heatmapData = Object.entries(this.modelMonthDict)
+            .map(([model, month_divided_data]) =>
+                month_divided_data.map((d) =>
+                    d.scatter.map((e, i) => {
+                        return {
+                            name: getModelType(model),
+                            coords: e,
+                            month: d.month,
+                            year: i,
+                        };
+                    }),
+                ),
+            )
+            .flat(2)),
+            // Trigger reddsraw when timeRange changes
+            watch(
+                [
+                    this.selectedTimeRange,
+                    this.selectedMonthRange,
+                    this.selectedModel,
+                ],
+                (newval) => {
+                    console.log("Redrawing", newval);
+                    this.needsToRedraw = true;
+                },
+            );
     }
 
-    blockedCenterOfMass(month, points, block_size) {
+    checkRedraw() {
+        return this.needsToRedraw;
+    }
+
+    blockedCenterOfMass(month, points, block_size, name) {
         let num_blocks = Math.floor(points.length / block_size);
         let ret = [];
         for (let block = 0; block < num_blocks; block++) {
@@ -89,13 +149,13 @@ export class CurveLayerv2 {
             ret.push({
                 coords: center,
                 block: block,
-                name: this.name,
+                name: name,
                 month: month,
             });
         }
         return ret;
     }
-    globalCenterOfMass(month, points) {
+    globalCenterOfMass(month, points, name) {
         let global_sum = points.reduce(
             (acc, curr) => [acc[0] + curr[0], acc[1] + curr[1]],
             [0, 0],
@@ -105,147 +165,151 @@ export class CurveLayerv2 {
                 global_sum[0] / global_sum.length,
                 global_sum[1] / global_sum.length,
             ],
-            name: this.name,
+            name: name,
             month: month,
         };
         return ret;
     }
 
-    getLayer() {
-        let ret = [];
-        this.month_divided_data.forEach((d) => {
-            // let s = new ScatterplotLayer({
-            //     id: `${this.name}-m${d.month}-scatter`,
-            //     data: [this.globalCenterOfMass(d.month, d.scatter)],
-            //     getPosition: (d) => d.coords,
-            //     getColor: (d) => colorSim(d.name),
-            //     // d.name.includes("historical") ? [255, 0, 0] : [0, 0, 255],
-            //     getRadius: 0.2,
-            //     pickable: true,
-            //     month: d.month,
-            //     onClick: (info, event) => {
-            //         // imgSrc.value = `http://localhost:5002/node_images/${info.object.id}.png`;
-            //         console.log("Clicked:", info.object, event);
-            //     },
-            // });
-            // let s = new ScatterplotLayer({
+    getLayers() {
+        if (this.layerList && !this.needsToRedraw) {
+            return this.layerList;
+        }
+        console.log("Drawing", this.selectedModel.value);
 
-            let temp = {
-                name: this.name,
-                message: getModelType(this.name),
-                path: this.blockedCenterOfMass(d.month, d.scatter, 10).map(
-                    (d) => d.coords,
-                ),
-            };
-            let s = new PathLayer({
-                id: `curve-${this.name}-m${d.month}-path-scatter`,
-                data: [temp],
-                // getPosition: (d) => d,
-                positionFormat: "XY",
-                getPath: (d) => pointsToCurve(d.path).flat(),
-                getColor: (d) => [...colorSim(getModelType(d.name)), 125],
-                getWidth: 0.05,
-                // opacity: (d) => 0.1 * d.decade,
-                // d.name.includes("historical") ? [255, 0, 0] : [0, 0, 255],
-                getRadius: 0.2,
-                pickable: true,
-                autoHighlight: true,
-                month: d.month,
-                onHover: (info, event) => {
-                    // imgSrc.value = `http://localhost:5002/node_images/${info.object.id}.png`;
-                    // console.log("Clicked:", info.object, event);
-                    console.log("Hovered", info);
-                },
-            });
-            ret = [...ret, s];
-            let s2 = new ScatterplotLayer({
-                id: `curve-${this.name}-m${d.month}-2-scatter`,
-                data: this.blockedCenterOfMass(d.month, d.scatter, 10),
-                getPosition: (d) => d.coords,
-                getColor: (d) => [
-                    ...colorSim(getModelType(d.name)),
-                    (255 / 10) * d.block + 30,
-                ],
-                getRadius: 0.1,
-                month: d.month,
-            });
-            ret = [...ret, s2];
-            let te = new TextLayer({
-                id: `curve-${this.name}-m${d.month}-text-scatter`,
-                data: [this.globalCenterOfMass(d.month, d.scatter)],
-                getPosition: (d) => d.coords,
-                getText: (d) => d.name,
-                getSize: 15,
-                month: d.month,
-                getTextAnchor: "end",
-                getAlignmentBaseline: "top",
-                // getColor: (d) => colorSim(d.name),
-                // // d.name.includes("historical") ? [255, 0, 0] : [0, 0, 255],
-                // getRadius: 0.2,
-                // pickable: true,
-                // month: d.month,
-                // onClick: (info, event) => {
-                //     // imgSrc.value = `http://localhost:5002/node_images/${info.object.id}.png`;
-                //     console.log("Clicked:", info.object, event);
-                // },
-            });
-            ret = [...ret, te];
-            // let l = new PathLayer({
-            //     id: `${this.name}-m${d.month}-curve`,
-            //     data: [d],
-            //     // data: "https://raw.githubusercontent.com/visgl/deck.gl-data/master/website/bart-lines.json",
-            //     positionFormat: "XY",
-            //     // getPath: (d) => d.coords,
-            //     month: d.month,
-            //     getPath: (d) => d.coords.flat(),
-            //     getColor: (d) => colorSim(getModelType(d.name)),
-            //     // pickable: true,
-            //     autoHighlight: true,
-            //     // getColor: (d) =>
-            //     //     d.name.includes("historical") ? [255, 0, 0] : [0, 0, 255],
-            //     getWidth: 0.01,
-            // });
-            // ret = [...ret, l];
-            // let h = new HeatmapLayer({
-            //     id: `${this.name}-m${d.month}-heat-scatter`,
-            //     data: d.scatter,
-            //     getPosition: (d) => d,
-            //     radiusPixels: 100,
-            //     debounceTimeout: 750,
-            //     opacity: 0.7,
-            //     month: d.month,
-            //     weightsTextureSize: 256,
-            //     // threshold: 0.2,
-            //     colorDomain: [30, 200],
-            // });
-            // ret = [...ret, h];
-            // ret = [...ret, h];
-            let scatter = new ScatterplotLayer({
-                id: `curve-${this.name}-m${d.month}-scatter`,
-                data: addJitter(d.scatter, 1).map((d, i) => {
-                    return { coord: d, year: i };
+        let curBlockedCenterofMass = this.blockedCenterofMassData;
+        let curHeatmapData = this.heatmapData;
+
+        if (this.selectedModel.value !== "All") {
+            curBlockedCenterofMass = this.blockedCenterofMassData.filter(
+                (d) => d.name == this.selectedModel.value,
+            );
+            curHeatmapData = this.heatmapData.filter(
+                (d) => d.name == this.selectedModel.value,
+            );
+        }
+        console.log(this.heatmapData);
+        console.log(curHeatmapData);
+
+        let monthlyCOMPath = new PathLayer({
+            id: `curve-monthly-com-path`,
+            // data: this.blockedCenterofMass,
+            data: curBlockedCenterofMass,
+            positionFormat: "XY",
+            getPath: (d) => pointsToCurve(d.path).flat(),
+            getColor: (d) => [...colorSim(d.name), 125],
+            getWidth: 0.05,
+            // opacity: (d) => 0.1 * d.decade,
+            // d.name.includes("historical") ? [255, 0, 0] : [0, 0, 255],
+            getRadius: 0.2,
+            pickable: true,
+            autoHighlight: true,
+            onHover: (info, event) => {
+                // imgSrc.value = `http://localhost:5002/node_images/${info.object.id}.png`;
+                // console.log("Clicked:", info.object, event);
+                // console.log("Hovered", info);
+            },
+            getFilterValue: (d) => d.month,
+            filterRange: [
+                this.selectedMonthRange.value,
+                this.selectedMonthRange.value,
+            ],
+            // getFilterCategory: (d) => getModelType(d.name),
+            // filterCategories: ["ACCESS-CM2", "CNRM-ESM2-1"],
+            // getFilterCategory: (d) => d.name,
+            // filterCategories: ["ACCESS-CM2"],
+            onFilteredItemsChange: (e) => {
+                console.log("Filtered", e);
+            },
+            extensions: [
+                new DataFilterExtension({
+                    filterSize: 1,
+                    countItems: true,
                 }),
-                getPosition: (d) => d.coord,
-                getColor: colorSim(getModelType(d.name)),
-                month: d.month,
-                getRadius: 0.1,
-                extensions: [new DataFilterExtension({ filterSize: 1 })],
-                getFilterValue: (d) => d.year,
-                filterRange: [this.timeRange.value[0], this.timeRange.value[1]],
-                // filterRange: [0, 10],
-            });
-            ret = [...ret, scatter];
+                // new DataFilterExtension({ categorySize: 1, countItems: true }),
+            ],
         });
+        let blockedMonthlyCOMScatter = new ScatterplotLayer({
+            id: `curve-blocked-com-center`,
+            data: curBlockedCenterofMass
+                .map((d) =>
+                    d.path.map((e) => {
+                        return {
+                            coords: e,
+                            month: d.month,
+                            name: getModelType(d.name),
+                        };
+                    }),
+                )
+                .flat(),
+            getPosition: (d) => d.coords,
+            // getColor: (d) => [
+            //     ...colorSim(getModelType(d.name)),
+            //     (255 / 10) * d.block + 30,
+            // ],
+            getRadius: 0.1,
+            extensions: [new DataFilterExtension({ filterSize: 1 })],
+            getFilterValue: (d) => d.month,
+            filterRange: [
+                this.selectedMonthRange.value,
+                this.selectedMonthRange.value,
+            ],
+            // getFilterCategory: (d) => {
+            //     console.log(d);
+            //     return d.name;
+            // },
+            // filterCategories: [this.selectedModel.value],
+        });
+        let heatmap = new HeatmapLayer({
+            id: `curve-heatmap`,
+            data: curHeatmapData,
+            getPosition: (d) => d.coords,
+            radiusPixels: 100,
+            debounceTimeout: 750,
+            opacity: 0.7,
+            weightsTextureSize: 256,
+            // threshold: 0.2,
+            // colorDomain: [30, 200],
+            extensions: [new DataFilterExtension({ filterSize: 2 })],
+            getFilterValue: (d) => [d.month, d.year],
+            filterRange: [
+                [this.selectedMonthRange.value, this.selectedMonthRange.value],
+                [
+                    this.selectedTimeRange.value[0],
+                    this.selectedTimeRange.value[1],
+                ],
+            ],
+        });
+        // let te = new TextLayer({
+        //     id: `curve-text-${this.name}`,
+        //     data: this.month_divided_data.map((d) => {
+        //         return {
+        //             coords: this.globalCenterOfMass(d.month, d.scatter),
+        //             name: d.name,
+        //             month: d.month,
+        //         };
+        //     }),
+        //     getPosition: (d) => d.coords,
+        //     getText: (d) => d.name,
+        //     getSize: 15,
+        //     getTextAnchor: "end",
+        //     getAlignmentBaseline: "top",
+        //     // getColor: (d) => colorSim(d.name),
+        //     // // d.name.includes("historical") ? [255, 0, 0] : [0, 0, 255],
+        //     // getRadius: 0.2,
+        //     // pickable: true,
+        //     // month: d.month,
+        //     // onClick: (info, event) => {
+        //     //     // imgSrc.value = `http://localhost:5002/node_images/${info.object.id}.png`;
+        //     //     console.log("Clicked:", info.object, event);
+        //     // },
+        // });
+        // ret = [...ret, te];
+        // let ret = [monthlyCOMPath, blockedMonthlyCOMScatter];
+        let ret = [monthlyCOMPath, heatmap];
+        // ret = [...ret, blockedMonthlyCOMScatter];
 
-        // ret = [...ret, l];
+        this.layerList = ret;
         return ret;
     }
 }
-// CurveLayer.layerName = "CurveLayer";
-// CurveLayer.defaultProps = {
-//     ...CompositeLayer.defaultProps,
-//     ...PathLayer.defaultProps,
-//     ...ScatterplotLayer.defaultProps,
-//     drawMonthly: false,
-//     name: "curve-default",
-// };

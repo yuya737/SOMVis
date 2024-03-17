@@ -46,11 +46,11 @@ import {
     PathLayer,
     PointCloudLayer,
     BitmapLayer,
-} from "deck.gl/typed";
+} from "@deck.gl/layers";
 
 import API from "@/api/api";
 
-import { LayersList, OrthographicViewState, Layer } from "@deck.gl/core/typed";
+import { LayersList, OrthographicViewState, Layer } from "@deck.gl/core";
 import { AxisLayer } from "./utils/AxisLayer";
 import { useStore } from "@/store/main";
 import InfoPanel from "./ui/InfoPanel.vue";

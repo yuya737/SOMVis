@@ -3,12 +3,16 @@ import {
     ContourLayer,
     ScatterplotLayer,
     TextLayer,
-} from "deck.gl/typed";
+} from "@deck.gl/layers";
+// import type { LayersList } from "deck.gl/typed";
 import { colorPercentile, pointsToCurve } from "./utils";
 
 export class NodeClassifyLayer {
     readonly mapping_data;
     readonly classify_data;
+    readonly needsToRedraw: boolean = false;
+
+    layerList: any = null;
 
     constructor(mapping_data, classify_data, contour_data) {
         this.mapping_data = mapping_data;
@@ -16,10 +20,17 @@ export class NodeClassifyLayer {
         this.contour_data = contour_data;
     }
 
-    getLayer() {
-        let data = this.mapping_data.map((d) => {
-            return { ...d, classify_data: this.classify_data[d.id].value };
-        });
+    checkNeedsToRedraw() {
+        return this.needsToRedraw;
+    }
+
+    getLayers() {
+        if (this.layerList && !this.needsToRedraw) {
+            return this.layerList;
+        }
+        // let data = this.mapping_data.map((d) => {
+        //     return { ...d, classify_data: this.classify_data[d.id].value };
+        // });
         let ret = [
             new PathLayer({
                 id: "classify-layer",
@@ -86,6 +97,7 @@ export class NodeClassifyLayer {
             //     },
             // }),
         ];
+        this.layerList = ret;
         return ret;
     }
 }

@@ -1,11 +1,13 @@
-import { PathLayer } from "deck.gl/typed";
-import type { LayersList } from "deck.gl/typed";
+import { PathLayer } from "@deck.gl/layers";
 
 export class AxisLayer {
     readonly min: number;
     readonly max: number;
     readonly gridWidth: number;
     readonly isThreeD: boolean;
+    needsToRedraw: boolean = false;
+
+    layerList: any = null;
 
     constructor(
         min: number,
@@ -17,6 +19,10 @@ export class AxisLayer {
         this.max = max;
         this.gridWidth = gridWidth;
         this.isThreeD = isThreeD;
+    }
+
+    checkNeedsToRedraw() {
+        return this.needsToRedraw;
     }
 
     _get2DLayers(): LayersList {
@@ -155,10 +161,15 @@ export class AxisLayer {
 
     // }
     getLayers(): LayersList {
+        if (this.layerList && !this.needsToRedraw) {
+            return this.layerList;
+        }
         // if (this.isThreeD){
         //     // return this._get3DLayers()
         // } else {
-        return this._get2DLayers();
+        let ret = this._get2DLayers();
+        this.layerList = ret;
+        return ret;
         // }
     }
 }

@@ -45,7 +45,51 @@ function hexToRgb(hex) {
           ]
         : null;
 }
+
+export function getMonthDividedData(data, name) {
+    let month_dict = {
+        1: [],
+        2: [],
+        3: [],
+        4: [],
+        5: [],
+        6: [],
+        7: [],
+        8: [],
+        9: [],
+        10: [],
+        11: [],
+        12: [],
+    };
+    data.map((d) => d.coords).forEach((d, i) => {
+        month_dict[(i % 12) + 1].push(d);
+    });
+    let month_divided_data = Object.entries(month_dict).map((v, i) => {
+        return {
+            month: parseInt(v[0]),
+            scatter: v[1].map((d) => [d[0], -d[1]]),
+            name: name,
+            year: i,
+        };
+    });
+    return month_divided_data;
+}
+
+// For DataFilterExtension on strings
+// https://github.com/visgl/deck.gl/issues/7827
+export function hashString(str: string): number {
+    var hash = 0;
+    if (str.length === 0) return hash;
+    for (var i = 0; i < str.length; i++) {
+        var char = str.charCodeAt(i);
+        hash = (hash << 5) - hash + char;
+        hash = hash & hash; // Convert to 32-bit integer
+    }
+    return hash;
+}
+
 export const getModelType = (model) => {
+    if (model == "All") return "All";
     // e.g. CMIP6_pr_historical_S3L0.02_ACCESS-CM2_historical_r1i1p1f1_pr.nc => ACCESS-CM2_historical_r1i1p1f1
     // first get basefile name
     let basefile = model.split("/").slice(-1)[0];
