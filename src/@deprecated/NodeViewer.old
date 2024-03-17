@@ -51,12 +51,12 @@ import {
 import API from "@/api/api";
 
 import { LayersList, OrthographicViewState, Layer } from "@deck.gl/core";
-import { AxisLayer } from "./utils/AxisLayer";
+import { AxisLayer } from "../components/utils/AxisLayer";
 import { useStore } from "@/store/main";
 import InfoPanel from "./ui/InfoPanel.vue";
 import InfoPanelSettings from "@/store/InfoPanelSettingsNode.json";
 import { filePrefix } from "@/assets/config";
-import { NodeLayer } from "./utils/NodeLayer";
+import { NodeLayer } from "../components/utils/NodeLayer";
 
 import {
     scalePointsToSquare,
@@ -67,7 +67,7 @@ import {
     miniorthoView,
     layerFilter,
     DECKGL_SETTINGS,
-} from "./utils/utils";
+} from "../components/utils/utils";
 import { pointsOnPath } from "points-on-path";
 import { CurveLayer } from "./utils/CurveLayer";
 
@@ -146,7 +146,7 @@ async function initalLayerProps() {
         null,
     );
     let nodelayer = new NodeLayer(mapping_data);
-    layerList = [...layerList, ...nodelayer.getLayer()];
+    layerList = [...layerList, ...nodelayer.getLayers()];
     let axis = new AxisLayer(-100, 100, 5, true);
     layerList = [...layerList, ...axis.getLayers()];
     return layerList;
@@ -221,3 +221,4 @@ function handleViewStateChange(viewstate: OrthographicViewState) {
     });
 }
 </script>
+./utils/CurveLayer.ts.old

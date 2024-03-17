@@ -3,7 +3,7 @@
         <div v-for="(scheme, index) in schema" :key="index">
             <KeepAlive>
                 <component
-                    v-if="index == selectedSchema"
+                    v-if="parseInt(index) == selectedSchema"
                     :is="scheme.type"
                     :scheme="scheme"
                     @settings-changed="settingsChanged"
@@ -15,8 +15,8 @@
 </template>
 
 <script setup lang="ts">
-import InfoPanelCheckbox from "./InfoPanelCheckbox.vue";
-import { ref } from "vue";
+// import InfoPanelCheckbox from "./InfoPanelCheckbox.vue";
+// import { ref } from "vue";
 
 const emit = defineEmits(["settings-changed"]);
 

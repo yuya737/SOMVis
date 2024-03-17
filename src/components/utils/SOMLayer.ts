@@ -7,27 +7,12 @@ import {
 import { DataFilterExtension } from "@deck.gl/extensions";
 import { HeatmapLayer } from "@deck.gl/aggregation-layers";
 // import type { LayersList } from "deck.gl/typed";
-import { line, curveNatural } from "d3";
-import { pointsOnPath } from "points-on-path";
-import {
-    scalePointsToSquare,
-    colorSim,
-    getModelType,
-    orbitView,
-    pointsToCurve,
-    addJitter,
-    orthoView,
-    miniorthoView,
-    layerFilter,
-    DECKGL_SETTINGS,
-    colorMonth,
-    hashString,
-} from "../utils/utils";
+import { addJitter, colorSim, getModelType, pointsToCurve } from "./utils";
 
-import { get, objectEntries, useCloned } from "@vueuse/core";
-import { h, watch } from "vue";
+import { ILayerGenerator } from "./layerGenerator";
+import { watch } from "vue";
 
-export class CurveLayerv2 {
+export class SOMLayer implements ILayerGenerator {
     // readonly coords: any;
     readonly data: any;
     // readonly name: string;
@@ -101,7 +86,7 @@ export class CurveLayerv2 {
             )
             .flat();
 
-        (this.heatmapData = Object.entries(this.modelMonthDict)
+        this.heatmapData = Object.entries(this.modelMonthDict)
             .map(([model, month_divided_data]) =>
                 month_divided_data.map((d) =>
                     d.scatter.map((e, i) => {
@@ -114,22 +99,22 @@ export class CurveLayerv2 {
                     }),
                 ),
             )
-            .flat(2)),
-            // Trigger reddsraw when timeRange changes
-            watch(
-                [
-                    this.selectedTimeRange,
-                    this.selectedMonthRange,
-                    this.selectedModel,
-                ],
-                (newval) => {
-                    console.log("Redrawing", newval);
-                    this.needsToRedraw = true;
-                },
-            );
+            .flat(2);
+        // Trigger reddsraw when timeRange changes
+        watch(
+            [
+                this.selectedTimeRange,
+                this.selectedMonthRange,
+                this.selectedModel,
+            ],
+            (newval) => {
+                console.log("Redrawing", newval);
+                this.needsToRedraw = true;
+            },
+        );
     }
 
-    checkRedraw() {
+    checkNeedsToRedraw() {
         return this.needsToRedraw;
     }
 
@@ -180,12 +165,13 @@ export class CurveLayerv2 {
         let curBlockedCenterofMass = this.blockedCenterofMassData;
         let curHeatmapData = this.heatmapData;
 
-        if (this.selectedModel.value !== "All") {
-            curBlockedCenterofMass = this.blockedCenterofMassData.filter(
-                (d) => d.name == this.selectedModel.value,
+        //TODO: If cateogry filtering hits stable release, this should be implemented with it
+        if (!this.selectedModel.value.includes("All")) {
+            curBlockedCenterofMass = this.blockedCenterofMassData.filter((d) =>
+                this.selectedModel.value.includes(d.name),
             );
-            curHeatmapData = this.heatmapData.filter(
-                (d) => d.name == this.selectedModel.value,
+            curHeatmapData = this.heatmapData.filter((d) =>
+                this.selectedModel.value.includes(d.name),
             );
         }
         console.log(this.heatmapData);
@@ -198,7 +184,7 @@ export class CurveLayerv2 {
             positionFormat: "XY",
             getPath: (d) => pointsToCurve(d.path).flat(),
             getColor: (d) => [...colorSim(d.name), 125],
-            getWidth: 0.05,
+            getWidth: 0.1,
             // opacity: (d) => 0.1 * d.decade,
             // d.name.includes("historical") ? [255, 0, 0] : [0, 0, 255],
             getRadius: 0.2,
@@ -207,7 +193,6 @@ export class CurveLayerv2 {
             onHover: (info, event) => {
                 // imgSrc.value = `http://localhost:5002/node_images/${info.object.id}.png`;
                 // console.log("Clicked:", info.object, event);
-                // console.log("Hovered", info);
             },
             getFilterValue: (d) => d.month,
             filterRange: [
@@ -260,10 +245,34 @@ export class CurveLayerv2 {
             // },
             // filterCategories: [this.selectedModel.value],
         });
-        let heatmap = new HeatmapLayer({
+        // let heatmap = new HeatmapLayer({
+        //     id: `curve-heatmap`,
+        //     data: curHeatmapData,
+        //     getPosition: (d) => d.coords,
+        //     radiusPixels: 100,
+        //     debounceTimeout: 750,
+        //     opacity: 0.7,
+        //     weightsTextureSize: 256,
+        //     // threshold: 0.2,
+        //     // colorDomain: [30, 200],
+        //     extensions: [new DataFilterExtension({ filterSize: 2 })],
+        //     getFilterValue: (d) => [d.month, d.year],
+        //     filterRange: [
+        //         [this.selectedMonthRange.value, this.selectedMonthRange.value],
+        //         [
+        //             this.selectedTimeRange.value[0],
+        //             this.selectedTimeRange.value[1],
+        //         ],
+        //     ],
+        // });
+        let heatmap = new ScatterplotLayer({
             id: `curve-heatmap`,
-            data: curHeatmapData,
+            data: curHeatmapData.map((d) => {
+                return { ...d, coords: addJitter(d.coords, 0.1) };
+            }),
+            getColor: (d) => [...colorSim(d.name)],
             getPosition: (d) => d.coords,
+            getRadius: 0.05,
             radiusPixels: 100,
             debounceTimeout: 750,
             opacity: 0.7,
@@ -306,7 +315,7 @@ export class CurveLayerv2 {
         // });
         // ret = [...ret, te];
         // let ret = [monthlyCOMPath, blockedMonthlyCOMScatter];
-        let ret = [monthlyCOMPath, heatmap];
+        let ret = [heatmap, monthlyCOMPath];
         // ret = [...ret, blockedMonthlyCOMScatter];
 
         this.layerList = ret;

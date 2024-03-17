@@ -6,10 +6,12 @@ import {
 } from "@deck.gl/layers";
 // import type { LayersList } from "deck.gl/typed";
 import { colorPercentile, pointsToCurve } from "./utils";
+import { ILayerGenerator } from "./layerGenerator";
 
-export class NodeClassifyLayer {
+export class NodeClassifyLayer implements ILayerGenerator {
     readonly mapping_data;
     readonly classify_data;
+    readonly contour_data;
     readonly needsToRedraw: boolean = false;
 
     layerList: any = null;
@@ -61,6 +63,7 @@ export class NodeClassifyLayer {
             // }),
             new TextLayer({
                 id: "classify-annotate-layer",
+                fontFamily: "Arial",
                 data: this.contour_data,
                 getPosition: (d) => [d.contours[0][0], -d.contours[0][1]],
                 getText: (d) => `Percentile: ${d.percentile}`,

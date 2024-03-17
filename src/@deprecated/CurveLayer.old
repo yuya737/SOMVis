@@ -21,7 +21,7 @@ import {
     layerFilter,
     DECKGL_SETTINGS,
     pointsToCurve,
-} from "../utils/utils";
+} from "./utils";
 
 export class CurveLayer extends CompositeLayer {
     // readonly coords: any;

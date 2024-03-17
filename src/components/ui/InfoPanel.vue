@@ -29,6 +29,7 @@
 import { shallowRef, ref, computed, nextTick } from "vue";
 import InfoPanelDynamicRenderer from "./InfoPanelDynamicRenderer.vue";
 import InfoPanelCheckboxDropdown from "./InfoPanelCheckboxDropdown.vue";
+import InfoPanelMultiCheckbox from "./InfoPanelMultiCheckbox.vue";
 import InfoPanelText from "./InfoPanelText.vue";
 import Dropdown from "primevue/dropdown";
 import Button from "primevue/button";
@@ -57,8 +58,10 @@ const selectedLayer = ref(layers.value[0]);
 
 const resolveInfoPanelObject = (id) => {
     // if (id === "checkbox") return InfoPanelCheckbox;
+    console.log(id);
     if (id === "text") return InfoPanelText;
     if (id === "checkbox-dropdown") return InfoPanelCheckboxDropdown;
+    if (id === "multi-checkbox") return InfoPanelMultiCheckbox;
 };
 
 const schema = props.settings.map((element) => {

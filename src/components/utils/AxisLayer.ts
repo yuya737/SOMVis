@@ -1,6 +1,8 @@
 import { PathLayer } from "@deck.gl/layers";
+import { ILayerGenerator } from "./layerGenerator";
+import type { LayersList } from "deck.gl/typed";
 
-export class AxisLayer {
+export class AxisLayer implements ILayerGenerator {
     readonly min: number;
     readonly max: number;
     readonly gridWidth: number;
