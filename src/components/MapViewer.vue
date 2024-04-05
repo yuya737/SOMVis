@@ -175,3 +175,4 @@ async function fetchMapDimensions() {
     longitudes = mapDimensions.lon;
 }
 </script>
+./ui/TheInfoPanel.vue

@@ -1,0 +1,28 @@
+{
+  "ignorePatterns": [
+      "dist",
+      "node_modules",
+      "src/store"
+  ],
+  "rules": {
+      "camelcase": 1,
+      "indent": "off",
+      "vue/html-indent": "off"
+  },
+  "env": {
+      "browser": true,
+      "es6": true
+  },
+  "extends": ["eslint:recommended", "plugin:vue/vue3-recommended"],
+  "globals": {
+      "Atomics": "readonly",
+      "SharedArrayBuffer": "readonly"
+  },
+  "parser": "vue-eslint-parser",
+  "parserOptions": {
+      "parser": "@typescript-eslint/parser",
+      "ecmaVersion": 11,
+      "sourceType": "module"
+  },
+  "settings": {}
+}

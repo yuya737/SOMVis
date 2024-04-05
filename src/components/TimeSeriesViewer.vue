@@ -177,3 +177,4 @@ function handleViewStateChange(viewstate: OrthographicViewState) {
     });
 }
 </script>
+./ui/TheInfoPanel.vue
