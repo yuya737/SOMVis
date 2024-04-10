@@ -30,10 +30,9 @@
 
 <script setup lang="ts">
 import InfoPanelScale from "./InfoPanelScale.vue";
-import { watch, inject, computed, ref, onMounted } from "vue";
+import { ref, onMounted } from "vue";
 import Checkbox from "primevue/checkbox";
 import Divider from "primevue/divider";
-import Dropdown from "primevue/dropdown";
 
 const titleID = `title-${Math.random()}`;
 const bodyID = `title-${Math.random()}`;

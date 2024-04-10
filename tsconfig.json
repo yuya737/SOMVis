@@ -4,6 +4,8 @@
       "paths": {
         "@/*": ["*"]
       },
+      "resolveJsonModule": true,
+      "esModuleInterop": true
       // Other compiler options...
     },
     // Other configuration options...

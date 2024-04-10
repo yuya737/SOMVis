@@ -1,46 +1,38 @@
 import { defineStore } from "pinia";
 
-// You can name the return value of `defineStore()` anything you want,
-// but it's best to use the name of the store and surround it with `use`
-// and `Store` (e.g. `useUserStore`, `useCartStore`, `useProductStore`)
-// the first argument is a unique id of the store across your application
 export const useStore = defineStore("main", {
-    // other options...
-    state: () => {
-        return {
-            // file_name
-            spatial_file_name: "",
-            temporal_file_name: "",
-
-            spatial_col_name: "",
-            temporal_col_name: "",
-        };
+  // other options...
+  state: () => {
+    return {
+      files: [
+        ["ACCESS-CM2_ssp370_r2i1p1f1_pr.nc"],
+        ["KACE-1-0-G_ssp370_r1i1p1f1_pr.nc"],
+      ], // Assume this is a list of two lists of files that we want to compare, for now
+      monthsSelected: [7],
+      yearsSelected: [-1], // -1 means all years
+      sspSelected: "historical",
+    };
+  },
+  getters: {
+    getFiles() {
+      return this.files;
     },
-    getters: {
-        getSpatialData() {
-            return {
-                spatial_file_name: this.spatial_file_name,
-                spatial_col_name: this.spatial_col_name,
-            };
-        },
-        getTemporalData() {
-            return {
-                temporal_file_name: this.temporal_file_name,
-                temporal_col_name: this.temporal_col_name,
-            };
-        },
+    getMonthsSelected() {
+      return this.monthsSelected;
     },
-    actions: {
-        updateSpatialID(spatial_file_name: string, spatial_col_name: string) {
-            this.spatial_file_name = spatial_file_name;
-            this.spatial_col_name = spatial_col_name;
-        },
-        updateTemporalID(
-            temporal_file_name: string,
-            temporal_col_name: string,
-        ) {
-            this.temporal_file_name = temporal_file_name;
-            this.temporal_col_name = temporal_col_name;
-        },
+    getYearsSelected() {
+      return this.yearsSelected;
     },
+    getSSPSelected() {
+      return this.sspSelected;
+    },
+  },
+  actions: {
+    updateElements({ files, monthsSelected, yearsSelected, sspSelected }) {
+      this.files = files;
+      this.monthsSelected = monthsSelected;
+      this.yearsSelected = yearsSelected;
+      this.sspSelected = sspSelected;
+    },
+  },
 });

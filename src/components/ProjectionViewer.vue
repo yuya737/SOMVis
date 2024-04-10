@@ -42,7 +42,7 @@
           :options="months"
           class="w-fit z-[4] md:w-14rem"
           checkmark
-          :highlightOnSelect="false"
+          :highlight-on-select="false"
           placeholder="Starting Month"
           @change="drawAllLayers"
         />
@@ -52,7 +52,7 @@
           :options="months"
           class="w-fit z-[4]"
           checkmark
-          :highlightOnSelect="false"
+          :highlight-on-select="false"
           placeholder="Ending Month"
           @change="drawAllLayers"
         />
@@ -83,10 +83,10 @@ import { useStore } from "@/store/main";
 import InfoPanel from "./ui/TheInfoPanel.vue";
 // import Button from "primevue/button";
 import Dropdown from "primevue/dropdown";
-// import Slider from "@vueform/slider";
+import Slider from "@vueform/slider";
 import InfoPanelSettings from "@/store/InfoPanelSettingsProj.json";
 
-import { ILayerGenerator } from "./utils/layerGenerator";
+import { AbstractLayerGenerator } from "./utils/AbstractLayerGenerator";
 
 import { SOMLayer } from "./utils/SOMLayer";
 import { NodeClassifyLayer } from "./utils/NodeClassifyLayer";
@@ -118,7 +118,7 @@ InfoPanelSettings[0].options[0].values = [
 let layerList: LayersList = [];
 let settings = {};
 
-let layerGenerators: ILayerGenerator[] = [];
+let layerGenerators: AbstractLayerGenerator[] = [];
 
 const store = useStore();
 let deck: any = null;
