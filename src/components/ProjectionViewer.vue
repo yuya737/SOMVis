@@ -30,7 +30,7 @@
         :min="timeMin"
         :max="timeMax"
         class="slider z-[4] w-full"
-        @change="drawAllLayers"
+        @change="yearMonthChanged"
       />
 
       <div
@@ -44,7 +44,7 @@
           checkmark
           :highlight-on-select="false"
           placeholder="Starting Month"
-          @change="drawAllLayers"
+          @change="yearMonthChanged"
         />
         <span class="flex items-center font-bold"> End: </span>
         <Dropdown
@@ -54,7 +54,7 @@
           checkmark
           :highlight-on-select="false"
           placeholder="Ending Month"
-          @change="drawAllLayers"
+          @change="yearMonthChanged"
         />
       </div>
       <!-- <Slider
@@ -81,9 +81,6 @@ import { LayersList } from "@deck.gl/core";
 import { AxisLayer } from "./utils/AxisLayer";
 import { useStore } from "@/store/main";
 import InfoPanel from "./ui/TheInfoPanel.vue";
-// import Button from "primevue/button";
-import Dropdown from "primevue/dropdown";
-import Slider from "@vueform/slider";
 import InfoPanelSettings from "@/store/InfoPanelSettingsProj.json";
 
 import { AbstractLayerGenerator } from "./utils/AbstractLayerGenerator";
@@ -101,6 +98,7 @@ import {
   ssp585Labels,
   approx,
   getModelType,
+  generateMonthRangeList,
   months,
 } from "./utils/utils";
 const props = defineProps({
@@ -127,8 +125,8 @@ const deckglCanvas = `deck-canvas-projection-viewer-${Math.random()}`;
 
 const imgSrc = ref("");
 const timeRange = ref([0, props.isHistorical ? 64 : 85]);
-const monthTemp1 = ref("January");
-const monthTemp2 = ref("December");
+const monthTemp1 = ref("July");
+const monthTemp2 = ref("July");
 watch([monthTemp1, monthTemp2], ([m1, m2]) => {
   monthRange.value = [months.indexOf(m1) + 1, months.indexOf(m2) + 1];
 });
@@ -248,34 +246,27 @@ function settingsChanged(updatedSettings) {
   console.log("setting changed", selectedModel.value);
 }
 
-// function incrementMonth() {
-//   month.value = (month.value % 12) + 1;
-//   drawAllLayers();
-// }
+function yearMonthChanged() {
+  nextTick(() => {
+    let allMonths = monthRange.value[0] == 1 && monthRange.value[1] == 12;
+    let allYears =
+      timeMin == timeRange.value[0] && timeMax == timeRange.value[1];
 
-// function togglePath() {
-//   showPath.value = !showPath.value;
-//   drawAllLayers();
-// }
+    store.updateElements({
+      files: store.getFiles,
+      monthsSelected: allMonths
+        ? [-1]
+        : generateMonthRangeList(monthRange.value[0], monthRange.value[1]),
+      yearsSelected: allYears ? [-1] : [timeRange.value[0], timeRange.value[1]],
+      sspSelected: store.getSSPSelected,
+    });
+    drawAllLayers();
+  });
+}
 
 function formatTooltipTime(d) {
   return d + (props.isHistorical ? 1950 : 2015);
 }
-
-// function formatTooltipMonth(d) {
-//   if (approx(d, 1)) return "Jan";
-//   if (approx(d, 2)) return "Feb";
-//   if (approx(d, 3)) return "Mar";
-//   if (approx(d, 4)) return "Apr";
-//   if (approx(d, 5)) return "May";
-//   if (approx(d, 6)) return "Jun";
-//   if (approx(d, 7)) return "Jul";
-//   if (approx(d, 8)) return "Aug";
-//   if (approx(d, 9)) return "Sep";
-//   if (approx(d, 10)) return "Oct";
-//   if (approx(d, 11)) return "Nov";
-//   if (approx(d, 12)) return "Dec";
-// }
 
 function setLayerProps() {
   deck.setProps({ layers: layerList });

@@ -114,4 +114,3 @@ const settingsChanged = (value) => {
   align-items: center;
 }
 </style>
-./InfoPanelCheckboxDropdown.vue

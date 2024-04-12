@@ -1,5 +1,10 @@
-import { scaleOrdinal } from "d3-scale";
-import { interpolateRainbow, interpolateViridis } from "d3-scale-chromatic";
+import { scaleOrdinal, scaleLinear } from "d3-scale";
+import {
+  interpolateRainbow,
+  interpolateBlues,
+  interpolateRdBu,
+  interpolateViridis,
+} from "d3-scale-chromatic";
 import { line, curveNatural } from "d3";
 import { pointsOnPath } from "points-on-path";
 
@@ -85,6 +90,21 @@ export function hashString(str: string): number {
   return hash;
 }
 
+export const stripSOMprefix = (model) => {
+  let basefile = model.split("/").slice(-1)[0];
+  let ret;
+
+  if (basefile.includes("sfbay")) {
+    let prefix = "CMIP6_pr_historical_sfbay_S2L0.1_20x20_";
+    ret = basefile.slice(prefix.length);
+  } else {
+    let prefix = "CMIP6_pr_historical_S3L0.02_";
+    // strip the prefix
+    ret = basefile.slice(prefix.length);
+  }
+  return ret;
+};
+
 export const getModelType = (model) => {
   if (model == "All") return "All";
   let ret;
@@ -101,6 +121,26 @@ export const getModelType = (model) => {
   }
   return ret;
 };
+
+// Generate a list of months from start (e.g. 9: September )to end (e.g. 1: January)
+// Accounts for cases where the months wrap around (e.g. 9 to 1)
+export function generateMonthRangeList(start, end) {
+  let ret = [];
+  if (start <= end) {
+    for (let i = start; i <= end; i++) {
+      ret.push(i);
+    }
+  } else {
+    for (let i = 1; i <= end; i++) {
+      ret.push(i);
+    }
+    for (let i = start; i <= 12; i++) {
+      ret.push(i);
+    }
+  }
+  return ret;
+}
+
 export const colorSim = scaleOrdinal(
   [
     "#e6194b",
@@ -138,6 +178,18 @@ export const colorPercentile = (d) => hexToRgb(interpolateViridis(d / 100));
 export const colorMonth = (d) =>
   interpolateRainbow((0.7 - d / 12) % 1)
     // interpolateSpectral((d / 12 + 0.5) % 1)
+    .replace(/[^\d,]/g, "")
+    .split(",")
+    .map((d) => Number(d));
+
+export const colorInterpDifference = (value) =>
+  interpolateRdBu(scaleLinear().domain([-0.0005, 0.0005]).range([1, 0])(value))
+    .replace(/[^\d,]/g, "")
+    .split(",")
+    .map((d) => Number(d));
+
+export const colorInterp = (value) =>
+  interpolateBlues(scaleLinear().domain([0.02, 0]).range([1, 0])(value))
     .replace(/[^\d,]/g, "")
     .split(",")
     .map((d) => Number(d));
@@ -189,6 +241,17 @@ export const DECKGL_SETTINGS = {
     zoom: 6,
   },
 };
+
+// Accept a ml-hclust object and return a list of nodes from left to right
+export function getNodeOrder(node, listSoFar = []) {
+  if (node.children.length > 0) {
+    getNodeOrder(node.children[0], listSoFar);
+    getNodeOrder(node.children[1], listSoFar);
+  } else {
+    listSoFar.push(node.index);
+  }
+  return listSoFar;
+}
 
 export function layerFilter({ layer, viewport }) {
   if (layer.id != "viewport-bounds") {

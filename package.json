@@ -13,6 +13,7 @@
     "@vueuse/core": "^10.9.0",
     "d3": "^7.8.5",
     "deck.gl": "8.9.35",
+    "ml-hclust": "^3.1.0",
     "pinia": "^2.1.7",
     "points-on-path": "^0.2.1",
     "primeicons": "^6.0.1",

@@ -10,10 +10,58 @@
       :bearing="bearing"
       :pitch="pitch"
     />
-    <div
+    <!-- <div
       class="relative bottom-10 left-1/2 z-[3] w-fit -translate-x-1/2 -translate-y-1/2 transform rounded-md bg-gray-200 p-4 text-lg font-bold text-black"
     >
       {{ bottomText }}
+    </div> -->
+    <div
+      class="absolute bottom-0 h-32 items-center justify-around px-32 w-full flex flex-col"
+    >
+      <div
+        class="flex flex-row items-center justify-evenly bg-gray-200 p-2 rounded-lg text-center"
+      >
+        <span class="flex items-center font-bold px-5"> Group 1: </span>
+        <MultiSelect
+          v-model="cmp_1"
+          :options="options"
+          showclear
+          placeholder="Select a model"
+          optionLabel="name"
+          optionValue="value"
+          class="w-fit z-[4] md:w-14rem"
+        />
+        <span class="flex items-center font-bold px-5"> Group 2: </span>
+        <MultiSelect
+          v-model="cmp_2"
+          :options="options"
+          showclear
+          checkmark
+          :highlightOnSelect="false"
+          placeholder="Select a model"
+          optionLabel="name"
+          optionValue="value"
+          class="w-fit z-[4]"
+        />
+      </div>
+      <div
+        class="flex flex-row items-center bg-gray-200 justify-evenly p-2 rounded-lg text-center w-fit"
+      >
+        <SelectButton
+          v-model="selectedMode"
+          :options="modeOptions"
+          :allowEmpty="false"
+          aria-labelledby="basic"
+        />
+        <Button
+          class="px-5"
+          type="button"
+          label="Show on Map"
+          icon="pi pi-map"
+          :loading="loading"
+          @click="submit"
+        />
+      </div>
     </div>
     <InfoPanel :settings="InfoPanelSettings" />
   </div>
@@ -27,10 +75,16 @@ import { scaleLinear, interpolateRdBu, scaleTime } from "d3";
 import InfoPanel from "./ui/TheInfoPanel.vue";
 import InfoPanelSettings from "@/store/InfoPanelSettingsNode.json";
 import API from "@/api/api";
-import { getModelType } from "./utils/utils";
+import {
+  getModelType,
+  stripSOMprefix,
+  ssp370Labels,
+  colorInterp,
+  colorInterpDifference,
+} from "./utils/utils";
 
-import { Deck, MapView, MapViewport } from "@deck.gl/core";
-import { ScatterplotLayer, PathLayer } from "deck.gl/typed";
+import { Deck, MapView } from "@deck.gl/core";
+import { ScatterplotLayer } from "deck.gl/typed";
 
 let deck: any = null;
 const token: string =
@@ -38,13 +92,25 @@ const token: string =
 
 let latitudes: number[] = [];
 let longitudes: number[] = [];
+let data: any = null;
 
-const data_type = "LOCA";
-// const data_type = "CMIP6";
-// const data_type = "MPI";
+// const data_type = "LOCA";
+// // const data_type = "CMIP6";
+// // const data_type = "MPI";
 
+// const loading = ref(false);
+// const bottomText = ref("Precip data");
+
+const cmp_1 = ref();
+const cmp_2 = ref();
+const selectedMode = ref("Difference");
+const options = ref(
+  ssp370Labels.map((d) => {
+    return { name: getModelType(d), value: stripSOMprefix(d) };
+  })
+);
+const modeOptions = ref(["Group 1 Mean", "Group 2 Mean", "Difference"]);
 const loading = ref(false);
-const bottomText = ref("Precip data");
 
 const mapCenter = reactive([0, 0]);
 const computedMapCenter = computed(() => [mapCenter[0], mapCenter[1]]);
@@ -98,46 +164,70 @@ onMounted(() => {
 const store = useStore();
 
 watch(
-  () => [store.getFiles, store.getMonthsSelected, store.getYearsSelected],
-  ([files, months, years]) => {
-    console.log("Map changed", files, months, years);
-    fetchMapData({
-      files: files,
-      months: months,
-      years: years,
-    });
-  },
-  { immediate: true }
+  () => [store.getMonthsSelected, store.getYearsSelected],
+  ([months, years]) => {
+    submit();
+  }
 );
 
+function submit() {
+  let cmp1 = cmp_1.value ? cmp_1.value : [];
+  let cmp2 = cmp_2.value ? cmp_2.value : [];
+
+  store.updateElements({
+    files: [cmp1, cmp2],
+    monthsSelected: store.getMonthsSelected,
+    yearsSelected: store.getYearsSelected,
+    sspSelected: store.getSSPSelected,
+  });
+
+  let payload = {
+    files: store.getFiles,
+    months: store.getMonthsSelected,
+    years: store.getYearsSelected,
+    ssp: store.getSSPSelected,
+  };
+  loading.value = true;
+  fetchMapData(payload).then(() => {
+    draw();
+    loading.value = false;
+  });
+}
+
 async function fetchMapData(payload) {
-  const data = await API.fetchData(`get_difference`, true, payload);
-  bottomText.value = `Comparing ${payload.files[0][0]} and ${payload.files[1][0]}`;
-  const mapData = data.difference
+  // No files are selected
+  if (payload.files[0].length == 0 && payload.files[1].length == 0) {
+    return;
+  }
+  data = await API.fetchData(`get_difference`, true, payload);
+}
+
+async function draw() {
+  let color;
+  // bottomText.value = `Comparing ${payload.files[0][0]} and ${payload.files[1][0]}`;
+  let subset;
+  if (selectedMode.value == "Difference") {
+    subset = data.difference;
+    color = colorInterpDifference;
+  } else if (selectedMode.value == "Group 1 Mean") {
+    subset = data.cmp_1;
+    color = colorInterp;
+  } else if (selectedMode.value == "Group 2 Mean") {
+    subset = data.cmp_2;
+    color = colorInterp;
+  }
+
+  const mapData = subset
     .map((d, index) => {
       return {
         val: d,
+        color: color(d),
         lon: longitudes[index % longitudes.length],
         lat: latitudes[Math.floor(index / longitudes.length)],
       };
     })
     .filter((d) => d.val != 0);
 
-  const colorInterp = (value) =>
-    interpolateRdBu(
-      scaleLinear().domain([-0.0005, 0.0005]).range([1, 0])(value)
-    )
-      .replace(/[^\d,]/g, "")
-      .split(",")
-      .map((d) => Number(d));
-
-  // let scatterplotlayer = new ScatterplotLayer({
-  //     data: "https://raw.githubusercontent.com/visgl/deck.gl-data/master/website/airports.json",
-  //     getPosition: (d) => d.coordinates,
-  //     getRadius: 100,
-  //     getColor: [155, 40, 0],
-  //     radiusMinPixels: 2,
-  // });
   let scatterplotlayer = new ScatterplotLayer({
     id: "scatterplot-layer",
     data: mapData,
@@ -151,15 +241,12 @@ async function fetchMapData(payload) {
     // radiusScale: 100,
     getRadius: 1500,
     radiusScale: 1,
-    getFillColor: (d) => {
-      return colorInterp(d.val);
-    },
+    getFillColor: (d) => d.color,
   });
 
   deck.setProps({
     layers: [scatterplotlayer],
   });
-  //   bottomText.value = name;
 }
 
 async function fetchMapDimensions() {

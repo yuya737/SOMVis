@@ -54,7 +54,7 @@ export class NodeLayer extends AbstractLayerGenerator {
         }),
       ];
     }
-    // this.layerList = ret;
-    return [];
+    this.layerList = ret;
+    return ret;
   }
 }

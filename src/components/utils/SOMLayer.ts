@@ -7,7 +7,12 @@ import {
 import { DataFilterExtension } from "@deck.gl/extensions";
 import { HeatmapLayer } from "@deck.gl/aggregation-layers";
 // import type { LayersList } from "deck.gl/typed";
-import { colorSim, getModelType, pointsToCurve } from "./utils";
+import {
+  colorSim,
+  getModelType,
+  pointsToCurve,
+  generateMonthRangeList,
+} from "./utils";
 
 import { AbstractLayerGenerator } from "./AbstractLayerGenerator";
 import { watch } from "vue";
@@ -30,26 +35,6 @@ export class SOMLayer extends AbstractLayerGenerator {
   needsToRedraw: boolean = false;
   layerList: any = null;
 
-  _generateMonthRange() {
-    this.selectedMonthRangeList = [];
-    if (this.selectedMonthRange.value[0] <= this.selectedMonthRange.value[1]) {
-      for (
-        let i = this.selectedMonthRange.value[0];
-        i <= this.selectedMonthRange.value[1];
-        i++
-      ) {
-        this.selectedMonthRangeList.push(i);
-      }
-    } else {
-      for (let i = 1; i <= this.selectedMonthRange.value[1]; i++) {
-        this.selectedMonthRangeList.push(i);
-      }
-      for (let i = this.selectedMonthRange.value[0]; i <= 12; i++) {
-        this.selectedMonthRangeList.push(i);
-      }
-    }
-  }
-
   // constructor(coords, name: string, timeRange: any, monthRange: any) {
   constructor(data, timeRange, monthRange, model) {
     super();
@@ -57,7 +42,10 @@ export class SOMLayer extends AbstractLayerGenerator {
     this.selectedTimeRange = timeRange;
     this.selectedMonthRange = monthRange;
     this.selectedModel = model;
-    this._generateMonthRange();
+    this.selectedMonthRangeList = generateMonthRangeList(
+      this.selectedMonthRange.value[0],
+      this.selectedMonthRange.value[1]
+    );
 
     let modelMonthDict = {};
     Object.keys(data).forEach((k) => {
@@ -126,7 +114,10 @@ export class SOMLayer extends AbstractLayerGenerator {
       [this.selectedTimeRange, this.selectedMonthRange, this.selectedModel],
       () => {
         //   console.log("Redrawing", newval);
-        this._generateMonthRange();
+        this.selectedMonthRangeList = generateMonthRangeList(
+          this.selectedMonthRange.value[0],
+          this.selectedMonthRange.value[1]
+        );
         this.needsToRedraw = true;
       }
     );
