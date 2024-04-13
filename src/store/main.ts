@@ -30,6 +30,9 @@ export const useStore = defineStore("main", {
     },
   },
   actions: {
+    setFiles(files) {
+      this.files = files;
+    },
     updateElements({ files, monthsSelected, yearsSelected, sspSelected }) {
       this.files = files;
       this.monthsSelected = monthsSelected;

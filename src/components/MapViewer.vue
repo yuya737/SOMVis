@@ -175,6 +175,11 @@ watch(
 );
 
 watch(
+  () => store.getFiles,
+  (files) => console.log(files)
+);
+
+watch(
   () => store.getHoveredFile,
   (file) => {
     drawLayer(data2?.[file], colorInterp);

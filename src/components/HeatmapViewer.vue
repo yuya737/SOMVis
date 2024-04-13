@@ -50,17 +50,17 @@ async function draw() {
   let svgHeatmap = make_heatmap(distances);
   console.log("SDF", svgHeatmap);
   let svgDendrogram = make_dendrogram({
-    width:
-      document.getElementById("my_dataviz").clientWidth -
-      document.getElementById("my_dataviz").clientHeight -
-      150,
+    // width:
+    //   document.getElementById("my_dataviz").clientWidth -
+    //   document.getElementById("my_dataviz").clientHeight -
+    //   150,
     height: document.getElementById("my_dataviz").clientHeight,
     yLabel: "Distance",
     strokeWidth: 5,
   });
   console.log("Files, years, or months changed. Redrawing heatmap.");
   document.getElementById("my_dataviz").innerHTML = "";
-  document.getElementById("my_dataviz").appendChild(svgHeatmap);
+  // document.getElementById("my_dataviz").appendChild(svgHeatmap);
   document.getElementById("my_dataviz").appendChild(svgDendrogram);
 }
 
@@ -96,8 +96,24 @@ function make_dendrogram(options = {}) {
     stroke-opacity: 1 !important;
     stroke-width: 6px;
   }
+  .link--active--class1{
+    stroke: #7fc97f !important;
+    stroke-opacity: 1 !important;
+    stroke-width: 6px;
+  }
+  .link--active--class2{
+    stroke: #beaed4 !important;
+    stroke-opacity: 1 !important;
+    stroke-width: 6px;
+  }
   .label--active {
     font-weight: bold;
+  }
+  .label--active--class1{
+    fill: #7fc97f !important;
+  }
+  .label--active--class2{
+    fill: #beaed4 !important;
   }
   .cmp--node--active {
     r: 10;
@@ -186,13 +202,26 @@ function make_dendrogram(options = {}) {
     .selectAll("path")
     .data(root.links())
     .join("path")
-    .each(function (d) {
-      d.target.linkNode = this;
+    .each(function (d, i) {
+      d.source.linkNodeFrom = this;
+      d.target.linkNodeTo = this;
+      d.source.index = i;
     })
     .attr("d", elbow)
     .attr("transform", `translate(${paddingLeft}, ${hideLabels ? 20 : 0})`);
 
-  debugger;
+  let temp = {};
+  root.links().forEach((d) => {
+    let id = d.source.index;
+    if (id in temp) {
+      temp[id].push(d.target);
+    } else {
+      temp[id] = [d.target];
+    }
+  });
+  console.log(root.links());
+  console.log(temp);
+
   svg
     .append("g")
     .selectAll("circle")
@@ -211,16 +240,31 @@ function make_dendrogram(options = {}) {
         ])
     )
     .on("mouseover", function (event, d) {
-      d3.select(d.target.linkNode).classed("link--active", true);
+      classAllLinksBelow(temp[d.source.index][0], "class1", true);
+      classAllLinksBelow(temp[d.source.index][1], "class2", true);
       d3.select(this).classed("cmp--node--active", true);
     })
     .on("mouseout", function (event, d) {
-      console.log(d.target);
-      d3.select(d.target.linkNode).classed("link--active", false);
+      classAllLinksBelow(temp[d.source.index][0], "class1", false);
+      classAllLinksBelow(temp[d.source.index][1], "class2", false);
       d3.select(this).classed("cmp--node--active", false);
+    })
+    .on("click", function (event, d) {
+      store.setFiles(d.children);
     });
 
   console.log(root.links());
+
+  function classAllLinksBelow(node, className, active) {
+    d3.select(node.linkNodeTo).classed("link--active--" + className, active);
+    if (node.children) {
+      classAllLinksBelow(node.children[0], className, active);
+      classAllLinksBelow(node.children[1], className, active);
+    } else {
+      d3.select(node.svg).classed("label--active--" + className, active);
+      // d3.select(node.svg).style("fill", "red");
+    }
+  }
 
   function getChildren(node, listSoFar = []) {
     if (node.children) {
@@ -248,6 +292,7 @@ function make_dendrogram(options = {}) {
     .each(function (d) {
       d.data.text = labels[d.data.index];
       d.data.fullText = fullLabels[d.data.index];
+      d.svg = this;
     })
     .attr(
       "transform",
@@ -300,9 +345,11 @@ function highlight(active) {
     }
 
     let dendrogramLeaf = d3.select("text#node" + d).data()[0];
-    d3.select(dendrogramLeaf.linkNode).classed("link--active", active).raise();
+    d3.select(dendrogramLeaf.linkNodeTo)
+      .classed("link--active", active)
+      .raise();
     do
-      d3.select(dendrogramLeaf.linkNode)
+      d3.select(dendrogramLeaf.linkNodeTo)
         .classed("link--active", active)
         .raise();
     while ((d = d.parent));
