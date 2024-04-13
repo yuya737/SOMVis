@@ -10,11 +10,6 @@
       :bearing="bearing"
       :pitch="pitch"
     />
-    <!-- <div
-      class="relative bottom-10 left-1/2 z-[3] w-fit -translate-x-1/2 -translate-y-1/2 transform rounded-md bg-gray-200 p-4 text-lg font-bold text-black"
-    >
-      {{ bottomText }}
-    </div> -->
     <div
       class="absolute bottom-0 h-32 items-center justify-around px-32 w-full flex flex-col"
     >
@@ -93,6 +88,7 @@ const token: string =
 let latitudes: number[] = [];
 let longitudes: number[] = [];
 let data: any = null;
+let data2: any = null;
 
 // const data_type = "LOCA";
 // // const data_type = "CMIP6";
@@ -159,6 +155,14 @@ onMounted(() => {
       },
     });
   });
+  let payload = {
+    files: ssp370Labels,
+    months: store.getMonthsSelected,
+    years: store.getYearsSelected,
+    ssp: store.getSSPSelected,
+  };
+  console.log(payload);
+  fetchMapData(payload);
 });
 
 const store = useStore();
@@ -167,6 +171,13 @@ watch(
   () => [store.getMonthsSelected, store.getYearsSelected],
   ([months, years]) => {
     submit();
+  }
+);
+
+watch(
+  () => store.getHoveredFile,
+  (file) => {
+    drawLayer(data2?.[file], colorInterp);
   }
 );
 
@@ -199,7 +210,12 @@ async function fetchMapData(payload) {
   if (payload.files[0].length == 0 && payload.files[1].length == 0) {
     return;
   }
-  data = await API.fetchData(`get_difference`, true, payload);
+  // data = await API.fetchData(`get_difference`, true, payload);
+  data2 = await API.fetchData(`get_all_means`, true, {
+    files: ssp370Labels.map((d) => stripSOMprefix(d)),
+    months: payload.months,
+    years: payload.years,
+  });
 }
 
 async function draw() {
@@ -222,6 +238,46 @@ async function draw() {
       return {
         val: d,
         color: color(d),
+        lon: longitudes[index % longitudes.length],
+        lat: latitudes[Math.floor(index / longitudes.length)],
+      };
+    })
+    .filter((d) => d.val != 0);
+
+  let scatterplotlayer = new ScatterplotLayer({
+    id: "scatterplot-layer",
+    data: mapData,
+    // pickable: true,
+    opacity: 1,
+    // stroked: true,
+    // filled: true,
+    getPosition: (d: any) => [d.lon, d.lat],
+    // getRadius: (d: any) => 70000,
+    // radiusMinPixels: 2,
+    // radiusScale: 100,
+    getRadius: 1500,
+    radiusScale: 1,
+    getFillColor: (d) => d.color,
+  });
+
+  deck.setProps({
+    layers: [scatterplotlayer],
+  });
+}
+
+function drawLayer(data, cmap) {
+  if (!data) {
+    deck.setProps({
+      layers: [],
+    });
+    return;
+  }
+  data = data.flat();
+  const mapData = data
+    .map((d, index) => {
+      return {
+        val: d,
+        color: cmap(d),
         lon: longitudes[index % longitudes.length],
         lat: latitudes[Math.floor(index / longitudes.length)],
       };

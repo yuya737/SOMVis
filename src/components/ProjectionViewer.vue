@@ -125,8 +125,8 @@ const deckglCanvas = `deck-canvas-projection-viewer-${Math.random()}`;
 
 const imgSrc = ref("");
 const timeRange = ref([0, props.isHistorical ? 64 : 85]);
-const monthTemp1 = ref("July");
-const monthTemp2 = ref("July");
+const monthTemp1 = ref("December");
+const monthTemp2 = ref("December");
 watch([monthTemp1, monthTemp2], ([m1, m2]) => {
   monthRange.value = [months.indexOf(m1) + 1, months.indexOf(m2) + 1];
 });
@@ -197,7 +197,7 @@ async function initializeLayers() {
   let contourData = await API.fetchData("contours", true, { data: data });
 
   // Set up layer generators
-  let nodeLayerGenerator = new NodeLayer(mappingData, imgSrc, 7, 30);
+  let nodeLayerGenerator = new NodeLayer(mappingData, imgSrc, 13, 30);
   let nodeclassifyLayerGenerator = new NodeClassifyLayer(
     mappingData,
     classifyData,

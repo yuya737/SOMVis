@@ -183,13 +183,13 @@ export const colorMonth = (d) =>
     .map((d) => Number(d));
 
 export const colorInterpDifference = (value) =>
-  interpolateRdBu(scaleLinear().domain([-0.0005, 0.0005]).range([1, 0])(value))
+  interpolateRdBu(scaleLinear().domain([-0.0005, 0.0005]).range([0, 1])(value))
     .replace(/[^\d,]/g, "")
     .split(",")
     .map((d) => Number(d));
 
 export const colorInterp = (value) =>
-  interpolateBlues(scaleLinear().domain([0.02, 0]).range([1, 0])(value))
+  interpolateBlues(scaleLinear().domain([0.001, 0]).range([1, 0])(value))
     .replace(/[^\d,]/g, "")
     .split(",")
     .map((d) => Number(d));

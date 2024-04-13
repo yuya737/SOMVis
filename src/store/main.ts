@@ -5,9 +5,11 @@ export const useStore = defineStore("main", {
   state: () => {
     return {
       files: [[], []], // Assume this is a list of two lists of files that we want to compare, for now
-      monthsSelected: [7], // -1 means all months
+      monthsSelected: [10], // -1 means all months
       yearsSelected: [-1], // -1 means all years
       sspSelected: "historical",
+
+      hoveredFile: null,
     };
   },
   getters: {
@@ -23,6 +25,9 @@ export const useStore = defineStore("main", {
     getSSPSelected() {
       return this.sspSelected;
     },
+    getHoveredFile() {
+      return this.hoveredFile;
+    },
   },
   actions: {
     updateElements({ files, monthsSelected, yearsSelected, sspSelected }) {
@@ -30,6 +35,9 @@ export const useStore = defineStore("main", {
       this.monthsSelected = monthsSelected;
       this.yearsSelected = yearsSelected;
       this.sspSelected = sspSelected;
+    },
+    setHoveredFile(file) {
+      this.hoveredFile = file;
     },
   },
 });

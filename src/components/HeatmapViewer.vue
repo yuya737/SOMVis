@@ -14,10 +14,13 @@ import {
   ssp370Labels,
   historicalLabels,
   getModelType,
+  stripSOMprefix,
   getNodeOrder,
 } from "./utils/utils";
 
 const store = useStore();
+const labels = ssp370Labels.map((i) => getModelType(i));
+const fullLabels = ssp370Labels.map((i) => stripSOMprefix(i));
 let tree;
 
 onMounted(() => {
@@ -47,14 +50,13 @@ async function draw() {
   let svgHeatmap = make_heatmap(distances);
   console.log("SDF", svgHeatmap);
   let svgDendrogram = make_dendrogram({
-    labels: ssp370Labels.map((i) => getModelType(i)),
     width:
       document.getElementById("my_dataviz").clientWidth -
       document.getElementById("my_dataviz").clientHeight -
       150,
     height: document.getElementById("my_dataviz").clientHeight,
     yLabel: "Distance",
-    strokeWidth: 3,
+    strokeWidth: 5,
   });
   console.log("Files, years, or months changed. Redrawing heatmap.");
   document.getElementById("my_dataviz").innerHTML = "";
@@ -77,8 +79,7 @@ function make_dendrogram(options = {}) {
     fontFamily: fontFamily = "sans-serif",
     linkColor: linkColor = "grey",
     fontSize: fontSize = 15,
-    strokeWidth: strokeWidth = 1,
-    labels = [],
+    strokeWidth: strokeWidth = 3,
   } = options;
 
   const svg = d3
@@ -93,10 +94,13 @@ function make_dendrogram(options = {}) {
   .link--active {
     stroke: #000 !important;
     stroke-opacity: 1 !important;
-    stroke-width: 5px;
+    stroke-width: 6px;
   }
   .label--active {
     font-weight: bold;
+  }
+  .cmp--node--active {
+    r: 10;
   }
   .rect--active {
     opacity: 1;
@@ -188,6 +192,47 @@ function make_dendrogram(options = {}) {
     .attr("d", elbow)
     .attr("transform", `translate(${paddingLeft}, ${hideLabels ? 20 : 0})`);
 
+  debugger;
+  svg
+    .append("g")
+    .selectAll("circle")
+    .data(root.links())
+    .join("circle")
+    .attr("r", 6)
+    .attr("cx", (d) => d.source.x)
+    .attr("cy", (d) => transformY(d.source))
+    .attr("transform", `translate(${paddingLeft}, ${hideLabels ? 20 : 0})`)
+    .attr("fill", "black")
+    .each(
+      (d) =>
+        (d.children = [
+          getChildren(d.source.children[0]).map((d) => fullLabels[d]),
+          getChildren(d.source.children[1]).map((d) => fullLabels[d]),
+        ])
+    )
+    .on("mouseover", function (event, d) {
+      d3.select(d.target.linkNode).classed("link--active", true);
+      d3.select(this).classed("cmp--node--active", true);
+    })
+    .on("mouseout", function (event, d) {
+      console.log(d.target);
+      d3.select(d.target.linkNode).classed("link--active", false);
+      d3.select(this).classed("cmp--node--active", false);
+    });
+
+  console.log(root.links());
+
+  function getChildren(node, listSoFar = []) {
+    if (node.children) {
+      getChildren(node.children[0], listSoFar);
+      getChildren(node.children[1], listSoFar);
+    } else {
+      listSoFar.push(node.data.index);
+    }
+    return listSoFar;
+  }
+  // root.links().map((d) => console.log(getNodeOrder(d.source)));
+
   // Nodes
   svg
     .append("g")
@@ -202,29 +247,16 @@ function make_dendrogram(options = {}) {
     .text((d) => labels[d.data.index])
     .each(function (d) {
       d.data.text = labels[d.data.index];
+      d.data.fullText = fullLabels[d.data.index];
     })
     .attr(
       "transform",
       (d) => `translate(${d.x + paddingLeft},${transformY(d)}) rotate(315)`
     )
-    .on("mouseover", mouseovered(true))
-    .on("mouseout", mouseovered(false));
+    .attr("id", (d) => "node" + d.data.text)
+    .on("mouseover", highlight(true))
+    .on("mouseout", highlight(false));
 
-  function mouseovered(active) {
-    return function (event, d) {
-      if (active) {
-        d3.selectAll("rect").style("opacity", "0.2");
-        d3.selectAll("rect#rect" + d.data.text).style("opacity", "1");
-      } else {
-        d3.selectAll("rect").style("opacity", "0.8");
-      }
-
-      d3.select(this).classed("label--active", active);
-      d3.select(d.linkNode).classed("link--active", active).raise();
-      // do d3.select(d.linkNode).classed("link--active", active).raise();
-      // while ((d = d.parent));
-    };
-  }
   svg
     .append("text")
     .attr("x", 0)
@@ -250,6 +282,31 @@ function make_dendrogram(options = {}) {
   }
 
   return svg.node();
+}
+function highlight(active) {
+  return function (event, d) {
+    if (d?.data?.text) {
+      d = d.data.text;
+    }
+    store.setHoveredFile(active ? fullLabels[labels.indexOf(d)] : null);
+    d3.selectAll("text#node" + d).classed("label--active", active);
+    d3.selectAll("text#tick" + d).classed("label--active", active);
+
+    if (active) {
+      d3.selectAll("rect").style("opacity", "0.2");
+      d3.selectAll("rect#rect" + d).style("opacity", "1");
+    } else {
+      d3.selectAll("rect").style("opacity", "0.8");
+    }
+
+    let dendrogramLeaf = d3.select("text#node" + d).data()[0];
+    d3.select(dendrogramLeaf.linkNode).classed("link--active", active).raise();
+    do
+      d3.select(dendrogramLeaf.linkNode)
+        .classed("link--active", active)
+        .raise();
+    while ((d = d.parent));
+  };
 }
 
 function make_heatmap(distances) {
@@ -293,6 +350,23 @@ function make_heatmap(distances) {
     // .attr("transform", `translate(${margin.left}, ${margin.top})`)
     .attr("id", "heatmap");
 
+  svg.append("style").text(`
+  .link--active {
+    stroke: #000 !important;
+    stroke-opacity: 1 !important;
+    stroke-width: 5px;
+  }
+  .label--active {
+    font-weight: bold;
+  }
+  .rect--active {
+    opacity: 1;
+  }
+  .rect--inactive {
+    opacity: 0.2;
+  }
+  }`);
+
   tree = agnes(distances, {
     method: "average",
   });
@@ -327,12 +401,17 @@ function make_heatmap(distances) {
     .range([0, height])
     .domain(labelsReordered.map((i) => getModelType(i)))
     .padding(0.05);
-  svg
+  const yAxis = svg
     .append("g")
     .style("font-size", 15)
-    .call(d3.axisLeft(y).tickSize(0))
-    .select(".domain")
-    .remove();
+    .call(d3.axisLeft(y).tickSize(0));
+
+  yAxis
+    .selectAll(".tick text") // Select all tick elements
+    .attr("id", (d) => "tick" + d)
+    .on("mouseover", highlight(true))
+    .on("mouseleave", highlight(false));
+  yAxis.select(".domain").remove();
 
   // Build color scale
   const myColor = d3
@@ -354,21 +433,21 @@ function make_heatmap(distances) {
     .style("position", "absolute")
     .style("width", "fit-content");
 
-  // Three function that change the tooltip when user hover / move / leave a cell
-  const mouseover = function (event, d) {
-    tooltip.style("opacity", 1).style("z-index", 1);
-    d3.select(this).style("stroke", "black").style("opacity", 1);
-  };
-  const mousemove = function (event, d) {
-    tooltip
-      .html("Cell is: " + d.value)
-      .style("left", event.clientX + "px")
-      .style("top", event.clientY + "px");
-  };
-  const mouseleave = function (event, d) {
-    tooltip.style("opacity", 0).style("z-index", -1);
-    d3.select(this).style("stroke", "none").style("opacity", 0.8);
-  };
+  // // Three function that change the tooltip when user hover / move / leave a cell
+  // const mouseover = function (event, d) {
+  //   tooltip.style("opacity", 1).style("z-index", 1);
+  //   d3.select(this).style("stroke", "black").style("opacity", 1);
+  // };
+  // const mousemove = function (event, d) {
+  //   tooltip
+  //     .html("Cell is: " + d.value)
+  //     .style("left", event.clientX + "px")
+  //     .style("top", event.clientY + "px");
+  // };
+  // const mouseleave = function (event, d) {
+  //   tooltip.style("opacity", 0).style("z-index", -1);
+  //   d3.select(this).style("stroke", "none").style("opacity", 0.8);
+  // };
 
   // add the squares
   svg
@@ -393,9 +472,9 @@ function make_heatmap(distances) {
     .style("stroke-width", 4)
     .style("stroke", "none")
     .style("opacity", 0.8)
-    .on("mouseover", mouseover)
-    .on("mousemove", mousemove)
-    .on("mouseleave", mouseleave)
+    // .on("mouseover", mouseover)
+    // .on("mousemove", mousemove)
+    // .on("mouseleave", mouseleave)
     .attr("id", function (d) {
       return "rect" + d.row;
     });
