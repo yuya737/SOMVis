@@ -3,15 +3,23 @@ import {
   PathLayer,
   TextLayer,
   CompositeLayer,
+  GridCellLayer,
 } from "@deck.gl/layers";
 import { DataFilterExtension } from "@deck.gl/extensions";
 import { HeatmapLayer } from "@deck.gl/aggregation-layers";
-// import type { LayersList } from "deck.gl/typed";
+import { interpolateGreens } from "d3-scale-chromatic";
+import { interpolateRgb } from "d3-interpolate";
+import { interpolateRdBu } from "d3-scale-chromatic";
+import { scaleLinear } from "d3-scale";
+import PlotLayer from "@/components/layers/plot-layer";
+import kde2d from "@stdlib/stats-kde2d";
+
 import {
   colorSim,
   getModelType,
   pointsToCurve,
   generateMonthRangeList,
+  hexToRgb,
 } from "./utils";
 
 import { AbstractLayerGenerator } from "./AbstractLayerGenerator";
@@ -28,24 +36,31 @@ export class SOMLayer extends AbstractLayerGenerator {
   // readonly month_divided_data: any;
   readonly modelMonthDict: any;
   readonly blockedCenterofMassData: any;
-  readonly heatmapData: any;
+  readonly BMUData: any;
 
   // Need to have two ranges for the heatmap to account for Dec-Feb type queries that wrap around the year
   selectedMonthRangeList: any = [];
   needsToRedraw: boolean = false;
   layerList: any = null;
+  extent: any = [[], []];
+  mode: string = "single"; // either single or compare
 
   // constructor(coords, name: string, timeRange: any, monthRange: any) {
-  constructor(data, timeRange, monthRange, model) {
+  constructor(data, timeRange, monthRange, model, extent) {
     super();
     this.data = data;
     this.selectedTimeRange = timeRange;
     this.selectedMonthRange = monthRange;
     this.selectedModel = model;
+    this.extent = extent;
     this.selectedMonthRangeList = generateMonthRangeList(
       this.selectedMonthRange.value[0],
       this.selectedMonthRange.value[1]
     );
+    // If two sets of models are selected, then we are in compare mode
+    this.selectedModel.value[1].length > 1
+      ? (this.mode = "compare")
+      : (this.mode = "single");
 
     let modelMonthDict = {};
     Object.keys(data).forEach((k) => {
@@ -95,7 +110,7 @@ export class SOMLayer extends AbstractLayerGenerator {
       )
       .flat();
 
-    this.heatmapData = Object.entries(this.modelMonthDict)
+    this.BMUData = Object.entries(this.modelMonthDict)
       .map(([model, monthDividedData]) =>
         monthDividedData.map((d) =>
           d.scatter.map((e, i) => {
@@ -109,15 +124,18 @@ export class SOMLayer extends AbstractLayerGenerator {
         )
       )
       .flat(2);
-    // Trigger reddsraw when timeRange changes
+    // Trigger redraw when things changes
     watch(
       [this.selectedTimeRange, this.selectedMonthRange, this.selectedModel],
       () => {
-        //   console.log("Redrawing", newval);
         this.selectedMonthRangeList = generateMonthRangeList(
           this.selectedMonthRange.value[0],
           this.selectedMonthRange.value[1]
         );
+        console.log(this.selectedModel.value);
+        this.selectedModel.value[1].length > 0
+          ? (this.mode = "compare")
+          : (this.mode = "single");
         this.needsToRedraw = true;
       }
     );
@@ -158,105 +176,171 @@ export class SOMLayer extends AbstractLayerGenerator {
     return ret;
   }
 
+  _subsetData() {
+    const selectData = (files) => {
+      let curBMUData = this.BMUData;
+      if (!files.includes("All")) {
+        // curBlockedCenterofMass = this.blockedCenterofMassData.filter((d) =>
+        //   this.selectedModel.value.includes(d.name)
+        // );
+        curBMUData = this.BMUData.filter((d) => files.includes(d.name));
+      }
+      // curBlockedCenterofMass = curBlockedCenterofMass.filter((d) =>
+      //   this.selectedMonthRangeList.includes(d.month)
+      // );
+      curBMUData = curBMUData.filter(
+        (d) =>
+          this.selectedMonthRangeList.includes(d.month) &&
+          d.year >= this.selectedTimeRange.value[0] &&
+          d.year <= this.selectedTimeRange.value[1]
+      );
+      return curBMUData;
+    };
+
+    let curBMUData;
+    if (this.mode === "single") {
+      curBMUData = selectData(this.selectedModel.value[0]);
+    } else {
+      // compare mode
+      curBMUData = [
+        selectData(this.selectedModel.value[0]),
+        selectData(this.selectedModel.value[1]),
+      ];
+    }
+    return curBMUData;
+  }
+
+  _getFreq(curBMUData) {
+    const countFrequecy = (arr) => {
+      let freq = {};
+      arr.forEach((d) => {
+        if (d.coords in freq) {
+          freq[d.coords] += 1;
+        } else {
+          freq[d.coords] = 1;
+        }
+      });
+      return Object.entries(freq)
+        .map((d) => [
+          d[0].split(",").map((d) => parseFloat(d)),
+          d[1] / arr.length,
+        ])
+        .filter((d) => d[1] > 0.01);
+    };
+    let freq;
+    if (this.mode == "single") {
+      freq = countFrequecy(curBMUData);
+    } else {
+      console.log("Calculating freq for compare mode");
+      let g1 = countFrequecy(curBMUData[0]).map((d) => {
+        return { ...d, group: "group1" };
+      });
+      let g2 = countFrequecy(curBMUData[1]).map((d) => {
+        return { ...d, group: "group2" };
+      });
+      // concat the two groups
+      freq = g1.concat(g2);
+
+      // g1.forEach((d) => (freq[d[0]] = d[1]));
+      // g2.forEach((d) => {
+      //   if (d[0] in freq) {
+      //     freq[d[0]] -= d[1];
+      //   } else {
+      //     freq[d[0]] = -d[1];
+      //   }
+      // });
+      // freq = Object.entries(freq).map((d) => [
+      //   d[0].split(",").map((d) => parseFloat(d)),
+      //   d[1],
+      // ]);
+    }
+    return freq;
+  }
+
   getLayers() {
     if (this.layerList && !this.needsToRedraw) {
       return this.layerList;
     }
-    console.log(
-      "Drawing",
-      this.selectedModel.value,
-      this.selectedMonthRange.value,
-      this.selectedTimeRange.value
-    );
+    let ret = [];
+    // console.log(
+    //   "Drawing",
+    //   this.selectedModel.value,
+    //   this.selectedMonthRange.value,
+    //   this.selectedTimeRange.value
+    // );
+    let curBMUData = this._subsetData();
+    let freq = this._getFreq(curBMUData);
 
-    let curBlockedCenterofMass = this.blockedCenterofMassData;
-    let curHeatmapData = this.heatmapData;
+    // console.log(curHeatmapData);
 
-    //TODO: If cateogry filtering hits stable release, this should be implemented with it
-    if (!this.selectedModel.value.includes("All")) {
-      curBlockedCenterofMass = this.blockedCenterofMassData.filter((d) =>
-        this.selectedModel.value.includes(d.name)
-      );
-      curHeatmapData = this.heatmapData.filter((d) =>
-        this.selectedModel.value.includes(d.name)
-      );
-    }
-    curBlockedCenterofMass = curBlockedCenterofMass.filter((d) =>
-      this.selectedMonthRangeList.includes(d.month)
-    );
-    curHeatmapData = curHeatmapData.filter((d) =>
-      this.selectedMonthRangeList.includes(d.month)
-    );
-    console.log(this.selectedMonthRangeList);
-
-    let monthlyCOMPath = new PathLayer({
-      id: `curve-monthly-com-path`,
-      // data: this.blockedCenterofMass,
-      data: curBlockedCenterofMass,
-      positionFormat: "XY",
-      getPath: (d) => pointsToCurve(d.path).flat(),
-      getColor: (d) => [...colorSim(d.name), 125],
-      getWidth: 0.1,
-      // opacity: (d) => 0.1 * d.decade,
-      // d.name.includes("historical") ? [255, 0, 0] : [0, 0, 255],
-      getRadius: 0.2,
-      pickable: true,
-      autoHighlight: true,
-      onHover: (info, event) => {
-        // imgSrc.value = `http://localhost:5002/node_images/${info.object.id}.png`;
-        // console.log("Clicked:", info.object, event);
-      },
-      getFilterValue: (d) => d.month,
-      filterRange: [
-        this.selectedMonthRange.value[0],
-        this.selectedMonthRange.value[1],
-      ],
-      // getFilterCategory: (d) => getModelType(d.name),
-      // filterCategories: ["ACCESS-CM2", "CNRM-ESM2-1"],
-      // getFilterCategory: (d) => d.name,
-      // filterCategories: ["ACCESS-CM2"],
-      onFilteredItemsChange: (e) => {
-        console.log("Filtered", e);
-      },
-      extensions: [
-        new DataFilterExtension({
-          filterSize: 1,
-          countItems: true,
-        }),
-        // new DataFilterExtension({ categorySize: 1, countItems: true }),
-      ],
-    });
-    let blockedMonthlyCOMScatter = new ScatterplotLayer({
-      id: `curve-blocked-com-center`,
-      data: curBlockedCenterofMass
-        .map((d) =>
-          d.path.map((e) => {
-            return {
-              coords: e,
-              month: d.month,
-              name: getModelType(d.name),
-            };
-          })
-        )
-        .flat(),
-      getPosition: (d) => d.coords,
-      // getColor: (d) => [
-      //     ...colorSim(getModelType(d.name)),
-      //     (255 / 10) * d.block + 30,
-      // ],
-      getRadius: 0.1,
-      extensions: [new DataFilterExtension({ filterSize: 1 })],
-      getFilterValue: (d) => d.month,
-      filterRange: [
-        this.selectedMonthRange.value[0],
-        this.selectedMonthRange.value[1],
-      ],
-      // getFilterCategory: (d) => {
-      //     console.log(d);
-      //     return d.name;
-      // },
-      // filterCategories: [this.selectedModel.value],
-    });
+    // let monthlyCOMPath = new PathLayer({
+    //   id: `curve-monthly-com-path`,
+    //   // data: this.blockedCenterofMass,
+    //   data: curBlockedCenterofMass,
+    //   positionFormat: "XY",
+    //   getPath: (d) => pointsToCurve(d.path).flat(),
+    //   getColor: (d) => [...colorSim(d.name), 125],
+    //   getWidth: 0.1,
+    //   // opacity: (d) => 0.1 * d.decade,
+    //   // d.name.includes("historical") ? [255, 0, 0] : [0, 0, 255],
+    //   getRadius: 0.2,
+    //   pickable: true,
+    //   autoHighlight: true,
+    //   onHover: (info, event) => {
+    //     // imgSrc.value = `http://localhost:5002/node_images/${info.object.id}.png`;
+    //     // console.log("Clicked:", info.object, event);
+    //   },
+    //   getFilterValue: (d) => d.month,
+    //   filterRange: [
+    //     this.selectedMonthRange.value[0],
+    //     this.selectedMonthRange.value[1],
+    //   ],
+    //   // getFilterCategory: (d) => getModelType(d.name),
+    //   // filterCategories: ["ACCESS-CM2", "CNRM-ESM2-1"],
+    //   // getFilterCategory: (d) => d.name,
+    //   // filterCategories: ["ACCESS-CM2"],
+    //   onFilteredItemsChange: (e) => {
+    //     console.log("Filtered", e);
+    //   },
+    //   extensions: [
+    //     new DataFilterExtension({
+    //       filterSize: 1,
+    //       countItems: true,
+    //     }),
+    //     // new DataFilterExtension({ categorySize: 1, countItems: true }),
+    //   ],
+    // });
+    // let blockedMonthlyCOMScatter = new ScatterplotLayer({
+    //   id: `curve-blocked-com-center`,
+    //   data: curBlockedCenterofMass
+    //     .map((d) =>
+    //       d.path.map((e) => {
+    //         return {
+    //           coords: e,
+    //           month: d.month,
+    //           name: getModelType(d.name),
+    //         };
+    //       })
+    //     )
+    //     .flat(),
+    //   getPosition: (d) => d.coords,
+    //   // getColor: (d) => [
+    //   //     ...colorSim(getModelType(d.name)),
+    //   //     (255 / 10) * d.block + 30,
+    //   // ],
+    //   getRadius: 0.1,
+    //   extensions: [new DataFilterExtension({ filterSize: 1 })],
+    //   getFilterValue: (d) => d.month,
+    //   filterRange: [
+    //     this.selectedMonthRange.value[0],
+    //     this.selectedMonthRange.value[1],
+    //   ],
+    //   // getFilterCategory: (d) => {
+    //   //     console.log(d);
+    //   //     return d.name;
+    //   // },
+    //   // filterCategories: [this.selectedModel.value],
+    // });
     // debugger;
     // let cd = [50, 175].map(
     //   (d) =>
@@ -272,32 +356,199 @@ export class SOMLayer extends AbstractLayerGenerator {
     //         65)
     // );
 
-    let cd = [curHeatmapData.length, curHeatmapData.length * 2];
-    console.log(curHeatmapData);
-    let heatmap = new HeatmapLayer({
-      id: "curve-heatmap",
-      data: curHeatmapData,
-      // data: [{ coords: [0, 0], name: "ACCESS-CM2", month: 1, year: 0 }],
-      getPosition: (d) => d.coords,
-      radiusPixels: 120,
-      debounceTimeout: 750,
-      opacity: 0.7,
-      weightsTextureSize: 256,
-      // threshold: 0.2,
-      colorDomain: cd,
-      // colorDomain: [50, 150],
-      // aggregation: "MEAN",
-      // extensions: [new DataFilterExtension({ filterSize: 1, categorySize: 1 })],
-      getFilterValue: (d) => d.year,
-      // getFilterCategory: (d) => d.month,
-      // filterCategories: ["1"],
-      filterRange: [
-        // [this.selectedMonthRange.value[0], this.selectedMonthRange.value[1]],
-        this.selectedTimeRange.value[0],
-        this.selectedTimeRange.value[1],
-      ],
-      extensions: [new DataFilterExtension({ filterSize: 1 })],
+    // let cd = [curHeatmapData.length, curHeatmapData.length * 2];
+    // console.log(curHeatmapData);
+
+    // let heatmap = new HeatmapLayer({
+    //   id: "curve-heatmap",
+    //   data: curHeatmapData,
+    //   // data: [{ coords: [0, 0], name: "ACCESS-CM2", month: 1, year: 0 }],
+    //   getPosition: (d) => d.coords,
+    //   radiusPixels: 120,
+    //   debounceTimeout: 750,
+    //   opacity: 0.7,
+    //   weightsTextureSize: 256,
+    //   // threshold: 0.2,
+    //   colorDomain: cd,
+    //   // colorDomain: [50, 150],
+    //   // aggregation: "MEAN",
+    //   // extensions: [new DataFilterExtension({ filterSize: 1, categorySize: 1 })],
+    //   getFilterValue: (d) => d.year,
+    //   // getFilterCategory: (d) => d.month,
+    //   // filterCategories: ["1"],
+    //   filterRange: [
+    //     // [this.selectedMonthRange.value[0], this.selectedMonthRange.value[1]],
+    //     this.selectedTimeRange.value[0],
+    //     this.selectedTimeRange.value[1],
+    //   ],
+    //   extensions: [new DataFilterExtension({ filterSize: 1 })],
+    // });
+
+    let gridcell = new GridCellLayer({
+      id: "grid-cell-layer",
+      data: freq,
+      getPosition: (d) => d[0],
+      getElevation: (d) => Math.abs(d[1] * 50),
+      getColor: (d) => {
+        if (this.mode == "single") {
+          return interpolateGreens(d[1] / 0.05)
+            .replace(/[^\d,]/g, "")
+            .split(",")
+            .map((d) => Number(d));
+        } else {
+          return d.group == "group1"
+            ? hexToRgb("#2b9e77")
+            : hexToRgb("#d95f02");
+        }
+      },
+      cellSize: 0.25,
     });
+    // ret = [...ret, gridcell];
+    const resolution = 100;
+    if (this.mode == "single") {
+      let kdeResult = kde2d(
+        curBMUData.map((d) => d.coords[0]),
+        curBMUData.map((d) => d.coords[1]),
+        {
+          n: resolution,
+          h: [1, 1],
+        }
+      );
+
+      // Print the sum
+      // let maxValue = Math.max(...kdeResult.z._buffer);
+      let heightMultiplier = 700;
+      console.log(kdeResult);
+
+      ret = [
+        ...ret,
+        new PlotLayer({
+          getPosition: (u, v) => {
+            return [
+              kdeResult.x[parseInt(u * (resolution - 1))],
+              kdeResult.z._buffer[
+                parseInt(
+                  u * resolution * (resolution - 1) + v * (resolution - 1)
+                )
+              ] * heightMultiplier,
+              kdeResult.y[parseInt(v * (resolution - 1))],
+            ];
+          },
+          // getColor: (x, z, y) => [40, interpolateGreens(z/15), 160, (z / 15) * 255],
+          getColor: (x, z, y) => {
+            let t = interpolateGreens(
+              scaleLinear().domain([0, 15]).range([0, 1])(z)
+            )
+              .replace(/[^\d,]/g, "")
+              .split(",")
+              .map((d) => Number(d));
+            t.push((z / 5) * 255);
+            return t;
+          },
+          uCount: resolution,
+          vCount: resolution,
+          drawAxes: false,
+          axesPadding: 0.25,
+          axesColor: [0, 0, 0, 128],
+          pickable: true,
+          updateTriggers: {
+            getPosition: curBMUData,
+          },
+        }),
+      ];
+    } else {
+      console.log("SDFSDF");
+      let kdeResult1 = kde2d(
+        curBMUData[0].map((d) => d.coords[0]),
+        curBMUData[0].map((d) => d.coords[1]),
+        {
+          n: resolution,
+          h: [1, 1],
+        }
+      );
+      let kdeResult2 = kde2d(
+        curBMUData[1].map((d) => d.coords[0]),
+        curBMUData[1].map((d) => d.coords[1]),
+        {
+          n: resolution,
+          h: [1, 1],
+        }
+      );
+      let heightMultiplier = 700;
+
+      ret = [
+        ...ret,
+        new PlotLayer({
+          getPosition: (u, v) => {
+            return [
+              kdeResult1.x[parseInt(u * (resolution - 1))],
+              kdeResult1.z._buffer[
+                parseInt(
+                  u * resolution * (resolution - 1) + v * (resolution - 1)
+                )
+              ] * heightMultiplier,
+              kdeResult1.y[parseInt(v * (resolution - 1))],
+            ];
+          },
+          // getColor: (x, z, y) => [40, interpolateGreens(z/15), 160, (z / 15) * 255],
+          getColor: (x, z, y) => {
+            let t = interpolateRgb(
+              "white",
+              "#1b9e77"
+            )(scaleLinear().domain([0, 15]).range([0, 1])(z))
+              .replace(/[^\d,]/g, "")
+              .split(",")
+              .map((d) => Number(d));
+            t.push((z / 5) * 255);
+            return t;
+          },
+          uCount: resolution,
+          vCount: resolution,
+          drawAxes: false,
+          axesPadding: 0.25,
+          axesColor: [0, 0, 0, 128],
+          pickable: true,
+          updateTriggers: {
+            getPosition: curBMUData,
+          },
+        }),
+        new PlotLayer({
+          getPosition: (u, v) => {
+            return [
+              kdeResult2.x[parseInt(u * (resolution - 1))],
+              kdeResult2.z._buffer[
+                parseInt(
+                  u * resolution * (resolution - 1) + v * (resolution - 1)
+                )
+              ] * heightMultiplier,
+              kdeResult2.y[parseInt(v * (resolution - 1))],
+            ];
+          },
+          // getColor: (x, z, y) => [40, interpolateGreens(z/15), 160, (z / 15) * 255],
+          getColor: (x, z, y) => {
+            let t = interpolateRgb(
+              "white",
+              "#d95f02"
+            )(scaleLinear().domain([0, 15]).range([0, 1])(z))
+              .replace(/[^\d,]/g, "")
+              .split(",")
+              .map((d) => Number(d));
+            t.push((z / 5) * 255);
+            // t.push(255);
+            return t;
+          },
+          uCount: resolution,
+          vCount: resolution,
+          drawAxes: false,
+          axesPadding: 0.25,
+          axesColor: [0, 0, 0, 128],
+          pickable: true,
+          updateTriggers: {
+            getPosition: curBMUData,
+          },
+        }),
+      ];
+    }
     // let heatmap = new ScatterplotLayer({
     //     id: `curve-heatmap`,
     //     data: curHeatmapData.map((d) => {
@@ -349,7 +600,6 @@ export class SOMLayer extends AbstractLayerGenerator {
     // ret = [...ret, te];
     // let ret = [monthlyCOMPath, blockedMonthlyCOMScatter];
     // let ret = [heatmap, monthlyCOMPath];
-    let ret = [heatmap];
     // ret = [...ret, blockedMonthlyCOMScatter];
 
     this.layerList = ret;

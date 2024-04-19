@@ -35,7 +35,7 @@ export function scalePointsToSquare(points, maxWidth = 40, maxHeight = 40) {
   });
 }
 
-function hexToRgb(hex) {
+export function hexToRgb(hex) {
   var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
   return result
     ? [
@@ -189,7 +189,7 @@ export const colorInterpDifference = (value) =>
     .map((d) => Number(d));
 
 export const colorInterp = (value) =>
-  interpolateBlues(scaleLinear().domain([0.001, 0]).range([1, 0])(value))
+  interpolateBlues(scaleLinear().domain([0.008, 0]).range([1, 0])(value))
     .replace(/[^\d,]/g, "")
     .split(",")
     .map((d) => Number(d));
@@ -203,6 +203,7 @@ export const approx = (a, b, epsilon = 0.0001) => Math.abs(a - b) < epsilon;
 
 export const orbitView = new OrbitView({
   id: "main",
+  // orbitAxis: "Y",
   controller: true,
 });
 
@@ -238,7 +239,8 @@ export const DECKGL_SETTINGS = {
   // },
   initialViewState: {
     target: [0, 0, 0],
-    zoom: 6,
+    rotationX: 60,
+    zoom: 5,
   },
 };
 

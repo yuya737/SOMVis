@@ -32,7 +32,7 @@ export class NodeLayer extends AbstractLayerGenerator {
           image: `http://localhost:5002/node_images/${i}.png`,
           // image: image_data.body,
           // image: "https://raw.githubusercontent.com/visgl/deck.gl-data/master/website/sf-districts.png",
-          pickable: true,
+          // pickable: true,
           bounds: [
             // 0, 0,
             this.mappingData[i].coords[0] - 0.4,
@@ -44,7 +44,7 @@ export class NodeLayer extends AbstractLayerGenerator {
           loadOptions: {
             imagebitmap: {
               // Flip the image vertically
-              imageOrientation: "flipY",
+              // imageOrientation: "flipY",
             },
           },
           onClick: (info, event) => {
@@ -54,6 +54,7 @@ export class NodeLayer extends AbstractLayerGenerator {
         }),
       ];
     }
+    // return [];
     this.layerList = ret;
     return ret;
   }

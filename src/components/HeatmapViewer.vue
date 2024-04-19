@@ -50,17 +50,17 @@ async function draw() {
   let svgHeatmap = make_heatmap(distances);
   console.log("SDF", svgHeatmap);
   let svgDendrogram = make_dendrogram({
-    // width:
-    //   document.getElementById("my_dataviz").clientWidth -
-    //   document.getElementById("my_dataviz").clientHeight -
-    //   150,
+    width:
+      document.getElementById("my_dataviz").clientWidth -
+      document.getElementById("my_dataviz").clientHeight -
+      30,
     height: document.getElementById("my_dataviz").clientHeight,
     yLabel: "Distance",
     strokeWidth: 5,
   });
   console.log("Files, years, or months changed. Redrawing heatmap.");
   document.getElementById("my_dataviz").innerHTML = "";
-  // document.getElementById("my_dataviz").appendChild(svgHeatmap);
+  document.getElementById("my_dataviz").appendChild(svgHeatmap);
   document.getElementById("my_dataviz").appendChild(svgDendrogram);
 }
 
@@ -96,35 +96,68 @@ function make_dendrogram(options = {}) {
     stroke-opacity: 1 !important;
     stroke-width: 6px;
   }
+  .link--active--class0{
+    stroke: #000 !important;
+    stroke-opacity: 1 !important;
+    stroke-width: 6px;
+  }
   .link--active--class1{
-    stroke: #7fc97f !important;
+    stroke: #1b9e77 !important;
     stroke-opacity: 1 !important;
     stroke-width: 6px;
   }
   .link--active--class2{
-    stroke: #beaed4 !important;
+    stroke: #d95f02 !important;
     stroke-opacity: 1 !important;
     stroke-width: 6px;
   }
+  .label--not--active {
+    opacity: 0.2;
+  }
   .label--active {
     font-weight: bold;
+    opacity: 1;
+  }
+  .label--active--class0 {
+    font-weight: bold;
+    opacity: 1;
   }
   .label--active--class1{
-    fill: #7fc97f !important;
+    fill: #1b9e77 !important;
+    opacity: 1;
   }
   .label--active--class2{
-    fill: #beaed4 !important;
+    fill: #d95f02 !important;
+    opacity: 1;
   }
   .cmp--node--active {
     r: 10;
   }
+  .rect--not--active {
+    opacity: 0.2 !important;
+  }
   .rect--active {
-    opacity: 1;
+    opacity: 1 !important;
   }
-  .rect--inactive {
-    opacity: 0.2;
+  .rect--active--class0{
+    stroke: #000 !important;
+    stroke-opacity: 1 !important;
+    stroke-width: 2px !important;
+    opacity: 1 !important;
   }
-  }`);
+  .rect--active--class1{
+    stroke: #1b9e77 !important;
+    stroke-opacity: 1 !important;
+    stroke-width: 2px !important;
+    opacity: 1 !important;
+  }
+  .rect--active--class2{
+    stroke: #d95f02 !important;
+    stroke-opacity: 1 !important;
+    stroke-width: 2px !important;
+    opacity: 1 !important;
+  }
+  `);
 
   var clusterLayout = d3
     .cluster()
@@ -171,8 +204,8 @@ function make_dendrogram(options = {}) {
   svg
     .append("g")
     .attr("transform", `translate(0, ${hideLabels ? 20 : 0})`)
-    .append("g")
-    .attr("class", "axis")
+    // .append("g")
+    // .attr("class", "axis")
     .attr("transform", `translate(${paddingLeft},${hideLabels ? 20 : 0})`)
     .call(yAxisLinear)
     .call((g) => g.select(".domain").remove())
@@ -193,6 +226,20 @@ function make_dendrogram(options = {}) {
     .style("font-family", fontFamily);
 
   // Links
+  console.log(root.links());
+  const temp = [
+    {
+      // source: { x: root.links()[0].target.x, y: root.links()[0].target.y - 20 },
+      source: { ...root.links()[0].source },
+      target: root.links()[0].source,
+    },
+    ...root.links(),
+  ];
+  temp[0].source.data = {
+    children: [temp[0].target.data],
+    height: temp[0].target.data.height * 1.1,
+  };
+  console.log(temp);
   const link = svg
     .append("g")
     .attr("fill", "none")
@@ -200,27 +247,41 @@ function make_dendrogram(options = {}) {
     .attr("stroke-opacity", 0.25)
     .attr("stroke-width", `${strokeWidth}px`)
     .selectAll("path")
-    .data(root.links())
+    .data(temp)
     .join("path")
     .each(function (d, i) {
       d.source.linkNodeFrom = this;
       d.target.linkNodeTo = this;
       d.source.index = i;
     })
+    .on("mouseover", function (event, d) {
+      d3.selectAll('text[id^="tick"]').classed("label--not--active", true);
+      d3.selectAll('rect[id^="rect"]').classed("rect--not--active", true);
+      classForComparison(d.target, "class0", true);
+    })
+    .on("mouseout", function (event, d) {
+      d3.selectAll('text[id^="tick"]').classed("label--not--active", false);
+      d3.selectAll('rect[id^="rect"]').classed("rect--not--active", false);
+      classForComparison(d.target, "class0", false);
+    })
+    .on("click", function (event, d) {
+      store.setFiles([
+        getChildren(d.target).map((d) => stripSOMprefix(ssp370Labels[d])),
+        [],
+      ]);
+    })
     .attr("d", elbow)
     .attr("transform", `translate(${paddingLeft}, ${hideLabels ? 20 : 0})`);
 
-  let temp = {};
+  let nodeToLinksMap = {};
   root.links().forEach((d) => {
     let id = d.source.index;
-    if (id in temp) {
-      temp[id].push(d.target);
+    if (id in nodeToLinksMap) {
+      nodeToLinksMap[id].push(d.target);
     } else {
-      temp[id] = [d.target];
+      nodeToLinksMap[id] = [d.target];
     }
   });
-  console.log(root.links());
-  console.log(temp);
 
   svg
     .append("g")
@@ -240,27 +301,38 @@ function make_dendrogram(options = {}) {
         ])
     )
     .on("mouseover", function (event, d) {
-      classAllLinksBelow(temp[d.source.index][0], "class1", true);
-      classAllLinksBelow(temp[d.source.index][1], "class2", true);
+      d3.selectAll('text[id^="tick"]').classed("label--not--active", true);
+      d3.selectAll('rect[id^="rect"]').classed("rect--not--active", true);
+      classForComparison(nodeToLinksMap[d.source.index][0], "class1", true);
+      classForComparison(nodeToLinksMap[d.source.index][1], "class2", true);
       d3.select(this).classed("cmp--node--active", true);
     })
     .on("mouseout", function (event, d) {
-      classAllLinksBelow(temp[d.source.index][0], "class1", false);
-      classAllLinksBelow(temp[d.source.index][1], "class2", false);
+      // Set all heatmap ticks to inactive
+      d3.selectAll('text[id^="tick"]').classed("label--not--active", false);
+      d3.selectAll('rect[id^="rect"]').classed("rect--not--active", false);
+      classForComparison(nodeToLinksMap[d.source.index][0], "class1", false);
+      classForComparison(nodeToLinksMap[d.source.index][1], "class2", false);
       d3.select(this).classed("cmp--node--active", false);
     })
     .on("click", function (event, d) {
       store.setFiles(d.children);
     });
 
-  console.log(root.links());
-
-  function classAllLinksBelow(node, className, active) {
+  function classForComparison(node, className, active) {
     d3.select(node.linkNodeTo).classed("link--active--" + className, active);
     if (node.children) {
-      classAllLinksBelow(node.children[0], className, active);
-      classAllLinksBelow(node.children[1], className, active);
+      classForComparison(node.children[0], className, active);
+      classForComparison(node.children[1], className, active);
     } else {
+      d3.selectAll("text#tick" + node.data.text).classed(
+        "label--active--" + className,
+        active
+      );
+      d3.selectAll(`rect[id^="rect${node.data.text}:"]`).classed(
+        "rect--active--" + className,
+        active
+      );
       d3.select(node.svg).classed("label--active--" + className, active);
       // d3.select(node.svg).style("fill", "red");
     }
@@ -275,7 +347,6 @@ function make_dendrogram(options = {}) {
     }
     return listSoFar;
   }
-  // root.links().map((d) => console.log(getNodeOrder(d.source)));
 
   // Nodes
   svg
@@ -299,8 +370,8 @@ function make_dendrogram(options = {}) {
       (d) => `translate(${d.x + paddingLeft},${transformY(d)}) rotate(315)`
     )
     .attr("id", (d) => "node" + d.data.text)
-    .on("mouseover", highlight(true))
-    .on("mouseout", highlight(false));
+    .on("mouseover", highlight(true, "class0"))
+    .on("mouseout", highlight(false, "class0"));
 
   svg
     .append("text")
@@ -328,31 +399,54 @@ function make_dendrogram(options = {}) {
 
   return svg.node();
 }
-function highlight(active) {
+function highlight(active, className) {
   return function (event, d) {
     if (d?.data?.text) {
       d = d.data.text;
     }
     store.setHoveredFile(active ? fullLabels[labels.indexOf(d)] : null);
-    d3.selectAll("text#node" + d).classed("label--active", active);
-    d3.selectAll("text#tick" + d).classed("label--active", active);
+    d3.selectAll("text#node" + d).classed(
+      "label--active--" + className,
+      active
+    );
+    d3.selectAll("text#tick" + d).classed(
+      "label--active--" + className,
+      active
+    );
 
-    if (active) {
-      d3.selectAll("rect").style("opacity", "0.2");
-      d3.selectAll("rect#rect" + d).style("opacity", "1");
-    } else {
-      d3.selectAll("rect").style("opacity", "0.8");
-    }
+    d3.selectAll("rect").classed("rect--not--active", active);
+    d3.selectAll(`rect[id^="rect${d}"]`).classed("rect--active", active);
+
+    // if (active) {
+    //   d3.selectAll(`rect[id^="rect${d}"]`).style("opacity", "1");
+    // } else {
+    //   d3.selectAll("rect").style("opacity", "0.8");
+    // }
 
     let dendrogramLeaf = d3.select("text#node" + d).data()[0];
-    d3.select(dendrogramLeaf.linkNodeTo)
-      .classed("link--active", active)
-      .raise();
+    d3.select(dendrogramLeaf.linkNodeTo).classed(
+      "link--active--" + className,
+      active
+    );
     do
-      d3.select(dendrogramLeaf.linkNodeTo)
-        .classed("link--active", active)
-        .raise();
-    while ((d = d.parent));
+      d3.select(dendrogramLeaf.linkNodeTo).classed(
+        "link--active--" + className,
+        active
+      );
+    while ((dendrogramLeaf = dendrogramLeaf.parent));
+  };
+}
+
+function highlightComparison(active, className) {
+  return function (event, d) {
+    d3.selectAll("text#node" + d).classed(
+      "label--active--" + className,
+      active
+    );
+    d3.selectAll("text#tick" + d).classed(
+      "label--active--" + className,
+      active
+    );
   };
 }
 
@@ -456,8 +550,8 @@ function make_heatmap(distances) {
   yAxis
     .selectAll(".tick text") // Select all tick elements
     .attr("id", (d) => "tick" + d)
-    .on("mouseover", highlight(true))
-    .on("mouseleave", highlight(false));
+    .on("mouseover", highlight(true, "class0"))
+    .on("mouseleave", highlight(false, "class0"));
   yAxis.select(".domain").remove();
 
   // Build color scale
@@ -523,7 +617,7 @@ function make_heatmap(distances) {
     // .on("mousemove", mousemove)
     // .on("mouseleave", mouseleave)
     .attr("id", function (d) {
-      return "rect" + d.row;
+      return "rect" + d.row + ":" + d.col;
     });
 
   // Add title to graph

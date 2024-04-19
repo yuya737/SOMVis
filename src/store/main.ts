@@ -8,7 +8,6 @@ export const useStore = defineStore("main", {
       monthsSelected: [10], // -1 means all months
       yearsSelected: [-1], // -1 means all years
       sspSelected: "historical",
-
       hoveredFile: null,
     };
   },

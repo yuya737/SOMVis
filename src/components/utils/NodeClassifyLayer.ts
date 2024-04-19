@@ -53,14 +53,15 @@ export class NodeClassifyLayer extends AbstractLayerGenerator {
       //     positionFormat: "XY",
       //     getColor: (d) => d.color,
       // }),
-      new TextLayer({
-        id: "classify-annotate-layer",
-        fontFamily: "Arial",
-        data: this.contourData,
-        getPosition: (d) => [d.contours[0][0], -d.contours[0][1]],
-        getText: (d) => `Percentile: ${d.percentile}`,
-        getSize: 32,
-      }),
+      // new TextLayer({
+      //   id: "classify-annotate-layer",
+      //   fontFamily: "Arial",
+      //   data: this.contourData,
+      //   getPosition: (d) => [d.contours[0][0], -d.contours[0][1], 0.1],
+      //   getText: (d) => `Percentile: ${d.percentile}`,
+      //   depthTest: false,
+      //   getSize: 32,
+      // }),
       // new ContourLayer({
       //     id: "classify-layer-contour",
       //     data: data,

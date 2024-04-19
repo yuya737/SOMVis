@@ -6,7 +6,7 @@
             "info": "Differece",
             "scales": [
                 {
-                    "variable": "Difference scaled by demand unit area",
+                    "variable": "Difference in precip kg/m2/s",
                     "colorRange": [
                          [172, 32, 47],
                          [213, 96, 80],

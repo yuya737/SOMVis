@@ -24,7 +24,8 @@
           placeholder="Select a model"
           optionLabel="name"
           optionValue="value"
-          class="w-fit z-[4] md:w-14rem"
+          :maxSelectedLabels="3"
+          class="w-full z-[4] md:w-14rem"
         />
         <span class="flex items-center font-bold px-5"> Group 2: </span>
         <MultiSelect
@@ -36,7 +37,8 @@
           placeholder="Select a model"
           optionLabel="name"
           optionValue="value"
-          class="w-fit z-[4]"
+          :maxSelectedLabels="3"
+          class="w-full z-[4] md:w-14rem"
         />
       </div>
       <div
@@ -79,7 +81,7 @@ import {
 } from "./utils/utils";
 
 import { Deck, MapView } from "@deck.gl/core";
-import { ScatterplotLayer } from "deck.gl/typed";
+import { ScatterplotLayer } from "@deck.gl/layers";
 
 let deck: any = null;
 const token: string =
@@ -105,7 +107,7 @@ const options = ref(
     return { name: getModelType(d), value: stripSOMprefix(d) };
   })
 );
-const modeOptions = ref(["Group 1 Mean", "Group 2 Mean", "Difference"]);
+const modeOptions = ref(["Group 1 Mean", "Difference"]);
 const loading = ref(false);
 
 const mapCenter = reactive([0, 0]);
@@ -170,14 +172,52 @@ const store = useStore();
 watch(
   () => [store.getMonthsSelected, store.getYearsSelected],
   ([months, years]) => {
-    submit();
+    data2 = null;
+    let payload = {
+      files: ssp370Labels,
+      months: months,
+      years: years,
+      ssp: store.getSSPSelected,
+    };
+    fetchMapData(payload);
   }
 );
 
 watch(
   () => store.getFiles,
-  (files) => console.log(files)
+  (files) => {
+    let group1Mean = calculateElementWiseMean(
+      files[0].map((d) => data2?.[d].flat())
+    );
+
+    let group2Mean = calculateElementWiseMean(
+      files[1].map((d) => data2?.[d].flat())
+    );
+    if (!group2Mean) {
+      cmp_1.value = files[0];
+      selectedMode.value = "Group 1 Mean";
+      drawLayer(group1Mean, colorInterp);
+    } else {
+      selectedMode.value = "Difference";
+      cmp_1.value = files[0];
+      cmp_2.value = files[1];
+      drawLayer(
+        group1Mean.map((d, i) => d - group2Mean[i]),
+        colorInterpDifference
+      );
+    }
+  }
 );
+
+function calculateElementWiseMean(lists) {
+  if (lists.length === 0 || lists[0] == undefined) return undefined;
+  return lists
+    .reduce(
+      (acc, curr) => acc.map((sum, i) => sum + curr[i]),
+      new Array(lists[0].length).fill(0)
+    )
+    .map((sum) => sum / lists.length);
+}
 
 watch(
   () => store.getHoveredFile,

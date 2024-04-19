@@ -63,7 +63,7 @@ export class AxisLayer extends AbstractLayerGenerator {
           ],
           getPath: (d) => d,
           getColor: [100, 100, 100],
-          getWidth: 1,
+          getWidth: 0.5,
           pickable: false,
           widthUnits: "pixels",
         })
@@ -79,27 +79,27 @@ export class AxisLayer extends AbstractLayerGenerator {
           ],
           getPath: (d) => d,
           getColor: [100, 100, 100],
-          getWidth: 1,
+          getWidth: 0.5,
           pickable: false,
           widthUnits: "pixels",
         })
       );
-      ret.push(
-        new PathLayer({
-          id: `grid-z-layer-${index}`,
-          data: [
-            [
-              [0, this.min, i],
-              [0, this.max, i],
-            ],
-          ],
-          getPath: (d) => d,
-          getColor: [100, 100, 100],
-          getWidth: 1,
-          pickable: false,
-          widthUnits: "pixels",
-        })
-      );
+      // ret.push(
+      //   new PathLayer({
+      //     id: `grid-z-layer-${index}`,
+      //     data: [
+      //       [
+      //         [0, this.min, i],
+      //         [0, this.max, i],
+      //       ],
+      //     ],
+      //     getPath: (d) => d,
+      //     getColor: [100, 100, 100],
+      //     getWidth: 1,
+      //     pickable: false,
+      //     widthUnits: "pixels",
+      //   })
+      // );
     });
     return ret;
   }

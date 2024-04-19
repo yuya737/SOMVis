@@ -1,10 +1,10 @@
 <template>
   <Splitter style="height: 100%" layout="horizontal">
-    <SplitterPanel style="height: 100%" :size="40">
+    <SplitterPanel style="height: 100%" :size="50">
       <ProjectionViewer class="h-full" />
     </SplitterPanel>
 
-    <SplitterPanel class="h-full w-full" :size="60">
+    <SplitterPanel class="h-full w-full" :size="50">
       <!-- <ProjectionViewer class="h-full" /> -->
       <Splitter class="h-full w-full" layout="vertical">
         <SplitterPanel class="h-full">

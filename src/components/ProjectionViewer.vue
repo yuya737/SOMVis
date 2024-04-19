@@ -88,8 +88,10 @@ import { AbstractLayerGenerator } from "./utils/AbstractLayerGenerator";
 import { SOMLayer } from "./utils/SOMLayer";
 import { NodeClassifyLayer } from "./utils/NodeClassifyLayer";
 import { NodeLayer } from "./utils/NodeLayer";
+import { SurfaceLayer } from "./utils/SurfaceLayer";
 
 import {
+  orbitView,
   orthoView,
   DECKGL_SETTINGS,
   historicalLabels,
@@ -125,28 +127,25 @@ const deckglCanvas = `deck-canvas-projection-viewer-${Math.random()}`;
 
 const imgSrc = ref("");
 const timeRange = ref([0, props.isHistorical ? 64 : 85]);
-const monthTemp1 = ref("December");
-const monthTemp2 = ref("December");
+const monthTemp1 = ref("October");
+const monthTemp2 = ref("October");
 watch([monthTemp1, monthTemp2], ([m1, m2]) => {
   monthRange.value = [months.indexOf(m1) + 1, months.indexOf(m2) + 1];
 });
-const monthRange = ref([1, 12]);
+const monthRange = ref([10, 10]);
 const timeMin = 0;
 const timeMax = props.isHistorical ? 64 : 85;
 const month = ref(1);
-const selectedModel = ref(["All"]);
+const selectedModel = ref([["All"], []]);
 const showPath = ref(false);
 // const text = ref(props.isHistorical ? "Historical" : "SSP585");
 const text = ref(props.isHistorical ? "Historical" : "SSP370");
 
 onMounted(() => {
   deck = new Deck({
-    onViewStateChange: () => {
-      // setLayerProps();
-    },
     ...DECKGL_SETTINGS,
     canvas: deckglCanvas,
-    views: orthoView,
+    views: orbitView,
     getTooltip: ({ object }) => {
       if (!object) return;
       console.log(object);
@@ -163,9 +162,33 @@ onMounted(() => {
 
   initializeLayers().then((layers) => {
     layerList = layers;
-    drawAllLayers();
+    // drawAllLayers();
     setLayerProps();
   });
+
+  watch(
+    () => store.getHoveredFile,
+    (hoveredFile) => {
+      if (!hoveredFile) return;
+      console.log("hovered file", hoveredFile);
+      selectedModel.value = [hoveredFile.split("_")[0], []];
+      drawAllLayers();
+    }
+  );
+  watch(
+    () => store.getFiles,
+    (files) => {
+      if (!files) return;
+      console.log("files changed", files);
+      selectedModel.value = [
+        files[0].map((d) => d.split("_")[0]),
+        files[1].map((d) => d.split("_")[0]),
+      ];
+      nextTick(() => {
+        drawAllLayers();
+      });
+    }
+  );
 });
 
 async function initializeLayers() {
@@ -177,6 +200,14 @@ async function initializeLayers() {
     true,
     null
   );
+  mappingData = mappingData.map((d, i) => {
+    return { ...d, coords: d.coords.map((c) => c * 2) };
+  });
+  let xMin = Math.min(...mappingData.map((d) => d.coords[0]));
+  let xMax = Math.max(...mappingData.map((d) => d.coords[0]));
+  let yMin = Math.min(...mappingData.map((d) => d.coords[1]));
+  let yMax = Math.max(...mappingData.map((d) => d.coords[1]));
+
   let classifyData = await API.fetchData("node_means", true, null);
 
   let pathData = {};
@@ -185,7 +216,9 @@ async function initializeLayers() {
       file: d,
       umap: true,
     });
-    pathData[d] = data;
+    pathData[d] = data.map((d) => {
+      return { ...d, coords: mappingData[d.id].coords };
+    });
   });
 
   await Promise.all(pathPromises);
@@ -197,7 +230,7 @@ async function initializeLayers() {
   let contourData = await API.fetchData("contours", true, { data: data });
 
   // Set up layer generators
-  let nodeLayerGenerator = new NodeLayer(mappingData, imgSrc, 13, 30);
+  let nodeLayerGenerator = new NodeLayer(mappingData, imgSrc, 3, 30);
   let nodeclassifyLayerGenerator = new NodeClassifyLayer(
     mappingData,
     classifyData,
@@ -208,18 +241,36 @@ async function initializeLayers() {
     pathData,
     timeRange,
     monthRange,
-    selectedModel
+    selectedModel,
+    [
+      [xMin, xMax],
+      [yMin, yMax],
+    ]
   );
+
+  // let surfaceLayerGenerator = new SurfaceLayer(
+  //   mappingData,
+  //   pathData,
+  //   timeRange,
+  //   monthRange,
+  //   selectedModel
+  // );
 
   layerGenerators = [
     nodeLayerGenerator,
     nodeclassifyLayerGenerator,
     axisLayerGenerator,
     somLayerGenerator,
+    // surfaceLayerGenerator,
   ];
 
   // Get the layers
-  layerList = layerGenerators.map((g) => g.getLayers()).flat();
+  // layerList = layerGenerators.map((g) => g.getLayers()).flat();
+  layerList = layerGenerators
+    .map((g) => {
+      return g.getLayers();
+    })
+    .flat();
   return layerList;
 }
 
@@ -240,7 +291,7 @@ function drawAllLayers() {
 function settingsChanged(updatedSettings) {
   settings = { ...settings, ...updatedSettings };
   if (settings["variant"]) {
-    selectedModel.value = settings["variant"];
+    selectedModel.value[0] = settings["variant"];
   }
   drawAllLayers();
   console.log("setting changed", selectedModel.value);
@@ -278,4 +329,3 @@ function setLayerProps() {
   --slider-tooltip-font-size: 1.5rem;
 }
 </style>
-./ui/TheInfoPanel.vue./utils/LayerGenerator./utils/AbstractLayerGenerator
