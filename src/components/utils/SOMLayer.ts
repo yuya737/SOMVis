@@ -23,7 +23,7 @@ import {
 } from "./utils";
 
 import { AbstractLayerGenerator } from "./AbstractLayerGenerator";
-import { watch } from "vue";
+import { h, watch } from "vue";
 
 export class SOMLayer extends AbstractLayerGenerator {
   // readonly coords: any;
@@ -404,7 +404,7 @@ export class SOMLayer extends AbstractLayerGenerator {
       cellSize: 0.25,
     });
     // ret = [...ret, gridcell];
-    const resolution = 100;
+    const resolution = 200;
     if (this.mode == "single") {
       let kdeResult = kde2d(
         curBMUData.map((d) => d.coords[0]),
@@ -414,28 +414,87 @@ export class SOMLayer extends AbstractLayerGenerator {
           h: [1, 1],
         }
       );
+      // Estimate the normal of the KDE surface
+      const getAdjacentIndices = (i) => {
+        let ret = [];
+        if (i % resolution > 0 && i % resolution < resolution - 1) {
+          ret = [...ret, i - 1, i + 1];
+        }
+        if (
+          Math.floor(i / resolution) > 0 &&
+          Math.floor(i / resolution) < resolution - 1
+        ) {
+          ret = [...ret, i - resolution, i + resolution];
+        }
+        return ret;
+      };
+
+      let heightMultiplier = 700;
+
+      const crossProduct3DandNorm = (a, b) => {
+        let ret = [
+          a[1] * b[2] - a[2] * b[1],
+          a[2] * b[0] - a[0] * b[2],
+          a[0] * b[1] - a[1] * b[0],
+        ];
+        return ret.map(
+          (d) => d / Math.sqrt(ret.reduce((acc, curr) => acc + curr ** 2, 0))
+        );
+      };
+      // let normal = Array.from(kdeResult.z._buffer).map((d, i) => {
+      //   let adj = getAdjacentIndices(i);
+      //   if (adj.length < 4) {
+      //     return [0, 0, 0];
+      //   } else {
+      //     let x = kdeResult.x[Math.floor(adj[0] / resolution)];
+      //     let y = kdeResult.y[adj[0] % resolution];
+      //     let z = kdeResult.z._buffer[adj[0]] * heightMultiplier;
+      //     let a = [x, y, z];
+      //     x = kdeResult.x[Math.floor(adj[1] / resolution)];
+      //     y = kdeResult.y[adj[1] % resolution];
+      //     z = kdeResult.z._buffer[adj[1]] * heightMultiplier;
+      //     let b = [x, y, z];
+      //     x = kdeResult.x[Math.floor(adj[2] / resolution)];
+      //     y = kdeResult.y[adj[2] % resolution];
+      //     z = kdeResult.z._buffer[adj[2]] * heightMultiplier;
+      //     let c = [x, y, z];
+      //     x = kdeResult.x[Math.floor(adj[3] / resolution)];
+      //     y = kdeResult.y[adj[3] % resolution];
+      //     z = kdeResult.z._buffer[adj[3]] * heightMultiplier;
+      //     let d = [x, y, z];
+      //     let v1 = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
+      //     let v2 = [d[0] - c[0], d[1] - c[1], d[2] - c[2]];
+      //     return crossProduct3DandNorm(v2, v1);
+      //   }
+      // });
+      // console.log(normal);
 
       // Print the sum
       // let maxValue = Math.max(...kdeResult.z._buffer);
-      let heightMultiplier = 700;
-      console.log(kdeResult);
+      // console.log(kdeResult);
 
       ret = [
         ...ret,
         new PlotLayer({
+          id: "surface-layer",
           getPosition: (u, v) => {
             return [
-              kdeResult.x[parseInt(u * (resolution - 1))],
+              kdeResult.x[Math.round(u * (resolution - 1))],
+              kdeResult.y[Math.round(v * (resolution - 1))],
               kdeResult.z._buffer[
-                parseInt(
+                Math.round(
                   u * resolution * (resolution - 1) + v * (resolution - 1)
                 )
               ] * heightMultiplier,
-              kdeResult.y[parseInt(v * (resolution - 1))],
             ];
           },
+          // getNormal: (u, v) => {
+          //   return normal[
+          //     parseInt(u * resolution * (resolution - 1) + v * (resolution - 1))
+          //   ];
+          // },
           // getColor: (x, z, y) => [40, interpolateGreens(z/15), 160, (z / 15) * 255],
-          getColor: (x, z, y) => {
+          getColor: (x, y, z) => {
             let t = interpolateGreens(
               scaleLinear().domain([0, 15]).range([0, 1])(z)
             )
@@ -481,17 +540,17 @@ export class SOMLayer extends AbstractLayerGenerator {
         new PlotLayer({
           getPosition: (u, v) => {
             return [
-              kdeResult1.x[parseInt(u * (resolution - 1))],
+              kdeResult1.x[Math.round(u * (resolution - 1))],
+              kdeResult1.y[Math.round(v * (resolution - 1))],
               kdeResult1.z._buffer[
-                parseInt(
+                Math.round(
                   u * resolution * (resolution - 1) + v * (resolution - 1)
                 )
               ] * heightMultiplier,
-              kdeResult1.y[parseInt(v * (resolution - 1))],
             ];
           },
           // getColor: (x, z, y) => [40, interpolateGreens(z/15), 160, (z / 15) * 255],
-          getColor: (x, z, y) => {
+          getColor: (x, y, z) => {
             let t = interpolateRgb(
               "white",
               "#1b9e77"
@@ -499,7 +558,7 @@ export class SOMLayer extends AbstractLayerGenerator {
               .replace(/[^\d,]/g, "")
               .split(",")
               .map((d) => Number(d));
-            t.push((z / 5) * 255);
+            t.push((z / 8) * 255);
             return t;
           },
           uCount: resolution,
@@ -515,17 +574,17 @@ export class SOMLayer extends AbstractLayerGenerator {
         new PlotLayer({
           getPosition: (u, v) => {
             return [
-              kdeResult2.x[parseInt(u * (resolution - 1))],
+              kdeResult2.x[Math.round(u * (resolution - 1))],
+              kdeResult2.y[Math.round(v * (resolution - 1))],
               kdeResult2.z._buffer[
-                parseInt(
+                Math.round(
                   u * resolution * (resolution - 1) + v * (resolution - 1)
                 )
               ] * heightMultiplier,
-              kdeResult2.y[parseInt(v * (resolution - 1))],
             ];
           },
           // getColor: (x, z, y) => [40, interpolateGreens(z/15), 160, (z / 15) * 255],
-          getColor: (x, z, y) => {
+          getColor: (x, y, z) => {
             let t = interpolateRgb(
               "white",
               "#d95f02"
@@ -533,7 +592,7 @@ export class SOMLayer extends AbstractLayerGenerator {
               .replace(/[^\d,]/g, "")
               .split(",")
               .map((d) => Number(d));
-            t.push((z / 5) * 255);
+            t.push((z / 8) * 255);
             // t.push(255);
             return t;
           },

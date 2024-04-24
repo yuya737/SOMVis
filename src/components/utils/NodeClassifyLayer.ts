@@ -94,6 +94,6 @@ export class NodeClassifyLayer extends AbstractLayerGenerator {
       // }),
     ];
     this.layerList = ret;
-    return [ret];
+    return ret;
   }
 }

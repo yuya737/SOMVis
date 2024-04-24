@@ -9,6 +9,7 @@ const DEFAULT_COLOR = [0, 0, 0, 255];
 
 const defaultProps = {
   data: [],
+  getNormal: () => [0, 0, 0],
   getPosition: () => [0, 0, 0],
   getColor: () => DEFAULT_COLOR,
   xScale: null,
@@ -44,6 +45,7 @@ export default class SurfaceLayer extends Layer {
     /* eslint-disable max-len */
     attributeManager.add({
       indices: {size: 1, isIndexed: true, update: this.calculateIndices, noAlloc},
+      normals: {size: 3, update: this.calculateNormals, noAlloc},
       positions: {size: 4, accessor: 'getPosition', update: this.calculatePositions, noAlloc},
       colors: {
         size: 4,
@@ -90,12 +92,18 @@ export default class SurfaceLayer extends Layer {
 
   draw({uniforms}) {
     const {lightStrength} = this.props;
+    const { viewport } = this.context;
 
     this.state.model
       .setUniforms(
-        Object.assign({}, uniforms, {
-          lightStrength
-        })
+        {
+          ...uniforms,
+          lightStrength: lightStrength,
+          uEyePosition: viewport.cameraPosition,
+        }
+        // Object.assign({}, uniforms, {
+        //   lightStrength
+        // })
       )
       .draw();
   }
@@ -190,18 +198,18 @@ export default class SurfaceLayer extends Layer {
         const v = vIndex / (vCount - 1);
         const [x, y, z] = getPosition(u, v);
 
+
         const isXFinite = isFinite(x);
         const isYFinite = isFinite(y);
         const isZFinite = isFinite(z);
 
         // swap z and y: y is up in the default viewport
         value[i++] = isXFinite ? xScale(x) : xScale.range()[0];
-        value[i++] = isZFinite ? zScale(z) : zScale.range()[0];
         value[i++] = isYFinite ? yScale(y) : yScale.range()[0];
+        value[i++] = isZFinite ? zScale(z) : zScale.range()[0];
         value[i++] = isXFinite && isYFinite && isZFinite ? 0 : 1;
       }
     }
-
     attribute.value = value;
   }
   /* eslint-enable max-statements */
@@ -220,11 +228,36 @@ export default class SurfaceLayer extends Layer {
 
     for (let i = 0; i < vertexCount; i++) {
       const index = i * 4;
-      const color = getColor(positions[index], positions[index + 2], positions[index + 1]);
+      const color = getColor(positions[index], positions[index + 1], positions[index + 2]);
       value[i * 4] = color[0];
       value[i * 4 + 1] = color[1];
       value[i * 4 + 2] = color[2];
       value[i * 4 + 3] = isNaN(color[3]) ? 255 : color[3];
+    }
+
+    attribute.value = value;
+  }
+
+  calculateNormals(attribute){
+    const {vertexCount} = this.state;
+
+    const value = new Float32Array(vertexCount * attribute.size);
+    const {uCount, vCount} = this.props;
+
+    let {getNormal} = this.props;
+    getNormal = typeof getNormal === 'function' ? getNormal : () => getNormal;
+
+    let i = 0;
+    for (let vIndex = 0; vIndex < vCount; vIndex++) {
+      for (let uIndex = 0; uIndex < uCount; uIndex++) {
+        const u = uIndex / (uCount - 1);
+        const v = vIndex / (vCount - 1);
+        const [x, y, z] = getNormal(u, v);
+        value[i++] = x;
+        value[i++] = y;
+        value[i++] = z;
+
+      }
     }
 
     attribute.value = value;

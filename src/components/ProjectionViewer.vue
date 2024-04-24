@@ -1,5 +1,5 @@
 <template>
-  <div id="eofvis-parent" class="relative h-full w-full">
+  <div class="relative h-full w-full">
     <img class="absolute bottom-0 right-0 z-[4] p-4" :src="imgSrc" />
     <div class="relative h-full w-full">
       <canvas :id="deckglCanvas" class="z-[2] h-full w-full" />
@@ -22,21 +22,21 @@
       style="display: none"
     />
     <div
-      class="absolute bottom-0 z-[4] flex h-32 w-full flex-col content-center justify-around px-32"
+      class="absolute bottom-0 z-[4] flex h-32 w-full flex-col items-center justify-around px-32"
     >
       <Slider
         v-model="timeRange"
         :format="formatTooltipTime"
         :min="timeMin"
         :max="timeMax"
-        class="slider z-[4] w-full"
+        class="slider z-[4] w-3/4"
         @change="yearMonthChanged"
       />
 
       <div
-        class="flex flex-row w-full items-center justify-evenly bg-gray-200 p-2 rounded-lg text-center"
+        class="flex flex-row w-fit items-center justify-evenly bg-gray-200 p-2 rounded-lg text-center"
       >
-        <span class="flex items-center font-bold"> Start: </span>
+        <span class="flex items-center font-bold px-5"> Start: </span>
         <Dropdown
           v-model="monthTemp1"
           :options="months"
@@ -46,7 +46,7 @@
           placeholder="Starting Month"
           @change="yearMonthChanged"
         />
-        <span class="flex items-center font-bold"> End: </span>
+        <span class="flex items-center font-bold px-5"> End: </span>
         <Dropdown
           v-model="monthTemp2"
           :options="months"
@@ -55,6 +55,13 @@
           :highlight-on-select="false"
           placeholder="Ending Month"
           @change="yearMonthChanged"
+        />
+        <ToggleButton
+          v-model="isShowingSurface"
+          @change="toggleShowSurface"
+          onLabel="Hide Surface"
+          offLabel="Show Surface"
+          class="px-5"
         />
       </div>
       <!-- <Slider
@@ -89,6 +96,7 @@ import { SOMLayer } from "./utils/SOMLayer";
 import { NodeClassifyLayer } from "./utils/NodeClassifyLayer";
 import { NodeLayer } from "./utils/NodeLayer";
 import { SurfaceLayer } from "./utils/SurfaceLayer";
+import ToggleButton from "primevue/togglebutton";
 
 import {
   orbitView,
@@ -110,10 +118,10 @@ const props = defineProps({
 // let labels = props.isHistorical ? historical_labels : ssp585_labels;
 let labels = props.isHistorical ? historicalLabels : ssp370Labels;
 // let labels = props.isHistorical ? historical_labels_sfbay : ssp370_labels;
-InfoPanelSettings[0].options[0].values = [
-  "All",
-  ...labels.map((d) => getModelType(d)),
-];
+// InfoPanelSettings[0].options[0].values = [
+//   "All",
+//   ...labels.map((d) => getModelType(d)),
+// ];
 
 let layerList: LayersList = [];
 let settings = {};
@@ -138,7 +146,7 @@ const timeMax = props.isHistorical ? 64 : 85;
 const month = ref(1);
 const selectedModel = ref([["All"], []]);
 const showPath = ref(false);
-// const text = ref(props.isHistorical ? "Historical" : "SSP585");
+const isShowingSurface = ref(true);
 const text = ref(props.isHistorical ? "Historical" : "SSP370");
 
 onMounted(() => {
@@ -271,6 +279,7 @@ async function initializeLayers() {
       return g.getLayers();
     })
     .flat();
+  debugger;
   return layerList;
 }
 
@@ -321,6 +330,16 @@ function formatTooltipTime(d) {
 
 function setLayerProps() {
   deck.setProps({ layers: layerList });
+}
+
+function toggleShowSurface() {
+  layerList = layerList.map((l) => {
+    let ret = l.id.startsWith("surface-layer")
+      ? l.clone({ visible: isShowingSurface.value })
+      : l.clone();
+    return ret;
+  });
+  setLayerProps();
 }
 </script>
 

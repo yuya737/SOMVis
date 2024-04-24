@@ -23,12 +23,17 @@ export default `\
 
 attribute vec4 positions;
 attribute vec4 colors;
+attribute vec3 normals;
 attribute vec3 pickingColors;
 
 uniform float lightStrength;
+uniform vec3 uEyePosition;
 uniform float opacity;
 
+varying vec3 eyePos;
+varying vec3 vertPos;
 varying vec4 vColor;
+varying vec3 normals_out;
 varying float shouldDiscard;
 
 void main(void) {
@@ -46,6 +51,14 @@ void main(void) {
   vColor = vec4(colors.rgb * fadeFactor, colors.a * opacity) / 255.0;;
   // vColor = vec4(colors.rgb, colors.a * opacity) / 255.0;;
   // vColor.a = 0.2;
+  // vColor = vec4(
+  //   normals * 0.5 + 0.5, 1.0
+  //   // project_normal(normals) * 0.5 + 0.5, 1.0
+  //   // project_common_normal_to_clipspace(normals)*0.5 + 0.5, 1.0
+  // );
+  // normals_out = normals;
+  // vertPos = position_commonspace;
+  // eyePos = project_common_position_to_clipspace(vec4(uEyePosition, 1.0)).xyz;
 
   picking_setPickingColor(pickingColors);
 

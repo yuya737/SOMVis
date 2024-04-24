@@ -23,6 +23,11 @@ export default `\
 
 precision highp float;
 
+uniform vec3 uEyePosition;
+
+varying vec3 eyePos;
+varying vec3 vertPos;
+varying vec3 normals_out;
 varying vec4 vColor;
 varying float shouldDiscard;
 
@@ -30,6 +35,29 @@ void main(void) {
   if (shouldDiscard > 0.0) {
     discard;
   }
+  // float shininessVal = 80.0;
+  // float Kd = 1.0;
+  // float Ks = 0.5;
+  // float Ka = 0.3;
+  // vec3 diffuseColor = vec3(0.1, 0.62, 0.47); 
+  // vec3 ambientColor = vec3(0.5, 0.5, 0.5);
+  // vec3 specularColor = vec3(1.0, 1.0, 1.0);
+  // vec3 N = normalize(normals_out);
+  // vec3 L = normalize(vec3(0.,0., 50.) - vertPos);
+  // float lambertian = max(dot(N, L), 0.0);
+  // float specular = 0.0;
+  // if(lambertian > 0.0) {
+  //   vec3 R = reflect(L, N);      // Reflected light vector
+  //   vec3 V = normalize(vertPos - eyePos); // Vector to viewer
+  //   // Compute the specular term
+  //   float specAngle = max(dot(R, V), 0.0);
+  //   specular = pow(specAngle, shininessVal);
+  // }
+  // gl_FragColor = vec4(Ka * ambientColor +
+  //                     Kd * lambertian * diffuseColor +
+  //                     Ks * specular * specularColor, 1.0);
+
+  // gl_FragColor = vec4(normals_out * 0.5 + 0.5, 1.0);
   gl_FragColor = vColor;
   gl_FragColor = picking_filterPickingColor(gl_FragColor);
 }

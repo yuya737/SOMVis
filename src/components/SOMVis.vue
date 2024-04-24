@@ -24,4 +24,5 @@ import SplitterPanel from "primevue/splitterpanel";
 import ProjectionViewer from "./ProjectionViewer.vue";
 import MapViewer from "./MapViewer.vue";
 import HeatmapViewer from "./HeatmapViewer.vue";
+import ForceGraph from "./ForceGraph.vue";
 </script>

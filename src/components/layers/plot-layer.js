@@ -11,6 +11,7 @@ const DEFAULT_COLOR = [0, 0, 0, 255];
 
 const defaultProps = {
   // SurfaceLayer props
+  getNormal: {type: 'accessor', value: (u, v) => [0, 0, 0]},
   getPosition: {type: 'accessor', value: (u, v) => [0, 0, 0]},
   getColor: {type: 'accessor', value: (x, y, z) => DEFAULT_COLOR},
   getXScale: DEFAULT_GET_SCALE,
@@ -114,6 +115,7 @@ export default class PlotLayer extends CompositeLayer {
     const {
       getPosition,
       getColor,
+      getNormal,
       uCount,
       vCount,
       lightStrength,
@@ -138,6 +140,7 @@ export default class PlotLayer extends CompositeLayer {
         {
           getPosition,
           getColor,
+          getNormal,
           uCount,
           vCount,
           xScale,

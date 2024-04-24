@@ -16,7 +16,9 @@
       <div
         class="flex flex-row items-center justify-evenly bg-gray-200 p-2 rounded-lg text-center"
       >
-        <span class="flex items-center font-bold px-5"> Group 1: </span>
+        <span class="flex items-center font-bold px-5 whitespace-pre">
+          Group 1:
+        </span>
         <MultiSelect
           v-model="cmp_1"
           :options="options"
@@ -27,19 +29,26 @@
           :maxSelectedLabels="3"
           class="w-full z-[4] md:w-14rem"
         />
-        <span class="flex items-center font-bold px-5"> Group 2: </span>
-        <MultiSelect
-          v-model="cmp_2"
-          :options="options"
-          showclear
-          checkmark
-          :highlightOnSelect="false"
-          placeholder="Select a model"
-          optionLabel="name"
-          optionValue="value"
-          :maxSelectedLabels="3"
-          class="w-full z-[4] md:w-14rem"
-        />
+        <div
+          class="flex flex-cols items-center"
+          v-show="selectedMode == 'Difference'"
+        >
+          <span class="flex items-center font-bold px-5 whitespace-pre">
+            Group 2:
+          </span>
+          <MultiSelect
+            v-model="cmp_2"
+            :options="options"
+            showclear
+            checkmark
+            :highlightOnSelect="false"
+            placeholder="Select a model"
+            optionLabel="name"
+            optionValue="value"
+            :maxSelectedLabels="3"
+            class="w-full z-[4] md:w-14rem"
+          />
+        </div>
       </div>
       <div
         class="flex flex-row items-center bg-gray-200 justify-evenly p-2 rounded-lg text-center w-fit"
@@ -89,7 +98,7 @@ const token: string =
 
 let latitudes: number[] = [];
 let longitudes: number[] = [];
-let data: any = null;
+// let data: any = null;
 let data2: any = null;
 
 // const data_type = "LOCA";
@@ -99,8 +108,8 @@ let data2: any = null;
 // const loading = ref(false);
 // const bottomText = ref("Precip data");
 
-const cmp_1 = ref();
-const cmp_2 = ref();
+const cmp_1 = ref([]);
+const cmp_2 = ref([]);
 const selectedMode = ref("Difference");
 const options = ref(
   ssp370Labels.map((d) => {
@@ -195,6 +204,7 @@ watch(
     );
     if (!group2Mean) {
       cmp_1.value = files[0];
+      cmp_2.value = [];
       selectedMode.value = "Group 1 Mean";
       drawLayer(group1Mean, colorInterp);
     } else {
@@ -209,6 +219,25 @@ watch(
   }
 );
 
+watch(
+  () => store.getHoveredFile,
+  (file) => {
+    if (!file) {
+      // When file gets hovered out
+      cmp_1.value = [];
+      cmp_2.value = [];
+      deck.setProps({
+        layers: [],
+      });
+      return;
+    }
+    cmp_1.value = [file];
+    cmp_2.value = [];
+    selectedMode.value = "Group 1 Mean";
+    drawLayer(data2?.[file], colorInterp);
+  }
+);
+
 function calculateElementWiseMean(lists) {
   if (lists.length === 0 || lists[0] == undefined) return undefined;
   return lists
@@ -218,13 +247,6 @@ function calculateElementWiseMean(lists) {
     )
     .map((sum) => sum / lists.length);
 }
-
-watch(
-  () => store.getHoveredFile,
-  (file) => {
-    drawLayer(data2?.[file], colorInterp);
-  }
-);
 
 function submit() {
   let cmp1 = cmp_1.value ? cmp_1.value : [];
@@ -236,18 +258,22 @@ function submit() {
     yearsSelected: store.getYearsSelected,
     sspSelected: store.getSSPSelected,
   });
-
-  let payload = {
-    files: store.getFiles,
-    months: store.getMonthsSelected,
-    years: store.getYearsSelected,
-    ssp: store.getSSPSelected,
-  };
   loading.value = true;
-  fetchMapData(payload).then(() => {
-    draw();
-    loading.value = false;
-  });
+  drawLayer(data2?.[cmp_1.value[0]], colorInterp);
+  loading.value = false;
+
+  // let payload = {
+  //   files: store.getFiles,
+  //   months: store.getMonthsSelected,
+  //   years: store.getYearsSelected,
+  //   ssp: store.getSSPSelected,
+  // };
+  // loading.value = true;
+  // fetchMapData(payload).then(() => {
+  //   console.log(payload);
+  //   draw();
+  //   loading.value = false;
+  // });
 }
 
 async function fetchMapData(payload) {
@@ -263,52 +289,43 @@ async function fetchMapData(payload) {
   });
 }
 
-async function draw() {
-  let color;
-  // bottomText.value = `Comparing ${payload.files[0][0]} and ${payload.files[1][0]}`;
-  let subset;
-  if (selectedMode.value == "Difference") {
-    subset = data.difference;
-    color = colorInterpDifference;
-  } else if (selectedMode.value == "Group 1 Mean") {
-    subset = data.cmp_1;
-    color = colorInterp;
-  } else if (selectedMode.value == "Group 2 Mean") {
-    subset = data.cmp_2;
-    color = colorInterp;
-  }
+// async function draw() {
+//   let color;
+//   // bottomText.value = `Comparing ${payload.files[0][0]} and ${payload.files[1][0]}`;
+//   let subset;
+//   if (selectedMode.value == "Difference") {
+//     subset = data.difference;
+//     color = colorInterpDifference;
+//   } else {
+//     subset = data2[cmp_1.value[0]];
+//     color = colorInterp;
+//   }
 
-  const mapData = subset
-    .map((d, index) => {
-      return {
-        val: d,
-        color: color(d),
-        lon: longitudes[index % longitudes.length],
-        lat: latitudes[Math.floor(index / longitudes.length)],
-      };
-    })
-    .filter((d) => d.val != 0);
+//   const mapData = subset
+//     .map((d, index) => {
+//       return {
+//         val: d,
+//         color: color(d),
+//         lon: longitudes[index % longitudes.length],
+//         lat: latitudes[Math.floor(index / longitudes.length)],
+//       };
+//     })
+//     .filter((d) => d.val != 0);
 
-  let scatterplotlayer = new ScatterplotLayer({
-    id: "scatterplot-layer",
-    data: mapData,
-    // pickable: true,
-    opacity: 1,
-    // stroked: true,
-    // filled: true,
-    getPosition: (d: any) => [d.lon, d.lat],
-    // getRadius: (d: any) => 70000,
-    // radiusMinPixels: 2,
-    // radiusScale: 100,
-    getRadius: 1500,
-    radiusScale: 1,
-    getFillColor: (d) => d.color,
-  });
+//   let scatterplotlayer = new ScatterplotLayer({
+//     id: "scatterplot-layer",
+//     data: mapData,
+//     opacity: 1,
+//     getPosition: (d: any) => [d.lon, d.lat],
+//     getRadius: 1500,
+//     radiusScale: 1,
+//     getFillColor: (d) => d.color,
+//   });
 
-  deck.setProps({
-    layers: [scatterplotlayer],
-  });
-}
+//   deck.setProps({
+//     layers: [scatterplotlayer],
+//   });
+// }
 
 function drawLayer(data, cmap) {
   if (!data) {

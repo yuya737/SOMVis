@@ -244,6 +244,16 @@ export const DECKGL_SETTINGS = {
   },
 };
 
+export function getChildren(node, listSoFar = []) {
+  if (node.children) {
+    getChildren(node.children[0], listSoFar);
+    getChildren(node.children[1], listSoFar);
+  } else {
+    listSoFar.push(node.data.index);
+  }
+  return listSoFar;
+}
+
 // Accept a ml-hclust object and return a list of nodes from left to right
 export function getNodeOrder(node, listSoFar = []) {
   if (node.children.length > 0) {

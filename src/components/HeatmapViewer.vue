@@ -1,5 +1,13 @@
 <template>
-  <div id="my_dataviz" class="h-full w-full flex justify-around" />
+  <div class="relative h-full w-full">
+    <Button
+      class="absolute left-0 top-0 z-[2] m-4 w-fit transform rounded-md bg-gray-200 p-4 text-lg font-bold text-black"
+      label="Clear"
+      icon="pi pi-times"
+      @click="clearSelections"
+    />
+    <div id="my_dataviz" class="h-full w-full flex justify-around" />
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -16,6 +24,7 @@ import {
   getModelType,
   stripSOMprefix,
   getNodeOrder,
+  getChildren,
 } from "./utils/utils";
 
 const store = useStore();
@@ -36,6 +45,14 @@ watch(
   () => [store.getYearsSelected, store.getMonthsSelected],
   async () => draw()
 );
+
+function clearSelections() {
+  store.setFiles([[], []]);
+  store.setHoveredFile(null);
+  d3.selectAll('text[id^="tick"]').classed("label--not--active", true);
+  d3.selectAll('text[id^="node"]').classed("label--not--active", true);
+  d3.selectAll('rect[id^="rect"]').classed("rect--not--active", true);
+}
 
 async function draw() {
   const { distances, dendrogram } = await API.fetchData(
@@ -115,18 +132,22 @@ function make_dendrogram(options = {}) {
     opacity: 0.2;
   }
   .label--active {
+    font-size: 17px;
     font-weight: bold;
     opacity: 1;
   }
   .label--active--class0 {
+    font-size: 17px;
     font-weight: bold;
     opacity: 1;
   }
   .label--active--class1{
+    font-size: 17px;
     fill: #1b9e77 !important;
     opacity: 1;
   }
   .label--active--class2{
+    font-size: 17px;
     fill: #d95f02 !important;
     opacity: 1;
   }
@@ -239,7 +260,6 @@ function make_dendrogram(options = {}) {
     children: [temp[0].target.data],
     height: temp[0].target.data.height * 1.1,
   };
-  console.log(temp);
   const link = svg
     .append("g")
     .attr("fill", "none")
@@ -257,14 +277,15 @@ function make_dendrogram(options = {}) {
     .on("mouseover", function (event, d) {
       d3.selectAll('text[id^="tick"]').classed("label--not--active", true);
       d3.selectAll('rect[id^="rect"]').classed("rect--not--active", true);
-      classForComparison(d.target, "class0", true);
+      classGroup(d.target, "class0", true);
     })
     .on("mouseout", function (event, d) {
       d3.selectAll('text[id^="tick"]').classed("label--not--active", false);
       d3.selectAll('rect[id^="rect"]').classed("rect--not--active", false);
-      classForComparison(d.target, "class0", false);
+      classGroup(d.target, "class0", false);
     })
     .on("click", function (event, d) {
+      classGroup(d.target, "class0", true);
       store.setFiles([
         getChildren(d.target).map((d) => stripSOMprefix(ssp370Labels[d])),
         [],
@@ -300,52 +321,51 @@ function make_dendrogram(options = {}) {
           getChildren(d.source.children[1]).map((d) => fullLabels[d]),
         ])
     )
+    .each((d) => (d.isClicked = false))
     .on("mouseover", function (event, d) {
+      d.isClicked = false;
       d3.selectAll('text[id^="tick"]').classed("label--not--active", true);
       d3.selectAll('rect[id^="rect"]').classed("rect--not--active", true);
-      classForComparison(nodeToLinksMap[d.source.index][0], "class1", true);
-      classForComparison(nodeToLinksMap[d.source.index][1], "class2", true);
+      classGroup(nodeToLinksMap[d.source.index][0], "class1", true);
+      classGroup(nodeToLinksMap[d.source.index][1], "class2", true);
       d3.select(this).classed("cmp--node--active", true);
     })
     .on("mouseout", function (event, d) {
+      if (d.isClicked) return;
       // Set all heatmap ticks to inactive
       d3.selectAll('text[id^="tick"]').classed("label--not--active", false);
       d3.selectAll('rect[id^="rect"]').classed("rect--not--active", false);
-      classForComparison(nodeToLinksMap[d.source.index][0], "class1", false);
-      classForComparison(nodeToLinksMap[d.source.index][1], "class2", false);
+      classGroup(nodeToLinksMap[d.source.index][0], "class1", false);
+      classGroup(nodeToLinksMap[d.source.index][1], "class2", false);
       d3.select(this).classed("cmp--node--active", false);
     })
     .on("click", function (event, d) {
+      d.isClicked = true;
+      console.log(d.isClicked);
+      classGroup(nodeToLinksMap[d.source.index][0], "class1", true);
+      classGroup(nodeToLinksMap[d.source.index][1], "class2", true);
       store.setFiles(d.children);
     });
 
-  function classForComparison(node, className, active) {
+  function classGroup(node, className, active) {
     d3.select(node.linkNodeTo).classed("link--active--" + className, active);
     if (node.children) {
-      classForComparison(node.children[0], className, active);
-      classForComparison(node.children[1], className, active);
+      classGroup(node.children[0], className, active);
+      classGroup(node.children[1], className, active);
     } else {
-      d3.selectAll("text#tick" + node.data.text).classed(
-        "label--active--" + className,
-        active
-      );
-      d3.selectAll(`rect[id^="rect${node.data.text}:"]`).classed(
-        "rect--active--" + className,
-        active
-      );
+      d3.selectAll(
+        (className == "class2" ? "text#label_x" : "text#label_y") +
+          node.data.text
+      ).classed("label--active--" + className, active);
+
+      d3.selectAll(
+        className == "class2"
+          ? `rect[id$=":${node.data.text}"]`
+          : `rect[id^="rect${node.data.text}:"]`
+      ).classed("rect--active--" + className, active);
       d3.select(node.svg).classed("label--active--" + className, active);
       // d3.select(node.svg).style("fill", "red");
     }
-  }
-
-  function getChildren(node, listSoFar = []) {
-    if (node.children) {
-      getChildren(node.children[0], listSoFar);
-      getChildren(node.children[1], listSoFar);
-    } else {
-      listSoFar.push(node.data.index);
-    }
-    return listSoFar;
   }
 
   // Nodes
@@ -370,8 +390,8 @@ function make_dendrogram(options = {}) {
       (d) => `translate(${d.x + paddingLeft},${transformY(d)}) rotate(315)`
     )
     .attr("id", (d) => "node" + d.data.text)
-    .on("mouseover", highlight(true, "class0"))
-    .on("mouseout", highlight(false, "class0"));
+    .on("mouseover", highlightOnHover(true, "class0"))
+    .on("mouseout", highlightOnHover(false, "class0"));
 
   svg
     .append("text")
@@ -399,17 +419,21 @@ function make_dendrogram(options = {}) {
 
   return svg.node();
 }
-function highlight(active, className) {
+function highlightOnHover(active, className) {
   return function (event, d) {
     if (d?.data?.text) {
       d = d.data.text;
     }
+    // Reset hoveredFile in store
     store.setHoveredFile(active ? fullLabels[labels.indexOf(d)] : null);
+
+    // Activate dendrogram label
     d3.selectAll("text#node" + d).classed(
       "label--active--" + className,
       active
     );
-    d3.selectAll("text#tick" + d).classed(
+    // Active heatmap label
+    d3.selectAll("text#label_y" + d).classed(
       "label--active--" + className,
       active
     );
@@ -430,23 +454,10 @@ function highlight(active, className) {
     );
     do
       d3.select(dendrogramLeaf.linkNodeTo).classed(
-        "link--active--" + className,
+        "ldink--active--" + className,
         active
       );
     while ((dendrogramLeaf = dendrogramLeaf.parent));
-  };
-}
-
-function highlightComparison(active, className) {
-  return function (event, d) {
-    d3.selectAll("text#node" + d).classed(
-      "label--active--" + className,
-      active
-    );
-    d3.selectAll("text#tick" + d).classed(
-      "label--active--" + className,
-      active
-    );
   };
 }
 
@@ -491,22 +502,22 @@ function make_heatmap(distances) {
     // .attr("transform", `translate(${margin.left}, ${margin.top})`)
     .attr("id", "heatmap");
 
-  svg.append("style").text(`
-  .link--active {
-    stroke: #000 !important;
-    stroke-opacity: 1 !important;
-    stroke-width: 5px;
-  }
-  .label--active {
-    font-weight: bold;
-  }
-  .rect--active {
-    opacity: 1;
-  }
-  .rect--inactive {
-    opacity: 0.2;
-  }
-  }`);
+  // svg.append("style").text(`
+  // .link--active {
+  //   stroke: #000 !important;
+  //   stroke-opacity: 1 !important;
+  //   stroke-width: 5px;
+  // }
+  // .label--active {
+  //   font-weight: bold;
+  // }
+  // .rect--active {
+  //   opacity: 1;
+  // }
+  // .rect--inactive {
+  //   opacity: 0.2;
+  // }
+  // }`);
 
   tree = agnes(distances, {
     method: "average",
@@ -524,17 +535,18 @@ function make_heatmap(distances) {
     .range([0, width])
     .domain(labelsReordered.map((i) => getModelType(i)))
     .padding(0.05);
-  svg
+  const xAxis = svg
     .append("g")
     .style("font-size", 15)
     .attr("transform", `translate(0, ${height})`)
-    .call(d3.axisBottom(x).tickSize(0))
-    .select(".domain")
-    .remove();
-  svg
+    .call(d3.axisBottom(x).tickSize(0));
+  xAxis
     .selectAll(".tick text") // Select all text elements under elements with class 'tick'
+    .attr("id", (d) => "label_x" + d)
     .attr("transform", "rotate(-45)") // Rotate each text element by -45 degrees
     .style("text-anchor", "end"); // Align the text to the end of the text element (right side when not rotated)
+
+  xAxis.select(".domain").remove();
 
   // Build Y scales and axis:
   const y = d3
@@ -549,9 +561,9 @@ function make_heatmap(distances) {
 
   yAxis
     .selectAll(".tick text") // Select all tick elements
-    .attr("id", (d) => "tick" + d)
-    .on("mouseover", highlight(true, "class0"))
-    .on("mouseleave", highlight(false, "class0"));
+    .attr("id", (d) => "label_y" + d)
+    .on("mouseover", highlightOnHover(true, "class0"))
+    .on("mouseleave", highlightOnHover(false, "class0"));
   yAxis.select(".domain").remove();
 
   // Build color scale
@@ -561,18 +573,18 @@ function make_heatmap(distances) {
     .domain([0, Math.max(...distances.flat())]);
 
   // create a tooltip
-  const tooltip = d3
-    .select("#my_dataviz")
-    .append("div")
-    .style("opacity", 0)
-    .attr("class", "tooltip")
-    .style("background-color", "white")
-    .style("border", "solid")
-    .style("border-width", "2px")
-    .style("border-radius", "5px")
-    .style("padding", "5px")
-    .style("position", "absolute")
-    .style("width", "fit-content");
+  // const tooltip = d3
+  //   .select("#my_dataviz")
+  //   .append("div")
+  //   .style("opacity", 0)
+  //   .attr("class", "tooltip")
+  //   .style("background-color", "white")
+  //   .style("border", "solid")
+  //   .style("border-width", "2px")
+  //   .style("border-radius", "5px")
+  //   .style("padding", "5px")
+  //   .style("position", "absolute")
+  //   .style("width", "fit-content");
 
   // // Three function that change the tooltip when user hover / move / leave a cell
   // const mouseover = function (event, d) {
