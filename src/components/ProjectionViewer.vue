@@ -24,6 +24,11 @@
     <div
       class="absolute bottom-0 z-[4] flex h-32 w-full flex-col items-center justify-around px-32"
     >
+      <div
+        class="flex items-center font-bold text-xl px-5 bg-gray-200 p-2 rounded-lg"
+      >
+        {{ message }}
+      </div>
       <Slider
         v-model="timeRange"
         :format="formatTooltipTime"
@@ -78,7 +83,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, watch, nextTick } from "vue";
+import { onMounted, ref, watch, nextTick, h } from "vue";
 
 import { Deck } from "@deck.gl/core";
 
@@ -134,6 +139,7 @@ let deck: any = null;
 const deckglCanvas = `deck-canvas-projection-viewer-${Math.random()}`;
 
 const imgSrc = ref("");
+const message = ref("");
 const timeRange = ref([0, props.isHistorical ? 64 : 85]);
 const monthTemp1 = ref("October");
 const monthTemp2 = ref("October");
@@ -144,7 +150,7 @@ const monthRange = ref([10, 10]);
 const timeMin = 0;
 const timeMax = props.isHistorical ? 64 : 85;
 const month = ref(1);
-const selectedModel = ref([["All"], []]);
+const selectedModel = ref([[], []]);
 const showPath = ref(false);
 const isShowingSurface = ref(true);
 const text = ref(props.isHistorical ? "Historical" : "SSP370");
@@ -170,16 +176,20 @@ onMounted(() => {
 
   initializeLayers().then((layers) => {
     layerList = layers;
-    // drawAllLayers();
     setLayerProps();
   });
 
   watch(
     () => store.getHoveredFile,
     (hoveredFile) => {
-      if (!hoveredFile) return;
-      console.log("hovered file", hoveredFile);
-      selectedModel.value = [hoveredFile.split("_")[0], []];
+      if (!hoveredFile) {
+        selectedModel.value = [[], []];
+      } else {
+        selectedModel.value = [
+          [hoveredFile.split("_")[0] + "_" + hoveredFile.split("_")[1]],
+          [],
+        ];
+      }
       drawAllLayers();
     }
   );
@@ -189,8 +199,8 @@ onMounted(() => {
       if (!files) return;
       console.log("files changed", files);
       selectedModel.value = [
-        files[0].map((d) => d.split("_")[0]),
-        files[1].map((d) => d.split("_")[0]),
+        files[0].map((d) => d.split("_")[0] + "_" + d.split("_")[1]),
+        files[1].map((d) => d.split("_")[0] + "_" + d.split("_")[1]),
       ];
       nextTick(() => {
         drawAllLayers();
@@ -279,11 +289,11 @@ async function initializeLayers() {
       return g.getLayers();
     })
     .flat();
-  debugger;
   return layerList;
 }
 
 function drawAllLayers() {
+  message.value = "Loading...";
   // Need to make sure that the 'watch's on the layer generators are flagged with a nextTick()
   nextTick(() => {
     layerList = layerGenerators
@@ -294,6 +304,10 @@ function drawAllLayers() {
 
     if (layerList.length == 0) return;
     setLayerProps();
+    message.value = "DONE!";
+    setTimeout(() => {
+      message.value = "";
+    }, 2000);
   });
 }
 

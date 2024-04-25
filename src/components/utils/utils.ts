@@ -117,7 +117,10 @@ export const getModelType = (model) => {
   } else {
     let prefix = "CMIP6_pr_historical_S3L0.02_";
     // strip the prefix
-    ret = basefile.slice(prefix.length, -7).split("_")[0];
+    ret =
+      basefile.slice(prefix.length, -7).split("_")[0] +
+      "_" +
+      basefile.slice(prefix.length, -7).split("_")[1];
   }
   return ret;
 };
@@ -438,7 +441,7 @@ export const historicalLabels = [
   // // "CMIP6_taxmax_historical_S3L0.1_TaiESM1_historical_r1i1p1f1_tasmax.nc"
 ];
 
-export const ssp370Labels = [
+export let ssp370Labels = [
   "CMIP6_pr_historical_S3L0.02_ACCESS-CM2_ssp370_r1i1p1f1_pr.nc",
   // "CMIP6_pr_historical_S3L0.02_ACCESS-CM2_ssp370_r2i1p1f1_pr.nc",
   // "CMIP6_pr_historical_S3L0.02_ACCESS-CM2_ssp370_r3i1p1f1_pr.nc",
@@ -502,6 +505,7 @@ export const ssp370Labels = [
   // "CMIP6_pr_historical_S3L0.02_MRI-ESM2-0_ssp370_r5i1p1f1_pr.nc",
   "CMIP6_pr_historical_S3L0.02_TaiESM1_ssp370_r1i1p1f1_pr.nc",
 ];
+ssp370Labels = [...historicalLabels, ...ssp370Labels];
 
 export const ssp585Labels = [
   "CMIP6_pr_historical_S3L0.02_ACCESS-CM2_ssp585_r1i1p1f1_pr.nc",

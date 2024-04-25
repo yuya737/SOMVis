@@ -13,7 +13,7 @@
 <script setup lang="ts">
 import { agnes } from "ml-hclust";
 
-import { onMounted, watch } from "vue";
+import { onMounted, watch, ref, nextTick } from "vue";
 import { useStore } from "@/store/main";
 import API from "@/api/api";
 import * as d3 from "d3";
@@ -30,6 +30,8 @@ import {
 const store = useStore();
 const labels = ssp370Labels.map((i) => getModelType(i));
 const fullLabels = ssp370Labels.map((i) => stripSOMprefix(i));
+console.log(labels);
+const clearFlag = ref(false);
 let tree;
 
 onMounted(() => {
@@ -49,9 +51,12 @@ watch(
 function clearSelections() {
   store.setFiles([[], []]);
   store.setHoveredFile(null);
-  d3.selectAll('text[id^="tick"]').classed("label--not--active", true);
-  d3.selectAll('text[id^="node"]').classed("label--not--active", true);
-  d3.selectAll('rect[id^="rect"]').classed("rect--not--active", true);
+  d3.selectAll('text[id^="label"]').attr("class", null);
+  d3.selectAll('text[id^="node"]').attr("class", null);
+  d3.selectAll('rect[id^="rect"]').attr("class", null);
+  d3.selectAll('path[id^="link"]').attr("class", null);
+  d3.selectAll('circle[id^="node"]').attr("class", null);
+  clearFlag.value = !clearFlag.value;
 }
 
 async function draw() {
@@ -64,9 +69,9 @@ async function draw() {
       years: store.getYearsSelected,
     }
   );
-  let svgHeatmap = make_heatmap(distances);
+  let svgHeatmap = makeHeatmap(distances);
   console.log("SDF", svgHeatmap);
-  let svgDendrogram = make_dendrogram({
+  let svgDendrogram = makeDendrogram({
     width:
       document.getElementById("my_dataviz").clientWidth -
       document.getElementById("my_dataviz").clientHeight -
@@ -81,15 +86,50 @@ async function draw() {
   document.getElementById("my_dataviz").appendChild(svgDendrogram);
 }
 
-function make_dendrogram(options = {}) {
+function highlightOneOnHover(active, className, event, d) {
+  if (d?.data?.text) {
+    d = d.data.text;
+  }
+  if (store.getFiles[0].length > 0 || store.getFiles[1].length > 0) {
+    // When files are selected, do not trigger any hover actions
+    return;
+  }
+  // Reset hoveredFile in store
+  store.setHoveredFile(active ? fullLabels[labels.indexOf(d)] : null);
+
+  // Activate dendrogram label
+  d3.selectAll("text#node" + d).classed("label--active--" + className, active);
+  // Active heatmap label
+  d3.selectAll("text#label_y" + d).classed(
+    "label--active--" + className,
+    active
+  );
+
+  d3.selectAll("rect").classed("rect--not--active", active);
+  d3.selectAll(`rect[id^="rect${d}:"]`).classed("rect--active", active);
+
+  let dendrogramLeaf = d3.select("text#node" + d).data()[0];
+  d3.select(dendrogramLeaf.linkNodeTo).classed(
+    "link--active--" + className,
+    active
+  );
+  do
+    d3.select(dendrogramLeaf.linkNodeTo).classed(
+      "link--active--" + className,
+      active
+    );
+  while ((dendrogramLeaf = dendrogramLeaf.parent));
+}
+
+function makeDendrogram(options = {}) {
   const {
     width: width = 420,
     height: height = 320,
     hideLabels: hideLabels = false,
-    paddingBottom: paddingBottom = hideLabels ? 20 : 250,
+    paddingBottom: paddingBottom = hideLabels ? 20 : 350,
     innerHeight = height - paddingBottom,
     innerWidth = width - 10,
-    paddingLeft = 70,
+    paddingLeft = 100,
     h: cutHeight = undefined,
     yLabel: yLabel = "↑ Height",
     colors: colors = d3.schemeTableau10,
@@ -292,7 +332,8 @@ function make_dendrogram(options = {}) {
       ]);
     })
     .attr("d", elbow)
-    .attr("transform", `translate(${paddingLeft}, ${hideLabels ? 20 : 0})`);
+    .attr("transform", `translate(${paddingLeft}, ${hideLabels ? 20 : 0})`)
+    .attr("id", (d) => "link" + d.source.index);
 
   let nodeToLinksMap = {};
   root.links().forEach((d) => {
@@ -312,6 +353,7 @@ function make_dendrogram(options = {}) {
     .attr("r", 6)
     .attr("cx", (d) => d.source.x)
     .attr("cy", (d) => transformY(d.source))
+    .attr("id", (d) => "node" + d.source.index + "_" + d.target.index)
     .attr("transform", `translate(${paddingLeft}, ${hideLabels ? 20 : 0})`)
     .attr("fill", "black")
     .each(
@@ -324,8 +366,6 @@ function make_dendrogram(options = {}) {
     .each((d) => (d.isClicked = false))
     .on("mouseover", function (event, d) {
       d.isClicked = false;
-      d3.selectAll('text[id^="tick"]').classed("label--not--active", true);
-      d3.selectAll('rect[id^="rect"]').classed("rect--not--active", true);
       classGroup(nodeToLinksMap[d.source.index][0], "class1", true);
       classGroup(nodeToLinksMap[d.source.index][1], "class2", true);
       d3.select(this).classed("cmp--node--active", true);
@@ -333,8 +373,8 @@ function make_dendrogram(options = {}) {
     .on("mouseout", function (event, d) {
       if (d.isClicked) return;
       // Set all heatmap ticks to inactive
-      d3.selectAll('text[id^="tick"]').classed("label--not--active", false);
-      d3.selectAll('rect[id^="rect"]').classed("rect--not--active", false);
+      // d3.selectAll('text[id^="tick"]').classed("label--not--active", false);
+      // d3.selectAll('rect[id^="rect"]').classed("rect--not--active", false);
       classGroup(nodeToLinksMap[d.source.index][0], "class1", false);
       classGroup(nodeToLinksMap[d.source.index][1], "class2", false);
       d3.select(this).classed("cmp--node--active", false);
@@ -344,15 +384,30 @@ function make_dendrogram(options = {}) {
       console.log(d.isClicked);
       classGroup(nodeToLinksMap[d.source.index][0], "class1", true);
       classGroup(nodeToLinksMap[d.source.index][1], "class2", true);
-      store.setFiles(d.children);
+      nextTick(() => store.setFiles(d.children));
+
+      watch(
+        clearFlag,
+        () => {
+          unclickCmpElement(this, nodeToLinksMap[d.source.index][0], "class1");
+          unclickCmpElement(this, nodeToLinksMap[d.source.index][1], "class2");
+        },
+        { once: true }
+      );
     });
 
   function classGroup(node, className, active) {
+    if (store.getFiles[0].length > 0 || store.getFiles[1].length > 0) {
+      // When files are selected, do not trigger any hover actions
+      return;
+    }
     d3.select(node.linkNodeTo).classed("link--active--" + className, active);
     if (node.children) {
       classGroup(node.children[0], className, active);
       classGroup(node.children[1], className, active);
     } else {
+      d3.selectAll('text[id^="tick"]').classed("label--not--active", active);
+      d3.selectAll('rect[id^="rect"]').classed("rect--not--active", active);
       d3.selectAll(
         (className == "class2" ? "text#label_x" : "text#label_y") +
           node.data.text
@@ -366,6 +421,13 @@ function make_dendrogram(options = {}) {
       d3.select(node.svg).classed("label--active--" + className, active);
       // d3.select(node.svg).style("fill", "red");
     }
+  }
+
+  function unclickCmpElement(cmpNode, element, className) {
+    d3.select(cmpNode).classed("cmp--node--active", true);
+    d3.selectAll('text[id^="tick"]').classed("label--not--active", false);
+    d3.selectAll('rect[id^="rect"]').classed("rect--not--active", false);
+    classGroup(element, className, false);
   }
 
   // Nodes
@@ -384,14 +446,36 @@ function make_dendrogram(options = {}) {
       d.data.text = labels[d.data.index];
       d.data.fullText = fullLabels[d.data.index];
       d.svg = this;
+      d.isClicked = false;
+    })
+    .style("fill", (d) => {
+      return d.data.text.includes("historical") ? "midnightblue" : "firebrick";
     })
     .attr(
       "transform",
       (d) => `translate(${d.x + paddingLeft},${transformY(d)}) rotate(315)`
     )
     .attr("id", (d) => "node" + d.data.text)
-    .on("mouseover", highlightOnHover(true, "class0"))
-    .on("mouseout", highlightOnHover(false, "class0"));
+    .on("mouseover", (event, d) => {
+      d.isClicked = false;
+      highlightOneOnHover(true, "class0", event, d);
+    })
+    .on("mouseout", (event, d) => {
+      if (d.isClicked) return;
+      highlightOneOnHover(false, "class0", event, d);
+    })
+    .on("click", (event, d) => {
+      d.isClicked = true;
+      highlightOneOnHover(true, "class0", event, d);
+      nextTick(() => store.setFiles([[d.data.fullText], []]));
+      watch(
+        clearFlag,
+        () => {
+          highlightOneOnHover(false, "class0", event, d);
+        },
+        { once: true }
+      );
+    });
 
   svg
     .append("text")
@@ -419,51 +503,10 @@ function make_dendrogram(options = {}) {
 
   return svg.node();
 }
-function highlightOnHover(active, className) {
-  return function (event, d) {
-    if (d?.data?.text) {
-      d = d.data.text;
-    }
-    // Reset hoveredFile in store
-    store.setHoveredFile(active ? fullLabels[labels.indexOf(d)] : null);
 
-    // Activate dendrogram label
-    d3.selectAll("text#node" + d).classed(
-      "label--active--" + className,
-      active
-    );
-    // Active heatmap label
-    d3.selectAll("text#label_y" + d).classed(
-      "label--active--" + className,
-      active
-    );
-
-    d3.selectAll("rect").classed("rect--not--active", active);
-    d3.selectAll(`rect[id^="rect${d}"]`).classed("rect--active", active);
-
-    // if (active) {
-    //   d3.selectAll(`rect[id^="rect${d}"]`).style("opacity", "1");
-    // } else {
-    //   d3.selectAll("rect").style("opacity", "0.8");
-    // }
-
-    let dendrogramLeaf = d3.select("text#node" + d).data()[0];
-    d3.select(dendrogramLeaf.linkNodeTo).classed(
-      "link--active--" + className,
-      active
-    );
-    do
-      d3.select(dendrogramLeaf.linkNodeTo).classed(
-        "ldink--active--" + className,
-        active
-      );
-    while ((dendrogramLeaf = dendrogramLeaf.parent));
-  };
-}
-
-function make_heatmap(distances) {
+function makeHeatmap(distances) {
   // set the dimensions and margins of the graph
-  const margin = { top: 80, right: 25, bottom: 100, left: 150 };
+  const margin = { top: 80, right: 25, bottom: 150, left: 200 };
   // print this elements' width and height
   const fullHW = Math.min(
     document.getElementById("my_dataviz").clientWidth,
@@ -561,46 +604,28 @@ function make_heatmap(distances) {
 
   yAxis
     .selectAll(".tick text") // Select all tick elements
+    .style("fill", (d) => {
+      return d.includes("historical") ? "midnightblue" : "firebrick";
+    })
     .attr("id", (d) => "label_y" + d)
-    .on("mouseover", highlightOnHover(true, "class0"))
-    .on("mouseleave", highlightOnHover(false, "class0"));
+    // .each((d) => {
+    //   // d.isClicked = false;
+    // })
+    .on("mouseover", (event, d) => {
+      // d.isClicked = false;
+      highlightOneOnHover(true, "class0", event, d);
+    })
+    .on("mouseleave", (event, d) => {
+      // if (d.isClicked) return;
+      highlightOneOnHover(false, "class0", event, d);
+    });
   yAxis.select(".domain").remove();
 
   // Build color scale
   const myColor = d3
     .scaleSequential()
-    .interpolator(d3.interpolateReds)
-    .domain([0, Math.max(...distances.flat())]);
-
-  // create a tooltip
-  // const tooltip = d3
-  //   .select("#my_dataviz")
-  //   .append("div")
-  //   .style("opacity", 0)
-  //   .attr("class", "tooltip")
-  //   .style("background-color", "white")
-  //   .style("border", "solid")
-  //   .style("border-width", "2px")
-  //   .style("border-radius", "5px")
-  //   .style("padding", "5px")
-  //   .style("position", "absolute")
-  //   .style("width", "fit-content");
-
-  // // Three function that change the tooltip when user hover / move / leave a cell
-  // const mouseover = function (event, d) {
-  //   tooltip.style("opacity", 1).style("z-index", 1);
-  //   d3.select(this).style("stroke", "black").style("opacity", 1);
-  // };
-  // const mousemove = function (event, d) {
-  //   tooltip
-  //     .html("Cell is: " + d.value)
-  //     .style("left", event.clientX + "px")
-  //     .style("top", event.clientY + "px");
-  // };
-  // const mouseleave = function (event, d) {
-  //   tooltip.style("opacity", 0).style("z-index", -1);
-  //   d3.select(this).style("stroke", "none").style("opacity", 0.8);
-  // };
+    .interpolator(d3.interpolateViridis)
+    .domain([Math.max(...distances.flat()), 0]);
 
   // add the squares
   svg
@@ -653,4 +678,6 @@ function make_heatmap(distances) {
     .text(`Ensemble Model Comparison: ${store.getMonthsSelected}`);
   return svg.node();
 }
+
+// function
 </script>

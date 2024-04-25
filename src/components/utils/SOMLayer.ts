@@ -207,6 +207,7 @@ export class SOMLayer extends AbstractLayerGenerator {
         selectData(this.selectedModel.value[1]),
       ];
     }
+    console.log(curBMUData);
     return curBMUData;
   }
 
@@ -240,19 +241,6 @@ export class SOMLayer extends AbstractLayerGenerator {
       });
       // concat the two groups
       freq = g1.concat(g2);
-
-      // g1.forEach((d) => (freq[d[0]] = d[1]));
-      // g2.forEach((d) => {
-      //   if (d[0] in freq) {
-      //     freq[d[0]] -= d[1];
-      //   } else {
-      //     freq[d[0]] = -d[1];
-      //   }
-      // });
-      // freq = Object.entries(freq).map((d) => [
-      //   d[0].split(",").map((d) => parseFloat(d)),
-      //   d[1],
-      // ]);
     }
     return freq;
   }
@@ -262,14 +250,14 @@ export class SOMLayer extends AbstractLayerGenerator {
       return this.layerList;
     }
     let ret = [];
-    // console.log(
-    //   "Drawing",
-    //   this.selectedModel.value,
-    //   this.selectedMonthRange.value,
-    //   this.selectedTimeRange.value
-    // );
     let curBMUData = this._subsetData();
     let freq = this._getFreq(curBMUData);
+
+    // if freq is an empty dict
+    if (freq.length == 0) {
+      this.layerList = [];
+      return ret;
+    }
 
     // console.log(curHeatmapData);
 
@@ -403,7 +391,7 @@ export class SOMLayer extends AbstractLayerGenerator {
       },
       cellSize: 0.25,
     });
-    // ret = [...ret, gridcell];
+    ret = [...ret, gridcell];
     const resolution = 200;
     if (this.mode == "single") {
       let kdeResult = kde2d(
@@ -414,6 +402,7 @@ export class SOMLayer extends AbstractLayerGenerator {
           h: [1, 1],
         }
       );
+      const sum = kdeResult.z._buffer.reduce((acc, curr) => acc + curr, 0);
       // Estimate the normal of the KDE surface
       const getAdjacentIndices = (i) => {
         let ret = [];
@@ -429,7 +418,7 @@ export class SOMLayer extends AbstractLayerGenerator {
         return ret;
       };
 
-      let heightMultiplier = 700;
+      let heightMultiplier = 70000;
 
       const crossProduct3DandNorm = (a, b) => {
         let ret = [
@@ -481,11 +470,13 @@ export class SOMLayer extends AbstractLayerGenerator {
             return [
               kdeResult.x[Math.round(u * (resolution - 1))],
               kdeResult.y[Math.round(v * (resolution - 1))],
-              kdeResult.z._buffer[
+              (kdeResult.z._buffer[
                 Math.round(
                   u * resolution * (resolution - 1) + v * (resolution - 1)
                 )
-              ] * heightMultiplier,
+              ] /
+                sum) *
+                heightMultiplier,
             ];
           },
           // getNormal: (u, v) => {
@@ -496,7 +487,7 @@ export class SOMLayer extends AbstractLayerGenerator {
           // getColor: (x, z, y) => [40, interpolateGreens(z/15), 160, (z / 15) * 255],
           getColor: (x, y, z) => {
             let t = interpolateGreens(
-              scaleLinear().domain([0, 15]).range([0, 1])(z)
+              scaleLinear().domain([0, 25]).range([0, 1])(z)
             )
               .replace(/[^\d,]/g, "")
               .split(",")
@@ -533,7 +524,9 @@ export class SOMLayer extends AbstractLayerGenerator {
           h: [1, 1],
         }
       );
-      let heightMultiplier = 700;
+      const sum1 = kdeResult1.z._buffer.reduce((acc, curr) => acc + curr, 0);
+      const sum2 = kdeResult2.z._buffer.reduce((acc, curr) => acc + curr, 0);
+      let heightMultiplier = 70000;
 
       ret = [
         ...ret,
@@ -542,11 +535,13 @@ export class SOMLayer extends AbstractLayerGenerator {
             return [
               kdeResult1.x[Math.round(u * (resolution - 1))],
               kdeResult1.y[Math.round(v * (resolution - 1))],
-              kdeResult1.z._buffer[
+              (kdeResult1.z._buffer[
                 Math.round(
                   u * resolution * (resolution - 1) + v * (resolution - 1)
                 )
-              ] * heightMultiplier,
+              ] /
+                sum1) *
+                heightMultiplier,
             ];
           },
           // getColor: (x, z, y) => [40, interpolateGreens(z/15), 160, (z / 15) * 255],
@@ -554,7 +549,7 @@ export class SOMLayer extends AbstractLayerGenerator {
             let t = interpolateRgb(
               "white",
               "#1b9e77"
-            )(scaleLinear().domain([0, 15]).range([0, 1])(z))
+            )(scaleLinear().domain([0, 25]).range([0, 1])(z))
               .replace(/[^\d,]/g, "")
               .split(",")
               .map((d) => Number(d));
@@ -576,11 +571,13 @@ export class SOMLayer extends AbstractLayerGenerator {
             return [
               kdeResult2.x[Math.round(u * (resolution - 1))],
               kdeResult2.y[Math.round(v * (resolution - 1))],
-              kdeResult2.z._buffer[
+              (kdeResult2.z._buffer[
                 Math.round(
                   u * resolution * (resolution - 1) + v * (resolution - 1)
                 )
-              ] * heightMultiplier,
+              ] /
+                sum2) *
+                heightMultiplier,
             ];
           },
           // getColor: (x, z, y) => [40, interpolateGreens(z/15), 160, (z / 15) * 255],
@@ -588,7 +585,7 @@ export class SOMLayer extends AbstractLayerGenerator {
             let t = interpolateRgb(
               "white",
               "#d95f02"
-            )(scaleLinear().domain([0, 15]).range([0, 1])(z))
+            )(scaleLinear().domain([0, 25]).range([0, 1])(z))
               .replace(/[^\d,]/g, "")
               .split(",")
               .map((d) => Number(d));

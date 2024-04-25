@@ -1,16 +1,16 @@
 <template>
   <Splitter style="height: 100%" layout="horizontal">
-    <SplitterPanel style="height: 100%" :size="50">
+    <SplitterPanel style="height: 100%" :size="40">
       <ProjectionViewer class="h-full" />
     </SplitterPanel>
 
-    <SplitterPanel class="h-full w-full" :size="50">
+    <SplitterPanel class="h-full w-full" :size="60">
       <!-- <ProjectionViewer class="h-full" /> -->
       <Splitter class="h-full w-full" layout="vertical">
         <SplitterPanel class="h-full">
           <MapViewer class="h-full" />
         </SplitterPanel>
-        <SplitterPanel style="height: 50%">
+        <SplitterPanel style="height: 100%" :size="70">
           <HeatmapViewer class="h-full" />
         </SplitterPanel>
       </Splitter>
