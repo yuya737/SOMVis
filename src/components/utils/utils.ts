@@ -10,6 +10,11 @@ import { pointsOnPath } from "points-on-path";
 
 import { OrthographicView, OrbitView } from "@deck.gl/core";
 
+export enum subsetType {
+  month = "month",
+  waterYear = "water_year_mean",
+}
+
 export function scalePointsToSquare(points, maxWidth = 40, maxHeight = 40) {
   // Find minimum and maximum values for x and y
   const minX = Math.min(...points.map((p) => p[0]));
@@ -506,6 +511,7 @@ export let ssp370Labels = [
   "CMIP6_pr_historical_S3L0.02_TaiESM1_ssp370_r1i1p1f1_pr.nc",
 ];
 ssp370Labels = [...historicalLabels, ...ssp370Labels];
+// ssp370Labels = [...historicalLabels];
 
 export const ssp585Labels = [
   "CMIP6_pr_historical_S3L0.02_ACCESS-CM2_ssp585_r1i1p1f1_pr.nc",

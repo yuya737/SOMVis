@@ -24,6 +24,7 @@
   "devDependencies": {
     "@typescript-eslint/parser": "^7.3.1",
     "@vitejs/plugin-vue": "^4.5.2",
+    "@vue/cli-plugin-typescript": "~5.0.0",
     "autoprefixer": "latest",
     "eslint": "^8.57.0",
     "eslint-config-prettier": "^9.1.0",

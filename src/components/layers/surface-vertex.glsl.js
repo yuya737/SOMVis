@@ -48,8 +48,8 @@ void main(void) {
   vec4 position_vector = project_common_position_to_clipspace(vec4(position_commonspace, 0.0));
   float fadeFactor = 1.0 - position_vector.z * lightStrength;
 
-  vColor = vec4(colors.rgb * fadeFactor, colors.a * opacity) / 255.0;;
-  // vColor = vec4(colors.rgb, colors.a * opacity) / 255.0;;
+  // vColor = vec4(colors.rgb * fadeFactor, colors.a * opacity) / 255.0;;
+  vColor = vec4(colors.rgb, colors.a * opacity) / 255.0;;
   // vColor.a = 0.2;
   // vColor = vec4(
   //   normals * 0.5 + 0.5, 1.0

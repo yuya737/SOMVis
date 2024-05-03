@@ -1,4 +1,5 @@
 import { defineStore } from "pinia";
+import { subsetType } from "@/components/utils/utils";
 
 export const useStore = defineStore("main", {
   // other options...
@@ -6,8 +7,9 @@ export const useStore = defineStore("main", {
     return {
       files: [[], []], // Assume this is a list of two lists of files that we want to compare, for now
       monthsSelected: [10], // -1 means all months
+      subsetType: subsetType.month,
+      // subsetType: "month",
       yearsSelected: [-1], // -1 means all years
-      sspSelected: "historical",
       hoveredFile: null,
     };
   },
@@ -21,8 +23,8 @@ export const useStore = defineStore("main", {
     getYearsSelected() {
       return this.yearsSelected;
     },
-    getSSPSelected() {
-      return this.sspSelected;
+    getSubsetType() {
+      return this.subsetType;
     },
     getHoveredFile() {
       return this.hoveredFile;
@@ -32,11 +34,11 @@ export const useStore = defineStore("main", {
     setFiles(files) {
       this.files = files;
     },
-    updateElements({ files, monthsSelected, yearsSelected, sspSelected }) {
+    updateElements({ files, monthsSelected, yearsSelected, subsetType }) {
       this.files = files;
       this.monthsSelected = monthsSelected;
       this.yearsSelected = yearsSelected;
-      this.sspSelected = sspSelected;
+      this.subsetType = subsetType;
     },
     setHoveredFile(file) {
       this.hoveredFile = file;

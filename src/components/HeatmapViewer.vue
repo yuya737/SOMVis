@@ -41,12 +41,11 @@ onMounted(() => {
       draw();
     }
   };
+  watch(
+    () => [store.getYearsSelected, store.getMonthsSelected],
+    async () => draw()
+  );
 });
-
-watch(
-  () => [store.getYearsSelected, store.getMonthsSelected],
-  async () => draw()
-);
 
 function clearSelections() {
   store.setFiles([[], []]);
@@ -65,12 +64,12 @@ async function draw() {
     true,
     {
       files: ssp370Labels,
+      subsetType: store.getSubsetType,
       months: store.getMonthsSelected,
       years: store.getYearsSelected,
     }
   );
   let svgHeatmap = makeHeatmap(distances);
-  console.log("SDF", svgHeatmap);
   let svgDendrogram = makeDendrogram({
     width:
       document.getElementById("my_dataviz").clientWidth -
@@ -422,7 +421,6 @@ function makeDendrogram(options = {}) {
       // d3.select(node.svg).style("fill", "red");
     }
   }
-
   function unclickCmpElement(cmpNode, element, className) {
     d3.select(cmpNode).classed("cmp--node--active", true);
     d3.selectAll('text[id^="tick"]').classed("label--not--active", false);
@@ -567,8 +565,8 @@ function makeHeatmap(distances) {
   });
   let data = distances.flat().map((item, index) => ({
     value: item,
-    row: getModelType(ssp370Labels[index % ssp370Labels.length]),
-    col: getModelType(ssp370Labels[Math.floor(index / ssp370Labels.length)]),
+    row: ssp370Labels[index % ssp370Labels.length],
+    col: ssp370Labels[Math.floor(index / ssp370Labels.length)],
   }));
   const dendrogramOrder = getNodeOrder(tree, []);
   const labelsReordered = dendrogramOrder.map((i) => ssp370Labels[i]);
@@ -576,7 +574,7 @@ function makeHeatmap(distances) {
   const x = d3
     .scaleBand()
     .range([0, width])
-    .domain(labelsReordered.map((i) => getModelType(i)))
+    .domain(labelsReordered)
     .padding(0.05);
   const xAxis = svg
     .append("g")
@@ -585,7 +583,13 @@ function makeHeatmap(distances) {
     .call(d3.axisBottom(x).tickSize(0));
   xAxis
     .selectAll(".tick text") // Select all text elements under elements with class 'tick'
-    .attr("id", (d) => "label_x" + d)
+    .text((d) => getModelType(d))
+    .style("fill", (d) => {
+      return stripSOMprefix(d).includes("historical")
+        ? "midnightblue"
+        : "firebrick";
+    })
+    .attr("id", (d) => "label_x" + getModelType(d))
     .attr("transform", "rotate(-45)") // Rotate each text element by -45 degrees
     .style("text-anchor", "end"); // Align the text to the end of the text element (right side when not rotated)
 
@@ -595,7 +599,7 @@ function makeHeatmap(distances) {
   const y = d3
     .scaleBand()
     .range([0, height])
-    .domain(labelsReordered.map((i) => getModelType(i)))
+    .domain(labelsReordered)
     .padding(0.05);
   const yAxis = svg
     .append("g")
@@ -605,19 +609,20 @@ function makeHeatmap(distances) {
   yAxis
     .selectAll(".tick text") // Select all tick elements
     .style("fill", (d) => {
-      return d.includes("historical") ? "midnightblue" : "firebrick";
+      return stripSOMprefix(d).includes("historical")
+        ? "midnightblue"
+        : "firebrick";
     })
-    .attr("id", (d) => "label_y" + d)
-    // .each((d) => {
-    //   // d.isClicked = false;
-    // })
+    // change text
+    .text((d) => getModelType(d))
+    .attr("id", (d) => "label_y" + getModelType(d))
     .on("mouseover", (event, d) => {
       // d.isClicked = false;
-      highlightOneOnHover(true, "class0", event, d);
+      highlightOneOnHover(true, "class0", event, getModelType(d));
     })
     .on("mouseleave", (event, d) => {
       // if (d.isClicked) return;
-      highlightOneOnHover(false, "class0", event, d);
+      highlightOneOnHover(false, "class0", event, getModelType(d));
     });
   yAxis.select(".domain").remove();
 
@@ -654,7 +659,40 @@ function makeHeatmap(distances) {
     // .on("mousemove", mousemove)
     // .on("mouseleave", mouseleave)
     .attr("id", function (d) {
-      return "rect" + d.row + ":" + d.col;
+      return "rect" + getModelType(d.row) + ":" + getModelType(d.col);
+    })
+    .on("click", function (event, d) {
+      store.setFiles([[stripSOMprefix(d.row)], [stripSOMprefix(d.col)]]);
+
+      d3.selectAll("text#label_y" + getModelType(d.row)).classed(
+        "label--active--class1",
+        true
+      );
+      d3.selectAll("text#label_x" + getModelType(d.col)).classed(
+        "label--active--class2",
+        true
+      );
+
+      d3.selectAll("rect").classed("rect--not--active", true);
+      d3.selectAll(`rect[id^="rect${getModelType(d.row)}:"]`).classed(
+        "rect--active--class1",
+        true
+      );
+      d3.selectAll(`rect[id$=":${getModelType(d.col)}"]`).classed(
+        "rect--active--class2",
+        true
+      );
+
+      watch(clearFlag, () => {
+        d3.selectAll("text#label_y" + getModelType(d.row)).classed(
+          "label--active--class1",
+          false
+        );
+        d3.selectAll("text#label_x" + getModelType(d.col)).classed(
+          "label--active--class2",
+          false
+        );
+      });
     });
 
   // Add title to graph

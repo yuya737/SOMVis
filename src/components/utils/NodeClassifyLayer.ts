@@ -25,6 +25,8 @@ export class NodeClassifyLayer extends AbstractLayerGenerator {
     // let data = this.mapping_data.map((d) => {
     //     return { ...d, classify_data: this.classify_data[d.id].value };
     // });
+    let retd: SOMPath = null;
+
     let ret = [
       new PathLayer({
         id: "classify-layer",
@@ -35,6 +37,7 @@ export class NodeClassifyLayer extends AbstractLayerGenerator {
         getWidth: 0.1,
         getColor: (d) => colorPercentile(d.percentile),
       }),
+
       // new PathLayer({
       //     id: "classify-layer",
       //     data: [

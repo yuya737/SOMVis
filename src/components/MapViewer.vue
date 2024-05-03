@@ -198,10 +198,11 @@ watch(
     let group1Mean = calculateElementWiseMean(
       files[0].map((d) => data2?.[d].flat())
     );
-
+    // console.log(group1Mean.reduce((acc, curr) => acc + curr, 0)/group1Mean.length);
     let group2Mean = calculateElementWiseMean(
       files[1].map((d) => data2?.[d].flat())
     );
+    // console.log(group2Mean.reduce((acc, curr) => acc + curr, 0)/group1Mean.length);
     if (!group2Mean) {
       cmp_1.value = files[0];
       cmp_2.value = [];

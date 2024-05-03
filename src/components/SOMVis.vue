@@ -1,7 +1,7 @@
 <template>
   <Splitter style="height: 100%" layout="horizontal">
     <SplitterPanel style="height: 100%" :size="40">
-      <ProjectionViewer class="h-full" />
+      <ProjectionViewer class="h-full" isHistorical />
     </SplitterPanel>
 
     <SplitterPanel class="h-full w-full" :size="60">
@@ -12,6 +12,7 @@
         </SplitterPanel>
         <SplitterPanel style="height: 100%" :size="70">
           <HeatmapViewer class="h-full" />
+          <!-- <ForceGraph class="h-full" /> -->
         </SplitterPanel>
       </Splitter>
     </SplitterPanel>

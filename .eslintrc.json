@@ -24,5 +24,13 @@
       "ecmaVersion": 11,
       "sourceType": "module"
   },
-  "settings": {}
+  "settings": {},
+  "overrides": [
+    {
+        "files": ["*.ts"],
+        "rules": {
+            "no-undef": "off"
+        }
+    }
+]
 }

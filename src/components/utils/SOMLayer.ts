@@ -20,10 +20,13 @@ import {
   pointsToCurve,
   generateMonthRangeList,
   hexToRgb,
+  stripSOMprefix,
+  subsetType,
 } from "./utils";
 
 import { AbstractLayerGenerator } from "./AbstractLayerGenerator";
-import { h, watch } from "vue";
+import { watch } from "vue";
+import { useStore } from "@/store/main";
 
 export class SOMLayer extends AbstractLayerGenerator {
   // readonly coords: any;
@@ -32,9 +35,9 @@ export class SOMLayer extends AbstractLayerGenerator {
   readonly selectedTimeRange: any;
   readonly selectedMonthRange: any;
   readonly selectedModel: any;
-  // readonly temp: any;
-  // readonly month_divided_data: any;
-  readonly modelMonthDict: any;
+  readonly selectedSubsetType: any;
+  readonly hoveredFile: any;
+
   readonly blockedCenterofMassData: any;
   readonly BMUData: any;
 
@@ -46,93 +49,57 @@ export class SOMLayer extends AbstractLayerGenerator {
   mode: string = "single"; // either single or compare
 
   // constructor(coords, name: string, timeRange: any, monthRange: any) {
-  constructor(data, timeRange, monthRange, model, extent) {
+  constructor(
+    data,
+    timeRange,
+    monthRange,
+    model,
+    subsetType: subsetType,
+    hoveredFile,
+    extent
+  ) {
     super();
     this.data = data;
     this.selectedTimeRange = timeRange;
     this.selectedMonthRange = monthRange;
     this.selectedModel = model;
+    this.hoveredFile = hoveredFile;
     this.extent = extent;
-    this.selectedMonthRangeList = generateMonthRangeList(
-      this.selectedMonthRange.value[0],
-      this.selectedMonthRange.value[1]
-    );
+    this.selectedMonthRangeList = monthRange;
+
+    watch(this.selectedModel, () => {
+      console.log("SDFSDFDFDDF");
+    });
+
     // If two sets of models are selected, then we are in compare mode
     this.selectedModel.value[1].length > 1
       ? (this.mode = "compare")
       : (this.mode = "single");
+    this.selectedSubsetType = subsetType;
 
-    let modelMonthDict = {};
-    Object.keys(data).forEach((k) => {
-      let monthDict = {
-        1: [],
-        2: [],
-        3: [],
-        4: [],
-        5: [],
-        6: [],
-        7: [],
-        8: [],
-        9: [],
-        10: [],
-        11: [],
-        12: [],
-      };
-      data[k]
-        .map((d) => d.coords)
-        .forEach((d, i) => {
-          monthDict[(i % 12) + 1].push(d);
-        });
-      let monthDividedData = Object.entries(monthDict).map((v) => {
-        return {
-          month: parseInt(v[0]),
-          scatter: v[1].map((d) => [d[0], -d[1]]),
-          coords: pointsToCurve(v[1]).map((d) => [d[0], -d[1]]),
-          name: k,
-        };
-      });
-      modelMonthDict[k] = monthDividedData;
-    });
-    this.modelMonthDict = modelMonthDict;
-
-    this.blockedCenterofMassData = Object.entries(this.modelMonthDict)
-      .map(([model, monthDividedData]) =>
-        monthDividedData.map((d) => {
-          return {
-            month: d.month,
-            name: getModelType(model),
-            message: getModelType(model),
-            path: this.blockedCenterOfMass(d.month, d.scatter, 10, model).map(
-              (d) => d.coords
-            ),
-          };
-        })
-      )
-      .flat();
-
-    this.BMUData = Object.entries(this.modelMonthDict)
+    this.BMUData = Object.entries(this.data)
       .map(([model, monthDividedData]) =>
         monthDividedData.map((d) =>
-          d.scatter.map((e, i) => {
+          d.coords.map((e, i) => {
             return {
-              name: getModelType(model),
+              name: stripSOMprefix(model),
               coords: e,
-              month: d.month,
+              id: d.id,
               year: i,
             };
           })
         )
       )
       .flat(2);
-    // Trigger redraw when things changes
     watch(
-      [this.selectedTimeRange, this.selectedMonthRange, this.selectedModel],
+      [
+        this.selectedTimeRange,
+        this.selectedMonthRange,
+        this.selectedModel,
+        this.selectedSubsetType,
+        this.hoveredFile,
+      ],
       () => {
-        this.selectedMonthRangeList = generateMonthRangeList(
-          this.selectedMonthRange.value[0],
-          this.selectedMonthRange.value[1]
-        );
-        console.log(this.selectedModel.value);
         this.selectedModel.value[1].length > 0
           ? (this.mode = "compare")
           : (this.mode = "single");
@@ -183,21 +150,44 @@ export class SOMLayer extends AbstractLayerGenerator {
         // curBlockedCenterofMass = this.blockedCenterofMassData.filter((d) =>
         //   this.selectedModel.value.includes(d.name)
         // );
+        console.log(this.BMUData);
         curBMUData = this.BMUData.filter((d) => files.includes(d.name));
       }
       // curBlockedCenterofMass = curBlockedCenterofMass.filter((d) =>
       //   this.selectedMonthRangeList.includes(d.month)
       // );
-      curBMUData = curBMUData.filter(
-        (d) =>
-          this.selectedMonthRangeList.includes(d.month) &&
-          d.year >= this.selectedTimeRange.value[0] &&
-          d.year <= this.selectedTimeRange.value[1]
-      );
+      if (this.selectedSubsetType.value == subsetType.month) {
+        curBMUData = curBMUData.filter((d) =>
+          this.selectedMonthRangeList.value.includes(parseInt(d.id))
+        );
+        if (this.selectedTimeRange.value[0] != -1) {
+          curBMUData = curBMUData.filter(
+            (d) => this.selectedTimeRange.value.includes(parseInt(d.year))
+
+            // d.year >= this.selectedTimeRange.value[0] &&
+            // d.year <= this.selectedTimeRange.value[1]
+          );
+        }
+      } else {
+        curBMUData = this.BMUData.filter(
+          (d) => d.id == subsetType.waterYear
+        ).filter((d) => files.includes(d.name));
+        if (this.selectedTimeRange.value[0] != -1) {
+          curBMUData = curBMUData.filter((d) =>
+            this.selectedTimeRange.value.includes(parseInt(d.year))
+          );
+        }
+      }
       return curBMUData;
     };
-
     let curBMUData;
+
+    // HOVER MODE
+    if (this.hoveredFile.value != null) {
+      curBMUData = selectData([this.hoveredFile.value]);
+      return curBMUData;
+    }
+
     if (this.mode === "single") {
       curBMUData = selectData(this.selectedModel.value[0]);
     } else {
@@ -207,7 +197,6 @@ export class SOMLayer extends AbstractLayerGenerator {
         selectData(this.selectedModel.value[1]),
       ];
     }
-    console.log(curBMUData);
     return curBMUData;
   }
 
@@ -221,12 +210,11 @@ export class SOMLayer extends AbstractLayerGenerator {
           freq[d.coords] = 1;
         }
       });
-      return Object.entries(freq)
-        .map((d) => [
-          d[0].split(",").map((d) => parseFloat(d)),
-          d[1] / arr.length,
-        ])
-        .filter((d) => d[1] > 0.01);
+      return Object.entries(freq).map((d) => [
+        d[0].split(",").map((d) => parseFloat(d)),
+        d[1] / arr.length,
+      ]);
+      // .filter((d) => d[1] > 0.01);
     };
     let freq;
     if (this.mode == "single") {
@@ -393,6 +381,7 @@ export class SOMLayer extends AbstractLayerGenerator {
     });
     ret = [...ret, gridcell];
     const resolution = 200;
+    const heightMultiplier = 750;
     if (this.mode == "single") {
       let kdeResult = kde2d(
         curBMUData.map((d) => d.coords[0]),
@@ -400,9 +389,14 @@ export class SOMLayer extends AbstractLayerGenerator {
         {
           n: resolution,
           h: [1, 1],
+          xMin: this.extent[0][0] * 1.2,
+          xMax: this.extent[0][1] * 1.2,
+          yMin: this.extent[1][0] * 1.2,
+          yMax: this.extent[1][1] * 1.2,
         }
       );
-      const sum = kdeResult.z._buffer.reduce((acc, curr) => acc + curr, 0);
+      // const sum = kdeResult.z._buffer.reduce((acc, curr) => acc + curr, 0);
+      // console.log(kdeResult.z._buffer, sum);
       // Estimate the normal of the KDE surface
       const getAdjacentIndices = (i) => {
         let ret = [];
@@ -417,8 +411,6 @@ export class SOMLayer extends AbstractLayerGenerator {
         }
         return ret;
       };
-
-      let heightMultiplier = 70000;
 
       const crossProduct3DandNorm = (a, b) => {
         let ret = [
@@ -470,13 +462,11 @@ export class SOMLayer extends AbstractLayerGenerator {
             return [
               kdeResult.x[Math.round(u * (resolution - 1))],
               kdeResult.y[Math.round(v * (resolution - 1))],
-              (kdeResult.z._buffer[
+              kdeResult.z._buffer[
                 Math.round(
                   u * resolution * (resolution - 1) + v * (resolution - 1)
                 )
-              ] /
-                sum) *
-                heightMultiplier,
+              ] * heightMultiplier,
             ];
           },
           // getNormal: (u, v) => {
@@ -492,7 +482,7 @@ export class SOMLayer extends AbstractLayerGenerator {
               .replace(/[^\d,]/g, "")
               .split(",")
               .map((d) => Number(d));
-            t.push((z / 5) * 255);
+            t.push((z / 8) * 255);
             return t;
           },
           uCount: resolution,
@@ -507,13 +497,16 @@ export class SOMLayer extends AbstractLayerGenerator {
         }),
       ];
     } else {
-      console.log("SDFSDF");
       let kdeResult1 = kde2d(
         curBMUData[0].map((d) => d.coords[0]),
         curBMUData[0].map((d) => d.coords[1]),
         {
           n: resolution,
           h: [1, 1],
+          xMin: this.extent[0][0] * 1.2,
+          xMax: this.extent[0][1] * 1.2,
+          yMin: this.extent[1][0] * 1.2,
+          yMax: this.extent[1][1] * 1.2,
         }
       );
       let kdeResult2 = kde2d(
@@ -522,11 +515,12 @@ export class SOMLayer extends AbstractLayerGenerator {
         {
           n: resolution,
           h: [1, 1],
+          xMin: this.extent[0][0] * 1.2,
+          xMax: this.extent[0][1] * 1.2,
+          yMin: this.extent[1][0] * 1.2,
+          yMax: this.extent[1][1] * 1.2,
         }
       );
-      const sum1 = kdeResult1.z._buffer.reduce((acc, curr) => acc + curr, 0);
-      const sum2 = kdeResult2.z._buffer.reduce((acc, curr) => acc + curr, 0);
-      let heightMultiplier = 70000;
 
       ret = [
         ...ret,
@@ -535,13 +529,11 @@ export class SOMLayer extends AbstractLayerGenerator {
             return [
               kdeResult1.x[Math.round(u * (resolution - 1))],
               kdeResult1.y[Math.round(v * (resolution - 1))],
-              (kdeResult1.z._buffer[
+              kdeResult1.z._buffer[
                 Math.round(
                   u * resolution * (resolution - 1) + v * (resolution - 1)
                 )
-              ] /
-                sum1) *
-                heightMultiplier,
+              ] * heightMultiplier,
             ];
           },
           // getColor: (x, z, y) => [40, interpolateGreens(z/15), 160, (z / 15) * 255],
@@ -553,7 +545,7 @@ export class SOMLayer extends AbstractLayerGenerator {
               .replace(/[^\d,]/g, "")
               .split(",")
               .map((d) => Number(d));
-            t.push((z / 8) * 255);
+            t.push((z / 15) * 255);
             return t;
           },
           uCount: resolution,
@@ -565,19 +557,18 @@ export class SOMLayer extends AbstractLayerGenerator {
           updateTriggers: {
             getPosition: curBMUData,
           },
+          parameters: { depthTest: false },
         }),
         new PlotLayer({
           getPosition: (u, v) => {
             return [
               kdeResult2.x[Math.round(u * (resolution - 1))],
               kdeResult2.y[Math.round(v * (resolution - 1))],
-              (kdeResult2.z._buffer[
+              kdeResult2.z._buffer[
                 Math.round(
                   u * resolution * (resolution - 1) + v * (resolution - 1)
                 )
-              ] /
-                sum2) *
-                heightMultiplier,
+              ] * heightMultiplier,
             ];
           },
           // getColor: (x, z, y) => [40, interpolateGreens(z/15), 160, (z / 15) * 255],
@@ -589,7 +580,7 @@ export class SOMLayer extends AbstractLayerGenerator {
               .replace(/[^\d,]/g, "")
               .split(",")
               .map((d) => Number(d));
-            t.push((z / 8) * 255);
+            t.push((z / 15) * 255);
             // t.push(255);
             return t;
           },
@@ -602,6 +593,7 @@ export class SOMLayer extends AbstractLayerGenerator {
           updateTriggers: {
             getPosition: curBMUData,
           },
+          parameters: { depthTest: false },
         }),
       ];
     }

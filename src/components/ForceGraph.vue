@@ -97,11 +97,16 @@ async function draw() {
   let tree = agnes(distances, {
     method: "average",
   });
-  let svgTree = ForceTree(
-    tree,
+  // let svgTree = ForceTree(
+  //   tree,
+  //   distances,
+  //   ssp370Labels.map((i) => getModelType(i))
+  // );
+  let svgTree = MST(
     distances,
     ssp370Labels.map((i) => getModelType(i))
   );
+
   // let svgHeatmap = make_heatmap(distances);
   // console.log("SDF", svgHeatmap);
   // let svgDendrogram = make_dendrogram({
@@ -118,6 +123,142 @@ async function draw() {
   // document.getElementById("my_dataviz").appendChild(svgGraph);
   document.getElementById("my_dataviz").appendChild(svgTree);
   // document.getElementById("my_dataviz").appendChild(svgDendrogram);
+}
+
+function MST(distances, labels) {
+  const width = 928;
+  const height = 600;
+
+  function minimumSpanningTree(distances) {
+    // use Prims to find MST given pairwise distances in a graph
+    let n = distances.length;
+    let mst = Array(n)
+      .fill(0)
+      .map(() => Array(n).fill(0));
+    let minDist = Array(n).fill(Infinity);
+    let minEdge = Array(n).fill(-1);
+    minDist[0] = 0;
+    for (let i = 0; i < n; i++) {
+      let u = -1;
+      for (let j = 0; j < n; j++) {
+        if (!mst[j][0] && (u == -1 || minDist[j] < minDist[u])) {
+          u = j;
+        }
+      }
+      mst[u][0] = 1;
+      if (minEdge[u] != -1) {
+        mst[u][minEdge[u]] = mst[minEdge[u]][u] = 1;
+      }
+      for (let v = 0; v < n; v++) {
+        if (distances[u][v] < minDist[v]) {
+          minDist[v] = distances[u][v];
+          minEdge[v] = u;
+        }
+      }
+    }
+    return mst;
+  }
+  console.log("distances", minimumSpanningTree(distances));
+  let mst = minimumSpanningTree(distances);
+  let links = [];
+  for (let i = 0; i < mst.length; i++) {
+    for (let j = i; j < mst[i].length; j++) {
+      if (mst[i][j] > 0) {
+        links.push({
+          source: i,
+          target: j,
+          value: mst[i][j],
+        });
+      }
+    }
+  }
+  links = links.slice(1);
+  const svg = d3
+    .create("svg")
+    .attr("width", width)
+    .attr("height", height)
+    .attr("viewBox", [-width / 2, -height / 2, width, height])
+    .attr("style", "max-width: 100%; height: auto;");
+
+  let nodes = distances.map((d, i) => {
+    return {
+      id: i,
+      x: Math.random() * width,
+      y: Math.random() * height,
+    };
+  });
+  let simulation = d3
+    .forceSimulation(nodes)
+    .force("charge", d3.forceManyBody().strength(-500))
+    .nodes(nodes)
+    .force(
+      "link",
+      d3.forceLink(links).id((d) => d.id)
+    );
+
+  console.log(links);
+  // simulation.force("link").links(links);
+  const link = svg
+    .selectAll("line")
+    .data(links, (d) => d)
+    .join(
+      (enter) => enter.append("line"),
+      (exit) => {
+        return exit.remove();
+      }
+    )
+    .attr("stroke", "#999")
+    .attr("stroke-width", 5)
+    .attr("stroke-opacity", 0.6)
+    .on("mouseover", (event, d) => console.log(d.value));
+
+  const textElements = svg
+    .selectAll("text")
+    .data(nodes, (d) => d)
+    .join(
+      (enter) => enter.append("text"),
+      (exit) => {
+        return exit.remove();
+      }
+    )
+    .text((node) => {
+      console.log(labels[node.id]);
+
+      return labels[node.id];
+    })
+    .attr("font-size", 15)
+    .attr("dx", 15)
+    .attr("dy", 4);
+
+  // Append nodes.
+  const node = svg
+    .selectAll("circle")
+    .data(nodes, (d) => d)
+    .join(
+      (enter) => enter.append("circle"),
+      (exit) => {
+        return exit.remove();
+      }
+    )
+    .attr("fill", (d) =>
+      d.children ? "#1b9e77" : d._children ? "#d95f02" : "#7570b3"
+    )
+    .attr("stroke", (d) => (d.children ? "#000" : "#fff"))
+    .attr("r", (d) => (d.index == 0 ? 15 : 10))
+    .attr("stroke-width", 1.5)
+    .call(drag(simulation));
+
+  simulation.on("tick", () => {
+    link
+      .attr("x1", (d) => d.source.x)
+      .attr("y1", (d) => d.source.y)
+      .attr("x2", (d) => d.target.x)
+      .attr("y2", (d) => d.target.y);
+
+    node.attr("cx", (d) => d.x).attr("cy", (d) => d.y);
+    textElements.attr("x", (node) => node.x).attr("y", (node) => node.y);
+  });
+  return svg.node();
 }
 
 function ForceTree(data, distances, labels) {
@@ -364,6 +505,7 @@ function ForceTree(data, distances, labels) {
 
   return svg.node();
 }
+
 // Copyright 2021-2024 Observable, Inc.
 // Released under the ISC license.
 // https://observablehq.com/@d3/force-directed-graph
@@ -500,30 +642,6 @@ function ForceGraph(
     textElements.attr("x", (node) => node.x).attr("y", (node) => node.y);
   }
 
-  function drag(simulation) {
-    function dragstarted(event) {
-      if (!event.active) simulation.alphaTarget(0.3).restart();
-      event.subject.fx = event.subject.x;
-      event.subject.fy = event.subject.y;
-    }
-
-    function dragged(event) {
-      event.subject.fx = event.x;
-      event.subject.fy = event.y;
-    }
-
-    function dragended(event) {
-      if (!event.active) simulation.alphaTarget(0);
-      event.subject.fx = null;
-      event.subject.fy = null;
-    }
-
-    return d3
-      .drag()
-      .on("start", dragstarted)
-      .on("drag", dragged)
-      .on("end", dragended);
-  }
   return svg.node();
 }
 
@@ -537,5 +655,31 @@ function getChildren(node, children) {
   }
   return children;
 }
+
+function drag(simulation) {
+  function dragstarted(event) {
+    if (!event.active) simulation.alphaTarget(0.3).restart();
+    event.subject.fx = event.subject.x;
+    event.subject.fy = event.subject.y;
+  }
+
+  function dragged(event) {
+    event.subject.fx = event.x;
+    event.subject.fy = event.y;
+  }
+
+  function dragended(event) {
+    if (!event.active) simulation.alphaTarget(0);
+    event.subject.fx = null;
+    event.subject.fy = null;
+  }
+
+  return d3
+    .drag()
+    .on("start", dragstarted)
+    .on("drag", dragged)
+    .on("end", dragended);
+}
+
 // Toggle children on click.
 </script>

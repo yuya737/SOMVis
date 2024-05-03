@@ -35,7 +35,6 @@
         :min="timeMin"
         :max="timeMax"
         class="slider z-[4] w-3/4"
-        @change="yearMonthChanged"
       />
 
       <div
@@ -44,30 +43,37 @@
         <span class="flex items-center font-bold px-5"> Start: </span>
         <Dropdown
           v-model="monthTemp1"
+          :disabled="isWaterYearMean"
           :options="months"
           class="w-fit z-[4] md:w-14rem"
           checkmark
           :highlight-on-select="false"
           placeholder="Starting Month"
-          @change="yearMonthChanged"
         />
         <span class="flex items-center font-bold px-5"> End: </span>
         <Dropdown
           v-model="monthTemp2"
+          :disabled="isWaterYearMean"
           :options="months"
           class="w-fit z-[4]"
           checkmark
           :highlight-on-select="false"
           placeholder="Ending Month"
-          @change="yearMonthChanged"
         />
         <ToggleButton
-          v-model="isShowingSurface"
-          @change="toggleShowSurface"
-          onLabel="Hide Surface"
-          offLabel="Show Surface"
+          v-model="isWaterYearMean"
+          onLabel="Disable Water Year Mean"
+          offLabel="Enable Water Year Mean"
           class="px-5"
         />
+        <ToggleButton
+          v-model="isHidingSurface"
+          @change="toggleShowSurface"
+          onLabel="Show Surface"
+          offLabel="Hide Surface"
+        />
+        <!-- <Divider layout="vertical" /> -->
+        <Button label="Apply" @click="yearMonthChanged" class="px-5" />
       </div>
       <!-- <Slider
         v-model="monthRange"
@@ -83,7 +89,8 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, watch, nextTick, h } from "vue";
+import { onMounted, ref, watch, computed, nextTick } from "vue";
+import { storeToRefs } from "pinia";
 
 import { Deck } from "@deck.gl/core";
 
@@ -100,7 +107,6 @@ import { AbstractLayerGenerator } from "./utils/AbstractLayerGenerator";
 import { SOMLayer } from "./utils/SOMLayer";
 import { NodeClassifyLayer } from "./utils/NodeClassifyLayer";
 import { NodeLayer } from "./utils/NodeLayer";
-import { SurfaceLayer } from "./utils/SurfaceLayer";
 import ToggleButton from "primevue/togglebutton";
 
 import {
@@ -115,13 +121,18 @@ import {
   getModelType,
   generateMonthRangeList,
   months,
+  subsetType,
 } from "./utils/utils";
+
+// import { subsetType, SOMPath } from "@/types/types";
+
 const props = defineProps({
   isHistorical: Boolean,
 });
 
 // let labels = props.isHistorical ? historical_labels : ssp585_labels;
-let labels = props.isHistorical ? historicalLabels : ssp370Labels;
+// let labels = props.isHistorical ? historicalLabels : ssp370Labels;
+let labels = ssp370Labels;
 // let labels = props.isHistorical ? historical_labels_sfbay : ssp370_labels;
 // InfoPanelSettings[0].options[0].values = [
 //   "All",
@@ -148,11 +159,14 @@ watch([monthTemp1, monthTemp2], ([m1, m2]) => {
 });
 const monthRange = ref([10, 10]);
 const timeMin = 0;
-const timeMax = props.isHistorical ? 64 : 85;
-const month = ref(1);
+const timeMax = computed(() => {
+  let ret = props.isHistorical ? 64 : 85;
+  if (isWaterYearMean.value) ret--;
+  return ret;
+});
 const selectedModel = ref([[], []]);
-const showPath = ref(false);
-const isShowingSurface = ref(true);
+const isHidingSurface = ref(false);
+const isWaterYearMean = ref(false);
 const text = ref(props.isHistorical ? "Historical" : "SSP370");
 
 onMounted(() => {
@@ -181,16 +195,11 @@ onMounted(() => {
 
   watch(
     () => store.getHoveredFile,
-    (hoveredFile) => {
-      if (!hoveredFile) {
-        selectedModel.value = [[], []];
-      } else {
-        selectedModel.value = [
-          [hoveredFile.split("_")[0] + "_" + hoveredFile.split("_")[1]],
-          [],
-        ];
-      }
-      drawAllLayers();
+    () => {
+      message.value = "Loading...";
+      nextTick(() => {
+        drawAllLayers();
+      });
     }
   );
   watch(
@@ -198,10 +207,7 @@ onMounted(() => {
     (files) => {
       if (!files) return;
       console.log("files changed", files);
-      selectedModel.value = [
-        files[0].map((d) => d.split("_")[0] + "_" + d.split("_")[1]),
-        files[1].map((d) => d.split("_")[0] + "_" + d.split("_")[1]),
-      ];
+      message.value = "Loading...";
       nextTick(() => {
         drawAllLayers();
       });
@@ -234,8 +240,15 @@ async function initializeLayers() {
       file: d,
       umap: true,
     });
-    pathData[d] = data.map((d) => {
-      return { ...d, coords: mappingData[d.id].coords };
+    // id can the month of water_year_mean
+    pathData[d] = Object.entries(data).map(([key, value]) => {
+      return {
+        id: key,
+        coords: value.map((d) => [
+          mappingData[d.id].coords[0],
+          -mappingData[d.id].coords[1],
+        ]),
+      };
     });
   });
 
@@ -255,31 +268,32 @@ async function initializeLayers() {
     contourData
   );
   let axisLayerGenerator = new AxisLayer(-100, 100, 5, true);
+  const {
+    getYearsSelected,
+    getMonthsSelected,
+    getFiles,
+    getSubsetType,
+    getHoveredFile,
+  } = storeToRefs(store);
+  console.log("SDFSDF", pathData);
   let somLayerGenerator = new SOMLayer(
     pathData,
-    timeRange,
-    monthRange,
-    selectedModel,
+    getYearsSelected,
+    getMonthsSelected,
+    getFiles,
+    getSubsetType,
+    getHoveredFile,
     [
       [xMin, xMax],
       [yMin, yMax],
     ]
   );
 
-  // let surfaceLayerGenerator = new SurfaceLayer(
-  //   mappingData,
-  //   pathData,
-  //   timeRange,
-  //   monthRange,
-  //   selectedModel
-  // );
-
   layerGenerators = [
+    axisLayerGenerator,
     nodeLayerGenerator,
     nodeclassifyLayerGenerator,
-    axisLayerGenerator,
     somLayerGenerator,
-    // surfaceLayerGenerator,
   ];
 
   // Get the layers
@@ -293,7 +307,6 @@ async function initializeLayers() {
 }
 
 function drawAllLayers() {
-  message.value = "Loading...";
   // Need to make sure that the 'watch's on the layer generators are flagged with a nextTick()
   nextTick(() => {
     layerList = layerGenerators
@@ -305,9 +318,9 @@ function drawAllLayers() {
     if (layerList.length == 0) return;
     setLayerProps();
     message.value = "DONE!";
-    setTimeout(() => {
-      message.value = "";
-    }, 2000);
+    // setTimeout(() => {
+    //   message.value = "";
+    // }, 2000);
   });
 }
 
@@ -324,15 +337,24 @@ function yearMonthChanged() {
   nextTick(() => {
     let allMonths = monthRange.value[0] == 1 && monthRange.value[1] == 12;
     let allYears =
-      timeMin == timeRange.value[0] && timeMax == timeRange.value[1];
+      timeMin == timeRange.value[0] && timeMax.value == timeRange.value[1];
 
     store.updateElements({
       files: store.getFiles,
       monthsSelected: allMonths
         ? [-1]
         : generateMonthRangeList(monthRange.value[0], monthRange.value[1]),
-      yearsSelected: allYears ? [-1] : [timeRange.value[0], timeRange.value[1]],
-      sspSelected: store.getSSPSelected,
+      // numbers from timeMin to timeMax.value inclusive
+      // yearsSelected: allYears
+      //   ? Array.from({ length: timeMax.value - timeMin + 1 }, (_, i) => i)
+      //   : [timeRange.value[0], timeRange.value[1]],
+      yearsSelected: Array.from(
+        { length: timeMax.value - timeMin + 1 },
+        (_, i) => i
+      ),
+      subsetType: isWaterYearMean.value
+        ? subsetType.waterYear
+        : subsetType.month,
     });
     drawAllLayers();
   });
@@ -349,7 +371,7 @@ function setLayerProps() {
 function toggleShowSurface() {
   layerList = layerList.map((l) => {
     let ret = l.id.startsWith("surface-layer")
-      ? l.clone({ visible: isShowingSurface.value })
+      ? l.clone({ visible: !isHidingSurface.value })
       : l.clone();
     return ret;
   });

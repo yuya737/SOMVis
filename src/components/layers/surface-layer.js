@@ -1,4 +1,5 @@
 import {Layer, picking} from '@deck.gl/core';
+import { setParameters } from '@luma.gl/core';
 import GL from '@luma.gl/constants';
 import {Model} from '@luma.gl/core';
 
@@ -78,6 +79,13 @@ export default class SurfaceLayer extends Layer {
   }
 
   getModel(gl) {
+    setParameters(gl, {
+      [GL.DEPTH_TEST]: true,
+      [GL.CULL_FACE]: false,
+      blend: true,
+      // blendFunc: [gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA],
+    });
+
     // 3d surface
     return new Model(gl, {
       id: `${this.props.id}-surface`,
