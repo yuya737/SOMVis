@@ -29,7 +29,7 @@ export function scalePointsToSquare(points, maxWidth = 40, maxHeight = 40) {
   // Scale each point and adjust for centering
   return points.map((point) => {
     const scaledX =
-      (points[0] - minX) * xScale +
+      (point[0] - minX) * xScale +
       (maxWidth - (maxX - minX) * xScale) / 2 -
       maxWidth / 2;
     const scaledY =
@@ -51,36 +51,36 @@ export function hexToRgb(hex) {
     : null;
 }
 
-export function getMonthDividedData(data, name) {
-  let monthDict = {
-    1: [],
-    2: [],
-    3: [],
-    4: [],
-    5: [],
-    6: [],
-    7: [],
-    8: [],
-    9: [],
-    10: [],
-    11: [],
-    12: [],
-  };
-  data
-    .map((d) => d.coords)
-    .forEach((d, i) => {
-      monthDict[(i % 12) + 1].push(d);
-    });
-  let monthDividedData = Object.entries(monthDict).map((v, i) => {
-    return {
-      month: parseInt(v[0]),
-      scatter: v[1].map((d) => [d[0], -d[1]]),
-      name: name,
-      year: i,
-    };
-  });
-  return monthDividedData;
-}
+// export function getMonthDividedData(data, name) {
+//   let monthDict = {
+//     1: [],
+//     2: [],
+//     3: [],
+//     4: [],
+//     5: [],
+//     6: [],
+//     7: [],
+//     8: [],
+//     9: [],
+//     10: [],
+//     11: [],
+//     12: [],
+//   };
+//   data
+//     .map((d) => d.coords)
+//     .forEach((d, i) => {
+//       monthDict[(i % 12) + 1].push(d);
+//     });
+//   let monthDividedData = Object.entries(monthDict).map((v, i) => {
+//     return {
+//       month: parseInt(v[0]),
+//       scatter: v[1].map((d) => [d[0], -d[1]]),
+//       name: name,
+//       year: i,
+//     };
+//   });
+//   return monthDividedData;
+// }
 
 // For DataFilterExtension on strings
 // https://github.com/visgl/deck.gl/issues/7827
@@ -213,6 +213,7 @@ export const orbitView = new OrbitView({
   id: "main",
   // orbitAxis: "Y",
   controller: true,
+  minRotationX: 0,
 });
 
 export const orthoView = new OrthographicView({
@@ -306,8 +307,8 @@ export const historicalLabels = [
   "CMIP6_pr_historical_S3L0.02_ACCESS-CM2_historical_r1i1p1f1_pr.nc",
   // "CMIP6_pr_historical_S3L0.02_ACCESS-CM2_historical_r2i1p1f1_pr.nc",
   // "CMIP6_pr_historical_S3L0.02_ACCESS-CM2_historical_r3i1p1f1_pr.nc",
-  "CMIP6_pr_historical_S3L0.02_CESM2-LENS_historical_r10i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_CESM2-LENS_historical_r1i1p1f1_pr.nc",
+  // "CMIP6_pr_historical_S3L0.02_CESM2-LENS_historical_r10i1p1f1_pr.nc",
+  "CMIP6_pr_historical_S3L0.02_CESM2-LENS_historical_r1i1p1f1_pr.nc",
   // "CMIP6_pr_historical_S3L0.02_CESM2-LENS_historical_r2i1p1f1_pr.nc",
   // "CMIP6_pr_historical_S3L0.02_CESM2-LENS_historical_r3i1p1f1_pr.nc",
   // "CMIP6_pr_historical_S3L0.02_CESM2-LENS_historical_r4i1p1f1_pr.nc",
@@ -339,8 +340,8 @@ export const historicalLabels = [
   // "CMIP6_pr_historical_S3L0.02_INM-CM5-0_historical_r3i1p1f1_pr.nc",
   // "CMIP6_pr_historical_S3L0.02_INM-CM5-0_historical_r4i1p1f1_pr.nc",
   // "CMIP6_pr_historical_S3L0.02_INM-CM5-0_historical_r5i1p1f1_pr.nc",
-  "CMIP6_pr_historical_S3L0.02_IPSL-CM6A-LR_historical_r10i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_IPSL-CM6A-LR_historical_r1i1p1f1_pr.nc",
+  // "CMIP6_pr_historical_S3L0.02_IPSL-CM6A-LR_historical_r10i1p1f1_pr.nc",
+  "CMIP6_pr_historical_S3L0.02_IPSL-CM6A-LR_historical_r1i1p1f1_pr.nc",
   // "CMIP6_pr_historical_S3L0.02_IPSL-CM6A-LR_historical_r2i1p1f1_pr.nc",
   // "CMIP6_pr_historical_S3L0.02_IPSL-CM6A-LR_historical_r3i1p1f1_pr.nc",
   // "CMIP6_pr_historical_S3L0.02_IPSL-CM6A-LR_historical_r4i1p1f1_pr.nc",
@@ -357,8 +358,8 @@ export const historicalLabels = [
   // "CMIP6_pr_historical_S3L0.02_MIROC6_historical_r3i1p1f1_pr.nc",
   // "CMIP6_pr_historical_S3L0.02_MIROC6_historical_r4i1p1f1_pr.nc",
   // "CMIP6_pr_historical_S3L0.02_MIROC6_historical_r5i1p1f1_pr.nc",
-  "CMIP6_pr_historical_S3L0.02_MPI-ESM1-2-HR_historical_r10i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_MPI-ESM1-2-HR_historical_r1i1p1f1_pr.nc",
+  // "CMIP6_pr_historical_S3L0.02_MPI-ESM1-2-HR_historical_r10i1p1f1_pr.nc",
+  "CMIP6_pr_historical_S3L0.02_MPI-ESM1-2-HR_historical_r1i1p1f1_pr.nc",
   // "CMIP6_pr_historical_S3L0.02_MPI-ESM1-2-HR_historical_r2i1p1f1_pr.nc",
   // "CMIP6_pr_historical_S3L0.02_MPI-ESM1-2-HR_historical_r3i1p1f1_pr.nc",
   // "CMIP6_pr_historical_S3L0.02_MPI-ESM1-2-HR_historical_r4i1p1f1_pr.nc",

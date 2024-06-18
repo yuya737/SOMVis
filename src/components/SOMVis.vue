@@ -9,10 +9,10 @@
       <Splitter class="h-full w-full" layout="vertical">
         <SplitterPanel class="h-full">
           <MapViewer class="h-full" />
-        </SplitterPanel>
-        <SplitterPanel style="height: 100%" :size="70">
-          <HeatmapViewer class="h-full" />
           <!-- <ForceGraph class="h-full" /> -->
+        </SplitterPanel>
+        <SplitterPanel style="height: 100%" :size="50">
+          <HeatmapViewer class="h-full" />
         </SplitterPanel>
       </Splitter>
     </SplitterPanel>

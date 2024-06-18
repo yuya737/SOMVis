@@ -10,11 +10,11 @@
       />
     </div>
 
-    <div
+    <!-- <div
       class="absolute top-0 z-[2] m-4 w-fit transform rounded-md bg-gray-200 p-4 text-lg font-bold text-black"
     >
       {{ text }}
-    </div>
+    </div> -->
 
     <div
       id="tooltip"
@@ -24,11 +24,12 @@
     <div
       class="absolute bottom-0 z-[4] flex h-32 w-full flex-col items-center justify-around px-32"
     >
-      <div
+      <!-- <div
+        id="message"
         class="flex items-center font-bold text-xl px-5 bg-gray-200 p-2 rounded-lg"
       >
         {{ message }}
-      </div>
+      </div> -->
       <Slider
         v-model="timeRange"
         :format="formatTooltipTime"
@@ -195,30 +196,36 @@ onMounted(() => {
 
   watch(
     () => store.getHoveredFile,
-    () => {
+    async () => {
       message.value = "Loading...";
-      nextTick(() => {
-        drawAllLayers();
-      });
+      await nextTick();
+      drawAllLayers();
     }
   );
   watch(
     () => store.getFiles,
-    (files) => {
+    async (files) => {
       if (!files) return;
-      console.log("files changed", files);
       message.value = "Loading...";
-      nextTick(() => {
-        drawAllLayers();
-      });
+      await nextTick();
+      drawAllLayers();
     }
+    // (files) => {
+    //   if (!files) return;
+    //   console.log("files changed", files);
+    //   message.value = "Loading...";
+    //   nextTick(() => {
+    //     drawAllLayers();
+    //   });
+    // }
   );
 });
 
 async function initializeLayers() {
   // Get all the data
   let mappingData = await API.fetchData(
-    "mapping/CMIP6_pr_historical_S3L0.02_umap",
+    // "mapping/CMIP6_pr_historical_S3L0.02_umap",
+    "mapping/CMIP6_pr_delta_historical_S5L0.02_umap",
     // "mapping/CMIP6_pr_historical_sfbay_S3L0.1_20x20_umap",
     // "mapping/CMIP6_taxmax_historical_S3L0.1_umap",
     true,
@@ -361,7 +368,8 @@ function yearMonthChanged() {
 }
 
 function formatTooltipTime(d) {
-  return d + (props.isHistorical ? 1950 : 2015);
+  // return d + (props.isHistorical ? 1950 : 2015);
+  return "Year " + d.toString();
 }
 
 function setLayerProps() {

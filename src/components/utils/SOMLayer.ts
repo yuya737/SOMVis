@@ -364,7 +364,7 @@ export class SOMLayer extends AbstractLayerGenerator {
       id: "grid-cell-layer",
       data: freq,
       getPosition: (d) => d[0],
-      getElevation: (d) => Math.abs(d[1] * 50),
+      getElevation: (d) => Math.abs(d[1] * 100),
       getColor: (d) => {
         if (this.mode == "single") {
           return interpolateGreens(d[1] / 0.05)
@@ -525,6 +525,7 @@ export class SOMLayer extends AbstractLayerGenerator {
       ret = [
         ...ret,
         new PlotLayer({
+          id: "surface-layer-1",
           getPosition: (u, v) => {
             return [
               kdeResult1.x[Math.round(u * (resolution - 1))],
@@ -545,7 +546,7 @@ export class SOMLayer extends AbstractLayerGenerator {
               .replace(/[^\d,]/g, "")
               .split(",")
               .map((d) => Number(d));
-            t.push((z / 15) * 255);
+            t.push((z / 8) * 255);
             return t;
           },
           uCount: resolution,
@@ -560,6 +561,7 @@ export class SOMLayer extends AbstractLayerGenerator {
           parameters: { depthTest: false },
         }),
         new PlotLayer({
+          id: "surface-layer-2",
           getPosition: (u, v) => {
             return [
               kdeResult2.x[Math.round(u * (resolution - 1))],
@@ -580,7 +582,7 @@ export class SOMLayer extends AbstractLayerGenerator {
               .replace(/[^\d,]/g, "")
               .split(",")
               .map((d) => Number(d));
-            t.push((z / 15) * 255);
+            t.push((z / 8) * 255);
             // t.push(255);
             return t;
           },
@@ -651,6 +653,7 @@ export class SOMLayer extends AbstractLayerGenerator {
     // ret = [...ret, blockedMonthlyCOMScatter];
 
     this.layerList = ret;
+    this.needsToRedraw = false;
     return ret;
   }
 }

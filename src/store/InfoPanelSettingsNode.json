@@ -2,8 +2,8 @@
         {
             "type": "text",
             "id": "diff",
-            "title": "Difference",
-            "info": "Differece",
+            "title": "Color Scales",
+            "info": "For difference, we calculate <code>Group 1</code> - <code>Group 2</code>.<br> Blue => <code>Group 1</code> > <code>Group 2</code>; <br> Red => <code>Group 1</code> < <code>Group 2</code>.",
             "scales": [
                 {
                     "variable": "Precip kg/m2/s",

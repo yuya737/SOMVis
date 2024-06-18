@@ -6,12 +6,13 @@
       icon="pi pi-times"
       @click="clearSelections"
     />
-    <div id="my_dataviz" class="h-full w-full flex justify-around" />
+    <div id="my_dataviz_2" class="h-full w-full flex justify-around" />
   </div>
 </template>
 
 <script setup lang="ts">
 import { agnes } from "ml-hclust";
+import { UMAP } from "umap-js";
 
 import { onMounted, watch } from "vue";
 import { useStore } from "@/store/main";
@@ -24,6 +25,8 @@ import {
   getModelType,
   stripSOMprefix,
   getNodeOrder,
+  subsetType,
+  scalePointsToSquare,
 } from "./utils/utils";
 import { LineLayer } from "deck.gl/typed";
 
@@ -33,12 +36,14 @@ const fullLabels = ssp370Labels.map((i) => stripSOMprefix(i));
 let tree;
 
 onMounted(() => {
-  window.onload = () => {
-    const element = document.getElementById("my_dataviz");
-    if (element) {
-      draw();
-    }
-  };
+  console.log("Mounted");
+  // window.onload = () => {
+  console.log("Mounted_2");
+  const element = document.getElementById("my_dataviz_2");
+  if (element) {
+    draw();
+  }
+  // };
 });
 
 watch(
@@ -59,6 +64,7 @@ async function draw() {
     "distance_matrix",
     true,
     {
+      subsetType: subsetType.month,
       files: ssp370Labels,
       months: store.getMonthsSelected,
       years: store.getYearsSelected,
@@ -102,10 +108,22 @@ async function draw() {
   //   distances,
   //   ssp370Labels.map((i) => getModelType(i))
   // );
-  let svgTree = MST(
+  // let svgTree = MST(
+  //   distances,
+  //   ssp370Labels.map((i) => getModelType(i)),
+  //   document.getElementById("my_dataviz_2").clientHeight,
+  //   document.getElementById("my_dataviz_2").clientWidth
+  // );
+
+  let svgUMAP = UMAP(
     distances,
-    ssp370Labels.map((i) => getModelType(i))
+    labels,
+    document.getElementById("my_dataviz_2").clientHeight,
+    document.getElementById("my_dataviz_2").clientWidth
   );
+  svgUMAP.then((d) => {
+    document.getElementById("my_dataviz_2").appendChild(d);
+  });
 
   // let svgHeatmap = make_heatmap(distances);
   // console.log("SDF", svgHeatmap);
@@ -119,82 +137,203 @@ async function draw() {
   //   strokeWidth: 5,
   // });
   // console.log("Files, years, or months changed. Redrawing heatmap.");
-  document.getElementById("my_dataviz").innerHTML = "";
+  // document.getElementById("my_dataviz_2").innerHTML = "";
   // document.getElementById("my_dataviz").appendChild(svgGraph);
-  document.getElementById("my_dataviz").appendChild(svgTree);
+  // document.getElementById("my_dataviz_2").appendChild(svgTree);
   // document.getElementById("my_dataviz").appendChild(svgDendrogram);
 }
 
-function MST(distances, labels) {
-  const width = 928;
-  const height = 600;
+async function UMAP(distances, labels, height, width) {
+  // let nodes = await API.fetchData("run_umap", true, {
+  //   distance_matrix: distances,
+  //   n_neighbors: 3,
+  //   min_dist: 0.0,
+  // });
+  let nodes = await API.fetchData("run_tsne", true, {
+    distance_matrix: distances,
+    perplexity: 2,
+  });
+  console.log("Nodes", nodes);
+  nodes = scalePointsToSquare(nodes, width * 0.8, height * 0.8);
+  console.log("Nodes", nodes);
+  nodes = nodes.map((d, i) => {
+    return {
+      ...d,
+      id: i, // Scale location to be in the center
+    };
+  });
+  console.log("Nodes", nodes);
 
-  function minimumSpanningTree(distances) {
-    // use Prims to find MST given pairwise distances in a graph
-    let n = distances.length;
-    let mst = Array(n)
-      .fill(0)
-      .map(() => Array(n).fill(0));
-    let minDist = Array(n).fill(Infinity);
-    let minEdge = Array(n).fill(-1);
-    minDist[0] = 0;
-    for (let i = 0; i < n; i++) {
-      let u = -1;
-      for (let j = 0; j < n; j++) {
-        if (!mst[j][0] && (u == -1 || minDist[j] < minDist[u])) {
-          u = j;
-        }
-      }
-      mst[u][0] = 1;
-      if (minEdge[u] != -1) {
-        mst[u][minEdge[u]] = mst[minEdge[u]][u] = 1;
-      }
-      for (let v = 0; v < n; v++) {
-        if (distances[u][v] < minDist[v]) {
-          minDist[v] = distances[u][v];
-          minEdge[v] = u;
-        }
-      }
-    }
-    return mst;
-  }
-  console.log("distances", minimumSpanningTree(distances));
-  let mst = minimumSpanningTree(distances);
-  let links = [];
-  for (let i = 0; i < mst.length; i++) {
-    for (let j = i; j < mst[i].length; j++) {
-      if (mst[i][j] > 0) {
-        links.push({
-          source: i,
-          target: j,
-          value: mst[i][j],
-        });
-      }
-    }
-  }
-  links = links.slice(1);
+  // // console.log("distances", minimumSpanningTree(distances));
+  // let mst = minimumSpanningTree(distances);
+  // let links = [];
+  // for (let i = 0; i < mst.length; i++) {
+  //   for (let j = i; j < mst[i].length; j++) {
+  //     if (mst[i][j] > 0) {
+  //       links.push({
+  //         source: i,
+  //         target: j,
+  //         value: mst[i][j],
+  //       });
+  //     }
+  //   }
+  // }
+  // let links = mst;
+  // console.log("Links", links);
+  // // links = links.slice(1);
   const svg = d3
     .create("svg")
     .attr("width", width)
     .attr("height", height)
-    .attr("viewBox", [-width / 2, -height / 2, width, height])
-    .attr("style", "max-width: 100%; height: auto;");
+    .attr("viewBox", [-width / 2, -height / 2, width, height]);
+  // .attr("style", "max-width: 100%; height: auto;");
+
+  const textElements = svg
+    .selectAll("text")
+    .data(nodes, (d) => d)
+    .join(
+      (enter) => enter.append("text"),
+      (exit) => {
+        return exit.remove();
+      }
+    )
+    .text((node) => {
+      console.log(labels[node.id]);
+
+      return labels[node.id];
+    })
+    .attr("font-size", 15)
+    .attr("dx", 15)
+    .attr("dy", 4)
+    .attr("x", (node) => node[0])
+    .attr("y", (node) => node[1]);
+
+  // Append nodes.
+  const node = svg
+    .selectAll("circle")
+    .data(nodes, (d) => d)
+    .join(
+      (enter) => enter.append("circle"),
+      (exit) => {
+        return exit.remove();
+      }
+    )
+    .attr("fill", (d) =>
+      d.children ? "#1b9e77" : d._children ? "#d95f02" : "#7570b3"
+    )
+    .attr("stroke", (d) => (d.children ? "#000" : "#fff"))
+    .attr("r", (d) => (d.index == 0 ? 15 : 10))
+    .attr("cx", (d) => d[0])
+    .attr("cy", (d) => d[1])
+    .attr("stroke-width", 1.5);
+
+  return svg.node();
+}
+
+function MST(distances, labels, height, width) {
+  function minimumSpanningTree(distances) {
+    class UnionFind {
+      constructor(elements) {
+        this.parent = {};
+
+        elements.forEach((e) => (this.parent[e] = e));
+      }
+
+      union(a, b) {
+        this.parent[this.find(a)] = this.find(b);
+      }
+
+      find(a) {
+        while (this.parent[a] !== a) {
+          a = this.parent[a];
+        }
+
+        return a;
+      }
+
+      connected(a, b) {
+        return this.find(a) === this.find(b);
+      }
+    }
+
+    let n = distances.length;
+    // clear the lower triangle
+    distances.forEach((d, i) => {
+      d.forEach((e, j) => {
+        if (i > j) {
+          distances[i][j] = 0;
+        }
+      });
+    });
+    console.log("distances", distances);
+    let edges = distances
+      .flat()
+      .map((d, i) => {
+        return {
+          source: Math.floor(i / n),
+          target: i % n,
+          value: d,
+        };
+      })
+      .filter((d) => d.value > 0);
+    let ret = [];
+    edges.sort((a, b) => a.value - b.value);
+
+    const nodes = new Set(edges.map((e) => [e.source, e.destination]).flat());
+    const unionFind = new UnionFind(nodes);
+
+    const mst = [];
+
+    for (let edge of edges) {
+      if (!unionFind.connected(edge.source, edge.destination)) {
+        unionFind.union(edge.source, edge.destination);
+        mst.push(edge);
+      }
+    }
+    return mst;
+  }
+  // console.log("distances", minimumSpanningTree(distances));
+  let mst = minimumSpanningTree(distances);
+  // let links = [];
+  // for (let i = 0; i < mst.length; i++) {
+  //   for (let j = i; j < mst[i].length; j++) {
+  //     if (mst[i][j] > 0) {
+  //       links.push({
+  //         source: i,
+  //         target: j,
+  //         value: mst[i][j],
+  //       });
+  //     }
+  //   }
+  // }
+  let links = mst;
+  console.log("Links", links);
+  // links = links.slice(1);
+  const svg = d3
+    .create("svg")
+    .attr("width", width)
+    .attr("height", height)
+    .attr("viewBox", [0, 0, width, height]);
+  // .attr("style", "max-width: 100%; height: auto;");
 
   let nodes = distances.map((d, i) => {
     return {
       id: i,
-      x: Math.random() * width,
-      y: Math.random() * height,
     };
   });
   let simulation = d3
     .forceSimulation(nodes)
-    .force("charge", d3.forceManyBody().strength(-500))
+    .force("charge", d3.forceManyBody().strength(-1500))
     .nodes(nodes)
     .force(
       "link",
-      d3.forceLink(links).id((d) => d.id)
-    );
+      d3
+        .forceLink(links)
+        .id((d) => d.id)
+        .distance((d) => d.value)
+    )
+    .force("x", d3.forceX(width / 2))
+    .force("y", d3.forceY(height / 2));
 
   console.log(links);
   // simulation.force("link").links(links);
@@ -263,8 +402,8 @@ function MST(distances, labels) {
 
 function ForceTree(data, distances, labels) {
   // Specify the chart’s dimensions.
-  const width = 928;
-  const height = 600;
+  const width = 400;
+  const height = 400;
 
   const drag = (simulation) => {
     function dragstarted(event, d) {

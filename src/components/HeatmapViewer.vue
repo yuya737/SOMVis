@@ -21,10 +21,12 @@ import * as d3 from "d3";
 import {
   ssp370Labels,
   historicalLabels,
+  scalePointsToSquare,
   getModelType,
   stripSOMprefix,
   getNodeOrder,
   getChildren,
+  months,
 } from "./utils/utils";
 
 const store = useStore();
@@ -35,12 +37,12 @@ const clearFlag = ref(false);
 let tree;
 
 onMounted(() => {
-  window.onload = () => {
-    const element = document.getElementById("my_dataviz");
-    if (element) {
-      draw();
-    }
-  };
+  // window.onload = () => {
+  const element = document.getElementById("my_dataviz");
+  if (element) {
+    draw();
+  }
+  // };
   watch(
     () => [store.getYearsSelected, store.getMonthsSelected],
     async () => draw()
@@ -69,20 +71,34 @@ async function draw() {
       years: store.getYearsSelected,
     }
   );
+  const tsneResult = await API.fetchData("run_tsne", true, {
+    distance_matrix: distances,
+    perplexity: 5,
+  });
   let svgHeatmap = makeHeatmap(distances);
-  let svgDendrogram = makeDendrogram({
+  let svgTSNE = makeTSNEProjection({
     width:
       document.getElementById("my_dataviz").clientWidth -
       document.getElementById("my_dataviz").clientHeight -
       30,
     height: document.getElementById("my_dataviz").clientHeight,
-    yLabel: "Distance",
-    strokeWidth: 5,
+    tsneResult: tsneResult,
+    labels: labels,
   });
+  // let svgDendrogram = makeDendrogram({
+  //   width:
+  //     document.getElementById("my_dataviz").clientWidth -
+  //     document.getElementById("my_dataviz").clientHeight -
+  //     30,
+  //   height: document.getElementById("my_dataviz").clientHeight,
+  //   yLabel: "Distance",
+  //   strokeWidth: 5,
+  // });
   console.log("Files, years, or months changed. Redrawing heatmap.");
   document.getElementById("my_dataviz").innerHTML = "";
   document.getElementById("my_dataviz").appendChild(svgHeatmap);
-  document.getElementById("my_dataviz").appendChild(svgDendrogram);
+  document.getElementById("my_dataviz").appendChild(svgTSNE);
+  // document.getElementById("my_dataviz").appendChild(svgDendrogram);
 }
 
 function highlightOneOnHover(active, className, event, d) {
@@ -120,6 +136,69 @@ function highlightOneOnHover(active, className, event, d) {
   while ((dendrogramLeaf = dendrogramLeaf.parent));
 }
 
+function makeTSNEProjection(options) {
+  const { width, height, tsneResult, labels } = options;
+  let nodes = scalePointsToSquare(tsneResult, width * 0.6, height * 0.6);
+  nodes = nodes.map((d, i) => {
+    return { id: i, x: d[0], y: d[1] };
+  });
+  const svg = d3
+    .create("svg")
+    .attr("width", width)
+    .attr("height", height)
+    .attr("viewBox", [-width / 2, -height / 2, width, height]);
+  // .attr("viewBox", [0, 0, width, height]);
+
+  // Append nodes.
+  const node = svg
+    .selectAll("circle")
+    .data(nodes, (d) => d)
+    .join(
+      (enter) => enter.append("circle"),
+      (exit) => {
+        return exit.remove();
+      }
+    )
+    .attr("r", (d) => 10)
+    .attr("cx", (d) => d.x)
+    .attr("cy", (d) => d.y)
+    .attr("fill", (d) => {
+      return labels[d.id].includes("historical") ? "midnightblue" : "firebrick";
+    })
+    .attr("stroke-width", 1.5);
+
+  const textElements = svg
+    .selectAll("text")
+    .data(nodes, (d) => d)
+    .join(
+      (enter) => enter.append("text"),
+      (exit) => {
+        return exit.remove();
+      }
+    )
+    .text((node) => {
+      console.log(labels[node.id]);
+      return labels[node.id];
+    })
+    .attr("font-size", 15)
+    .attr("dx", 15)
+    .attr("dy", 4)
+    .attr("x", (node) => node.x)
+    .attr("y", (node) => node.y);
+
+  svg
+    .append("text")
+    .attr("x", (-width * 0.6) / 2)
+    .attr("y", (-height * 0.6) / 2 - 50)
+    // .attr("x", 0)
+    // .attr("y", -20)
+    .attr("text-anchor", "left")
+    .style("font-size", "x-large")
+    .style("fill", "grey")
+    .style("max-width", 400)
+    .text(`TSNE Projections`);
+  return svg.node();
+}
 function makeDendrogram(options = {}) {
   const {
     width: width = 420,
@@ -483,7 +562,7 @@ function makeDendrogram(options = {}) {
     .style("font-size", "x-large")
     .style("fill", "grey")
     .style("max-width", 400)
-    .text(`Dendrogram: ${store.getMonthsSelected}`);
+    .text(`Clustering Dendrogram: ${months[store.getMonthsSelected - 1]}`);
 
   // Custom path generator
   function elbow(d) {
@@ -504,7 +583,7 @@ function makeDendrogram(options = {}) {
 
 function makeHeatmap(distances) {
   // set the dimensions and margins of the graph
-  const margin = { top: 80, right: 25, bottom: 150, left: 200 };
+  const margin = { top: 80, right: 25, bottom: 170, left: 250 };
   // print this elements' width and height
   const fullHW = Math.min(
     document.getElementById("my_dataviz").clientWidth,
