@@ -31,8 +31,8 @@ export const useStore = defineStore("main", {
     },
   },
   actions: {
-    setFiles(files) {
-      this.files = files;
+    setFiles({ group1, group2 }: { group1: any[]; group2?: any[] }) {
+      this.files = [group1, group2 || []];
     },
     updateElements({ files, monthsSelected, yearsSelected, subsetType }) {
       this.files = files;

@@ -8,14 +8,21 @@ import {
 import { line, curveNatural } from "d3";
 import { pointsOnPath } from "points-on-path";
 
-import { OrthographicView, OrbitView } from "@deck.gl/core";
+import { OrthographicView, OrbitView } from "@deck.gl/core/typed";
+
+// const prefix = 'CMIP6_pr_historical_S3L0.02_'
+const prefix = "CMIP6_pr_delta_historical_S5L0.02_30x30_";
 
 export enum subsetType {
   month = "month",
   waterYear = "water_year_mean",
 }
 
-export function scalePointsToSquare(points, maxWidth = 40, maxHeight = 40) {
+export function scalePointsToSquare(
+  points: number[][],
+  maxWidth = 40,
+  maxHeight = 40
+) {
   // Find minimum and maximum values for x and y
   const minX = Math.min(...points.map((p) => p[0]));
   const maxX = Math.max(...points.map((p) => p[0]));
@@ -40,7 +47,7 @@ export function scalePointsToSquare(points, maxWidth = 40, maxHeight = 40) {
   });
 }
 
-export function hexToRgb(hex) {
+export function hexToRgb(hex: string) {
   var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
   return result
     ? [
@@ -95,7 +102,7 @@ export function hashString(str: string): number {
   return hash;
 }
 
-export const stripSOMprefix = (model) => {
+export function stripSOMprefix(model: string): string {
   let basefile = model.split("/").slice(-1)[0];
   let ret;
 
@@ -103,16 +110,16 @@ export const stripSOMprefix = (model) => {
     let prefix = "CMIP6_pr_historical_sfbay_S2L0.1_20x20_";
     ret = basefile.slice(prefix.length);
   } else {
-    let prefix = "CMIP6_pr_historical_S3L0.02_";
+    // let prefix = "CMIP6_pr_historical_S3L0.02_";
     // strip the prefix
     ret = basefile.slice(prefix.length);
   }
   return ret;
-};
+}
 
-export const getModelType = (model) => {
+export function getModelType(model: string): string {
   if (model == "All") return "All";
-  let ret;
+  let ret: string;
   // e.g. CMIP6_pr_historical_S3L0.02_ACCESS-CM2_historical_r1i1p1f1_pr.nc => ACCESS-CM2_historical_r1i1p1f1
   // first get basefile name
   let basefile = model.split("/").slice(-1)[0];
@@ -120,7 +127,7 @@ export const getModelType = (model) => {
     let prefix = "CMIP6_pr_historical_sfbay_S2L0.1_20x20_";
     ret = basefile.slice(prefix.length).split("_")[0];
   } else {
-    let prefix = "CMIP6_pr_historical_S3L0.02_";
+    // let prefix = "CMIP6_pr_historical_S3L0.02_";
     // strip the prefix
     ret =
       basefile.slice(prefix.length, -7).split("_")[0] +
@@ -128,11 +135,11 @@ export const getModelType = (model) => {
       basefile.slice(prefix.length, -7).split("_")[1];
   }
   return ret;
-};
+}
 
 // Generate a list of months from start (e.g. 9: September )to end (e.g. 1: January)
 // Accounts for cases where the months wrap around (e.g. 9 to 1)
-export function generateMonthRangeList(start, end) {
+export function generateMonthRangeList(start: number, end: number): number[] {
   let ret = [];
   if (start <= end) {
     for (let i = start; i <= end; i++) {
@@ -176,33 +183,34 @@ export const colorSim = scaleOrdinal(
   ].map(hexToRgb)
 );
 
-export const addJitter = (d, jitter = 0.01) => [
+export const addJitter = (d: number[], jitter = 0.01) => [
   d[0] + (Math.random() - 0.5) * jitter,
   d[1] + (Math.random() - 0.5) * jitter,
 ];
 
-export const colorPercentile = (d) => hexToRgb(interpolateViridis(d / 100));
+export const colorPercentile = (d: number) =>
+  hexToRgb(interpolateViridis(d / 100));
 
-export const colorMonth = (d) =>
+export const colorMonth = (d: number) =>
   interpolateRainbow((0.7 - d / 12) % 1)
     // interpolateSpectral((d / 12 + 0.5) % 1)
     .replace(/[^\d,]/g, "")
     .split(",")
     .map((d) => Number(d));
 
-export const colorInterpDifference = (value) =>
+export const colorInterpDifference = (value: number) =>
   interpolateRdBu(scaleLinear().domain([-0.0005, 0.0005]).range([0, 1])(value))
     .replace(/[^\d,]/g, "")
     .split(",")
     .map((d) => Number(d));
 
-export const colorInterp = (value) =>
+export const colorInterp = (value: number) =>
   interpolateBlues(scaleLinear().domain([0.008, 0]).range([1, 0])(value))
     .replace(/[^\d,]/g, "")
     .split(",")
     .map((d) => Number(d));
 
-export const pointsToCurve = (points) => {
+export const pointsToCurve = (points: number[][]) => {
   let curve = line().curve(curveNatural);
   return pointsOnPath(curve(points), 0.001)[0];
 };
@@ -222,12 +230,12 @@ export const orthoView = new OrthographicView({
 });
 export const miniorthoView = new OrthographicView({
   id: "minimap",
-  zoom: 3.5,
+  // zoom: 3.5,
   x: 20,
   y: 20,
   width: "25%",
   height: "25%",
-  clear: true,
+  // clear: true,
 });
 
 export const DECKGL_SETTINGS = {
@@ -304,76 +312,76 @@ export const calsimLabels = [
   "LTO_BA_EXP1_2022MED",
 ];
 export const historicalLabels = [
-  "CMIP6_pr_historical_S3L0.02_ACCESS-CM2_historical_r1i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_ACCESS-CM2_historical_r2i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_ACCESS-CM2_historical_r3i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_CESM2-LENS_historical_r10i1p1f1_pr.nc",
-  "CMIP6_pr_historical_S3L0.02_CESM2-LENS_historical_r1i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_CESM2-LENS_historical_r2i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_CESM2-LENS_historical_r3i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_CESM2-LENS_historical_r4i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_CESM2-LENS_historical_r5i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_CESM2-LENS_historical_r6i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_CESM2-LENS_historical_r7i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_CESM2-LENS_historical_r8i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_CESM2-LENS_historical_r9i1p1f1_pr.nc",
-  "CMIP6_pr_historical_S3L0.02_CNRM-ESM2-1_historical_r1i1p1f2_pr.nc",
-  "CMIP6_pr_historical_S3L0.02_EC-Earth3_historical_r1i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_EC-Earth3_historical_r2i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_EC-Earth3_historical_r3i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_EC-Earth3_historical_r4i1p1f1_pr.nc",
-  "CMIP6_pr_historical_S3L0.02_EC-Earth3-Veg_historical_r1i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_EC-Earth3-Veg_historical_r2i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_EC-Earth3-Veg_historical_r3i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_EC-Earth3-Veg_historical_r4i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_EC-Earth3-Veg_historical_r5i1p1f1_pr.nc",
-  "CMIP6_pr_historical_S3L0.02_FGOALS-g3_historical_r1i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_FGOALS-g3_historical_r3i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_FGOALS-g3_historical_r4i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_FGOALS-g3_historical_r5i1p1f1_pr.nc",
-  "CMIP6_pr_historical_S3L0.02_GFDL-ESM4_historical_r1i1p1f1_pr.nc",
-  "CMIP6_pr_historical_S3L0.02_HadGEM3-GC31-LL_historical_r1i1p1f3_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_HadGEM3-GC31-LL_historical_r2i1p1f3_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_HadGEM3-GC31-LL_historical_r3i1p1f3_pr.nc",
-  "CMIP6_pr_historical_S3L0.02_INM-CM5-0_historical_r1i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_INM-CM5-0_historical_r2i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_INM-CM5-0_historical_r3i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_INM-CM5-0_historical_r4i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_INM-CM5-0_historical_r5i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_IPSL-CM6A-LR_historical_r10i1p1f1_pr.nc",
-  "CMIP6_pr_historical_S3L0.02_IPSL-CM6A-LR_historical_r1i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_IPSL-CM6A-LR_historical_r2i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_IPSL-CM6A-LR_historical_r3i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_IPSL-CM6A-LR_historical_r4i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_IPSL-CM6A-LR_historical_r5i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_IPSL-CM6A-LR_historical_r6i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_IPSL-CM6A-LR_historical_r7i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_IPSL-CM6A-LR_historical_r8i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_IPSL-CM6A-LR_historical_r9i1p1f1_pr.nc",
-  "CMIP6_pr_historical_S3L0.02_KACE-1-0-G_historical_r1i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_KACE-1-0-G_historical_r2i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_KACE-1-0-G_historical_r3i1p1f1_pr.nc",
-  "CMIP6_pr_historical_S3L0.02_MIROC6_historical_r1i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_MIROC6_historical_r2i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_MIROC6_historical_r3i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_MIROC6_historical_r4i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_MIROC6_historical_r5i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_MPI-ESM1-2-HR_historical_r10i1p1f1_pr.nc",
-  "CMIP6_pr_historical_S3L0.02_MPI-ESM1-2-HR_historical_r1i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_MPI-ESM1-2-HR_historical_r2i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_MPI-ESM1-2-HR_historical_r3i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_MPI-ESM1-2-HR_historical_r4i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_MPI-ESM1-2-HR_historical_r5i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_MPI-ESM1-2-HR_historical_r6i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_MPI-ESM1-2-HR_historical_r7i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_MPI-ESM1-2-HR_historical_r8i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_MPI-ESM1-2-HR_historical_r9i1p1f1_pr.nc",
-  "CMIP6_pr_historical_S3L0.02_MRI-ESM2-0_historical_r1i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_MRI-ESM2-0_historical_r2i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_MRI-ESM2-0_historical_r3i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_MRI-ESM2-0_historical_r4i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_MRI-ESM2-0_historical_r5i1p1f1_pr.nc",
-  "CMIP6_pr_historical_S3L0.02_TaiESM1_historical_r1i1p1f1_pr.nc",
+  "ACCESS-CM2_historical_r1i1p1f1_pr.nc",
+  // "ACCESS-CM2_historical_r2i1p1f1_pr.nc",
+  // "ACCESS-CM2_historical_r3i1p1f1_pr.nc",
+  // "CESM2-LENS_historical_r10i1p1f1_pr.nc",
+  "CESM2-LENS_historical_r1i1p1f1_pr.nc",
+  // "CESM2-LENS_historical_r2i1p1f1_pr.nc",
+  // "CESM2-LENS_historical_r3i1p1f1_pr.nc",
+  // "CESM2-LENS_historical_r4i1p1f1_pr.nc",
+  // "CESM2-LENS_historical_r5i1p1f1_pr.nc",
+  // "CESM2-LENS_historical_r6i1p1f1_pr.nc",
+  // "CESM2-LENS_historical_r7i1p1f1_pr.nc",
+  // "CESM2-LENS_historical_r8i1p1f1_pr.nc",
+  // "CESM2-LENS_historical_r9i1p1f1_pr.nc",
+  "CNRM-ESM2-1_historical_r1i1p1f2_pr.nc",
+  "EC-Earth3_historical_r1i1p1f1_pr.nc",
+  // "EC-Earth3_historical_r2i1p1f1_pr.nc",
+  // "EC-Earth3_historical_r3i1p1f1_pr.nc",
+  // "EC-Earth3_historical_r4i1p1f1_pr.nc",
+  "EC-Earth3-Veg_historical_r1i1p1f1_pr.nc",
+  // "EC-Earth3-Veg_historical_r2i1p1f1_pr.nc",
+  // "EC-Earth3-Veg_historical_r3i1p1f1_pr.nc",
+  // "EC-Earth3-Veg_historical_r4i1p1f1_pr.nc",
+  // "EC-Earth3-Veg_historical_r5i1p1f1_pr.nc",
+  "FGOALS-g3_historical_r1i1p1f1_pr.nc",
+  // "FGOALS-g3_historical_r3i1p1f1_pr.nc",
+  // "FGOALS-g3_historical_r4i1p1f1_pr.nc",
+  // "FGOALS-g3_historical_r5i1p1f1_pr.nc",
+  "GFDL-ESM4_historical_r1i1p1f1_pr.nc",
+  "HadGEM3-GC31-LL_historical_r1i1p1f3_pr.nc",
+  // "HadGEM3-GC31-LL_historical_r2i1p1f3_pr.nc",
+  // "HadGEM3-GC31-LL_historical_r3i1p1f3_pr.nc",
+  "INM-CM5-0_historical_r1i1p1f1_pr.nc",
+  // "INM-CM5-0_historical_r2i1p1f1_pr.nc",
+  // "INM-CM5-0_historical_r3i1p1f1_pr.nc",
+  // "INM-CM5-0_historical_r4i1p1f1_pr.nc",
+  // "INM-CM5-0_historical_r5i1p1f1_pr.nc",
+  // "IPSL-CM6A-LR_historical_r10i1p1f1_pr.nc",
+  "IPSL-CM6A-LR_historical_r1i1p1f1_pr.nc",
+  // "IPSL-CM6A-LR_historical_r2i1p1f1_pr.nc",
+  // "IPSL-CM6A-LR_historical_r3i1p1f1_pr.nc",
+  // "IPSL-CM6A-LR_historical_r4i1p1f1_pr.nc",
+  // "IPSL-CM6A-LR_historical_r5i1p1f1_pr.nc",
+  // "IPSL-CM6A-LR_historical_r6i1p1f1_pr.nc",
+  // "IPSL-CM6A-LR_historical_r7i1p1f1_pr.nc",
+  // "IPSL-CM6A-LR_historical_r8i1p1f1_pr.nc",
+  // "IPSL-CM6A-LR_historical_r9i1p1f1_pr.nc",
+  "KACE-1-0-G_historical_r1i1p1f1_pr.nc",
+  // "KACE-1-0-G_historical_r2i1p1f1_pr.nc",
+  // "KACE-1-0-G_historical_r3i1p1f1_pr.nc",
+  "MIROC6_historical_r1i1p1f1_pr.nc",
+  // "MIROC6_historical_r2i1p1f1_pr.nc",
+  // "MIROC6_historical_r3i1p1f1_pr.nc",
+  // "MIROC6_historical_r4i1p1f1_pr.nc",
+  // "MIROC6_historical_r5i1p1f1_pr.nc",
+  // "MPI-ESM1-2-HR_historical_r10i1p1f1_pr.nc",
+  "MPI-ESM1-2-HR_historical_r1i1p1f1_pr.nc",
+  // "MPI-ESM1-2-HR_historical_r2i1p1f1_pr.nc",
+  // "MPI-ESM1-2-HR_historical_r3i1p1f1_pr.nc",
+  // "MPI-ESM1-2-HR_historical_r4i1p1f1_pr.nc",
+  // "MPI-ESM1-2-HR_historical_r5i1p1f1_pr.nc",
+  // "MPI-ESM1-2-HR_historical_r6i1p1f1_pr.nc",
+  // "MPI-ESM1-2-HR_historical_r7i1p1f1_pr.nc",
+  // "MPI-ESM1-2-HR_historical_r8i1p1f1_pr.nc",
+  // "MPI-ESM1-2-HR_historical_r9i1p1f1_pr.nc",
+  "MRI-ESM2-0_historical_r1i1p1f1_pr.nc",
+  // "MRI-ESM2-0_historical_r2i1p1f1_pr.nc",
+  // "MRI-ESM2-0_historical_r3i1p1f1_pr.nc",
+  // "MRI-ESM2-0_historical_r4i1p1f1_pr.nc",
+  // "MRI-ESM2-0_historical_r5i1p1f1_pr.nc",
+  "TaiESM1_historical_r1i1p1f1_pr.nc",
 
   // "CMIP6_taxmax_historical_S3L0.1_ACCESS-CM2_historical_r1i1p1f1_tasmax.nc",
   // // "CMIP6_taxmax_historical_S3L0.1_ACCESS-CM2_historical_r2i1p1f1_tasmax.nc",
@@ -447,108 +455,124 @@ export const historicalLabels = [
   // // "CMIP6_taxmax_historical_S3L0.1_TaiESM1_historical_r1i1p1f1_tasmax.nc"
 ];
 
-export let ssp370Labels = [
-  "CMIP6_pr_historical_S3L0.02_ACCESS-CM2_ssp370_r1i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_ACCESS-CM2_ssp370_r2i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_ACCESS-CM2_ssp370_r3i1p1f1_pr.nc",
-  "CMIP6_pr_historical_S3L0.02_CESM2-LENS_ssp370_r10i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_CESM2-LENS_ssp370_r1i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_CESM2-LENS_ssp370_r2i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_CESM2-LENS_ssp370_r3i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_CESM2-LENS_ssp370_r4i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_CESM2-LENS_ssp370_r5i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_CESM2-LENS_ssp370_r6i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_CESM2-LENS_ssp370_r7i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_CESM2-LENS_ssp370_r8i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_CESM2-LENS_ssp370_r9i1p1f1_pr.nc",
-  "CMIP6_pr_historical_S3L0.02_CNRM-ESM2-1_ssp370_r1i1p1f2_pr.nc",
-  "CMIP6_pr_historical_S3L0.02_EC-Earth3_ssp370_r1i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_EC-Earth3_ssp370_r4i1p1f1_pr.nc",
-  "CMIP6_pr_historical_S3L0.02_EC-Earth3-Veg_ssp370_r1i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_EC-Earth3-Veg_ssp370_r2i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_EC-Earth3-Veg_ssp370_r3i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_EC-Earth3-Veg_ssp370_r4i1p1f1_pr.nc",
-  "CMIP6_pr_historical_S3L0.02_FGOALS-g3_ssp370_r1i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_FGOALS-g3_ssp370_r3i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_FGOALS-g3_ssp370_r4i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_FGOALS-g3_ssp370_r5i1p1f1_pr.nc",
-  "CMIP6_pr_historical_S3L0.02_GFDL-ESM4_ssp370_r1i1p1f1_pr.nc",
-  "CMIP6_pr_historical_S3L0.02_INM-CM5-0_ssp370_r1i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_INM-CM5-0_ssp370_r2i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_INM-CM5-0_ssp370_r3i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_INM-CM5-0_ssp370_r4i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_INM-CM5-0_ssp370_r5i1p1f1_pr.nc",
-  "CMIP6_pr_historical_S3L0.02_IPSL-CM6A-LR_ssp370_r10i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_IPSL-CM6A-LR_ssp370_r1i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_IPSL-CM6A-LR_ssp370_r2i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_IPSL-CM6A-LR_ssp370_r3i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_IPSL-CM6A-LR_ssp370_r4i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_IPSL-CM6A-LR_ssp370_r5i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_IPSL-CM6A-LR_ssp370_r6i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_IPSL-CM6A-LR_ssp370_r7i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_IPSL-CM6A-LR_ssp370_r8i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_IPSL-CM6A-LR_ssp370_r9i1p1f1_pr.nc",
-  "CMIP6_pr_historical_S3L0.02_KACE-1-0-G_ssp370_r1i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_KACE-1-0-G_ssp370_r2i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_KACE-1-0-G_ssp370_r3i1p1f1_pr.nc",
-  "CMIP6_pr_historical_S3L0.02_MIROC6_ssp370_r1i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_MIROC6_ssp370_r2i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_MIROC6_ssp370_r3i1p1f1_pr.nc",
-  "CMIP6_pr_historical_S3L0.02_MPI-ESM1-2-HR_ssp370_r10i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_MPI-ESM1-2-HR_ssp370_r1i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_MPI-ESM1-2-HR_ssp370_r2i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_MPI-ESM1-2-HR_ssp370_r3i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_MPI-ESM1-2-HR_ssp370_r4i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_MPI-ESM1-2-HR_ssp370_r5i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_MPI-ESM1-2-HR_ssp370_r6i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_MPI-ESM1-2-HR_ssp370_r7i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_MPI-ESM1-2-HR_ssp370_r8i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_MPI-ESM1-2-HR_ssp370_r9i1p1f1_pr.nc",
-  "CMIP6_pr_historical_S3L0.02_MRI-ESM2-0_ssp370_r1i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_MRI-ESM2-0_ssp370_r2i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_MRI-ESM2-0_ssp370_r3i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_MRI-ESM2-0_ssp370_r4i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_MRI-ESM2-0_ssp370_r5i1p1f1_pr.nc",
-  "CMIP6_pr_historical_S3L0.02_TaiESM1_ssp370_r1i1p1f1_pr.nc",
+export let ssp245Labels = [
+  "ACCESS-CM2_ssp245_r1i1p1f1_pr.nc",
+  "GFDL-ESM4_ssp245_r1i1p1f1_pr.nc",
+  "MIROC6_ssp245_r1i1p1f1_pr.nc",
+  "CNRM-ESM2-1_ssp245_r1i1p1f2_pr.nc",
+  "HadGEM3-GC31-LL_ssp245_r1i1p1f3_pr.nc",
+  "MPI-ESM1-2-HR_ssp245_r1i1p1f1_pr.nc",
+  "EC-Earth3_ssp245_r1i1p1f1_pr.nc",
+  "INM-CM5-0_ssp245_r1i1p1f1_pr.nc",
+  "MRI-ESM2-0_ssp245_r1i1p1f1_pr.nc",
+  "EC-Earth3-Veg_ssp245_r1i1p1f1_pr.nc",
+  "IPSL-CM6A-LR_ssp245_r1i1p1f1_pr.nc",
+  "TaiESM1_ssp245_r1i1p1f1_pr.nc",
+  "FGOALS-g3_ssp245_r1i1p1f1_pr.nc",
+  "KACE-1-0-G_ssp245_r1i1p1f1_pr.nc",
 ];
-ssp370Labels = [...historicalLabels, ...ssp370Labels];
+
+export let ssp370Labels = [
+  "ACCESS-CM2_ssp370_r1i1p1f1_pr.nc",
+  // "ACCESS-CM2_ssp370_r2i1p1f1_pr.nc",
+  // "ACCESS-CM2_ssp370_r3i1p1f1_pr.nc",
+  //   "CESM2-LENS_ssp370_r10i1p1f1_pr.nc",
+  "CESM2-LENS_ssp370_r1i1p1f1_pr.nc",
+  // "CESM2-LENS_ssp370_r2i1p1f1_pr.nc",
+  // "CESM2-LENS_ssp370_r3i1p1f1_pr.nc",
+  // "CESM2-LENS_ssp370_r4i1p1f1_pr.nc",
+  // "CESM2-LENS_ssp370_r5i1p1f1_pr.nc",
+  // "CESM2-LENS_ssp370_r6i1p1f1_pr.nc",
+  // "CESM2-LENS_ssp370_r7i1p1f1_pr.nc",
+  // "CESM2-LENS_ssp370_r8i1p1f1_pr.nc",
+  // "CESM2-LENS_ssp370_r9i1p1f1_pr.nc",
+  "CNRM-ESM2-1_ssp370_r1i1p1f2_pr.nc",
+  "EC-Earth3_ssp370_r1i1p1f1_pr.nc",
+  // "EC-Earth3_ssp370_r4i1p1f1_pr.nc",
+  "EC-Earth3-Veg_ssp370_r1i1p1f1_pr.nc",
+  // "EC-Earth3-Veg_ssp370_r2i1p1f1_pr.nc",
+  // "EC-Earth3-Veg_ssp370_r3i1p1f1_pr.nc",
+  // "EC-Earth3-Veg_ssp370_r4i1p1f1_pr.nc",
+  "FGOALS-g3_ssp370_r1i1p1f1_pr.nc",
+  // "FGOALS-g3_ssp370_r3i1p1f1_pr.nc",
+  // "FGOALS-g3_ssp370_r4i1p1f1_pr.nc",
+  // "FGOALS-g3_ssp370_r5i1p1f1_pr.nc",
+  "GFDL-ESM4_ssp370_r1i1p1f1_pr.nc",
+  "INM-CM5-0_ssp370_r1i1p1f1_pr.nc",
+  // "INM-CM5-0_ssp370_r2i1p1f1_pr.nc",
+  // "INM-CM5-0_ssp370_r3i1p1f1_pr.nc",
+  // "INM-CM5-0_ssp370_r4i1p1f1_pr.nc",
+  // "INM-CM5-0_ssp370_r5i1p1f1_pr.nc",
+  //   "IPSL-CM6A-LR_ssp370_r10i1p1f1_pr.nc",
+  "IPSL-CM6A-LR_ssp370_r1i1p1f1_pr.nc",
+  // "IPSL-CM6A-LR_ssp370_r2i1p1f1_pr.nc",
+  // "IPSL-CM6A-LR_ssp370_r3i1p1f1_pr.nc",
+  // "IPSL-CM6A-LR_ssp370_r4i1p1f1_pr.nc",
+  // "IPSL-CM6A-LR_ssp370_r5i1p1f1_pr.nc",
+  // "IPSL-CM6A-LR_ssp370_r6i1p1f1_pr.nc",
+  // "IPSL-CM6A-LR_ssp370_r7i1p1f1_pr.nc",
+  // "IPSL-CM6A-LR_ssp370_r8i1p1f1_pr.nc",
+  // "IPSL-CM6A-LR_ssp370_r9i1p1f1_pr.nc",
+  "KACE-1-0-G_ssp370_r1i1p1f1_pr.nc",
+  // "KACE-1-0-G_ssp370_r2i1p1f1_pr.nc",
+  // "KACE-1-0-G_ssp370_r3i1p1f1_pr.nc",
+  "MIROC6_ssp370_r1i1p1f1_pr.nc",
+  // "MIROC6_ssp370_r2i1p1f1_pr.nc",
+  // "MIROC6_ssp370_r3i1p1f1_pr.nc",
+  //   "MPI-ESM1-2-HR_ssp370_r10i1p1f1_pr.nc",
+  "MPI-ESM1-2-HR_ssp370_r1i1p1f1_pr.nc",
+  // "MPI-ESM1-2-HR_ssp370_r2i1p1f1_pr.nc",
+  // "MPI-ESM1-2-HR_ssp370_r3i1p1f1_pr.nc",
+  // "MPI-ESM1-2-HR_ssp370_r4i1p1f1_pr.nc",
+  // "MPI-ESM1-2-HR_ssp370_r5i1p1f1_pr.nc",
+  // "MPI-ESM1-2-HR_ssp370_r6i1p1f1_pr.nc",
+  // "MPI-ESM1-2-HR_ssp370_r7i1p1f1_pr.nc",
+  // "MPI-ESM1-2-HR_ssp370_r8i1p1f1_pr.nc",
+  // "MPI-ESM1-2-HR_ssp370_r9i1p1f1_pr.nc",
+  "MRI-ESM2-0_ssp370_r1i1p1f1_pr.nc",
+  // "MRI-ESM2-0_ssp370_r2i1p1f1_pr.nc",
+  // "MRI-ESM2-0_ssp370_r3i1p1f1_pr.nc",
+  // "MRI-ESM2-0_ssp370_r4i1p1f1_pr.nc",
+  // "MRI-ESM2-0_ssp370_r5i1p1f1_pr.nc",
+  "TaiESM1_ssp370_r1i1p1f1_pr.nc",
+];
 // ssp370Labels = [...historicalLabels];
 
 export const ssp585Labels = [
-  "CMIP6_pr_historical_S3L0.02_ACCESS-CM2_ssp585_r1i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_ACCESS-CM2_ssp585_r2i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_ACCESS-CM2_ssp585_r3i1p1f1_pr.nc",
-  "CMIP6_pr_historical_S3L0.02_CNRM-ESM2-1_ssp585_r1i1p1f2_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_EC-Earth3_ssp585_r1i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_EC-Earth3_ssp585_r3i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_EC-Earth3_ssp585_r4i1p1f1_pr.nc",
-  "CMIP6_pr_historical_S3L0.02_EC-Earth3-Veg_ssp585_r1i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_EC-Earth3-Veg_ssp585_r2i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_EC-Earth3-Veg_ssp585_r3i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_EC-Earth3-Veg_ssp585_r4i1p1f1_pr.nc",
-  "CMIP6_pr_historical_S3L0.02_FGOALS-g3_ssp585_r1i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_FGOALS-g3_ssp585_r3i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_FGOALS-g3_ssp585_r4i1p1f1_pr.nc",
-  "CMIP6_pr_historical_S3L0.02_GFDL-ESM4_ssp585_r1i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_HadGEM3-GC31-LL_ssp585_r1i1p1f3_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_HadGEM3-GC31-LL_ssp585_r2i1p1f3_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_HadGEM3-GC31-LL_ssp585_r3i1p1f3_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_INM-CM5-0_ssp585_r1i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_IPSL-CM6A-LR_ssp585_r1i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_IPSL-CM6A-LR_ssp585_r2i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_IPSL-CM6A-LR_ssp585_r3i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_IPSL-CM6A-LR_ssp585_r4i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_KACE-1-0-G_ssp585_r1i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_KACE-1-0-G_ssp585_r2i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_KACE-1-0-G_ssp585_r3i1p1f1_pr.nc",
-  "CMIP6_pr_historical_S3L0.02_MIROC6_ssp585_r1i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_MIROC6_ssp585_r2i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_MIROC6_ssp585_r3i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_MIROC6_ssp585_r4i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_MIROC6_ssp585_r5i1p1f1_pr.nc",
-  "CMIP6_pr_historical_S3L0.02_MPI-ESM1-2-HR_ssp585_r1i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_MPI-ESM1-2-HR_ssp585_r2i1p1f1_pr.nc",
-  // "CMIP6_pr_historical_S3L0.02_MRI-ESM2-0_ssp585_r1i1p1f1_pr.nc",
+  "ACCESS-CM2_ssp585_r1i1p1f1_pr.nc",
+  // "ACCESS-CM2_ssp585_r2i1p1f1_pr.nc",
+  // "ACCESS-CM2_ssp585_r3i1p1f1_pr.nc",
+  "CNRM-ESM2-1_ssp585_r1i1p1f2_pr.nc",
+  // "EC-Earth3_ssp585_r1i1p1f1_pr.nc",
+  // "EC-Earth3_ssp585_r3i1p1f1_pr.nc",
+  // "EC-Earth3_ssp585_r4i1p1f1_pr.nc",
+  "EC-Earth3-Veg_ssp585_r1i1p1f1_pr.nc",
+  // "EC-Earth3-Veg_ssp585_r2i1p1f1_pr.nc",
+  // "EC-Earth3-Veg_ssp585_r3i1p1f1_pr.nc",
+  // "EC-Earth3-Veg_ssp585_r4i1p1f1_pr.nc",
+  "FGOALS-g3_ssp585_r1i1p1f1_pr.nc",
+  // "FGOALS-g3_ssp585_r3i1p1f1_pr.nc",
+  // "FGOALS-g3_ssp585_r4i1p1f1_pr.nc",
+  "GFDL-ESM4_ssp585_r1i1p1f1_pr.nc",
+  // "HadGEM3-GC31-LL_ssp585_r1i1p1f3_pr.nc",
+  // "HadGEM3-GC31-LL_ssp585_r2i1p1f3_pr.nc",
+  // "HadGEM3-GC31-LL_ssp585_r3i1p1f3_pr.nc",
+  // "INM-CM5-0_ssp585_r1i1p1f1_pr.nc",
+  // "IPSL-CM6A-LR_ssp585_r1i1p1f1_pr.nc",
+  // "IPSL-CM6A-LR_ssp585_r2i1p1f1_pr.nc",
+  // "IPSL-CM6A-LR_ssp585_r3i1p1f1_pr.nc",
+  // "IPSL-CM6A-LR_ssp585_r4i1p1f1_pr.nc",
+  // "KACE-1-0-G_ssp585_r1i1p1f1_pr.nc",
+  // "KACE-1-0-G_ssp585_r2i1p1f1_pr.nc",
+  // "KACE-1-0-G_ssp585_r3i1p1f1_pr.nc",
+  "MIROC6_ssp585_r1i1p1f1_pr.nc",
+  // "MIROC6_ssp585_r2i1p1f1_pr.nc",
+  // "MIROC6_ssp585_r3i1p1f1_pr.nc",
+  // "MIROC6_ssp585_r4i1p1f1_pr.nc",
+  // "MIROC6_ssp585_r5i1p1f1_pr.nc",
+  "MPI-ESM1-2-HR_ssp585_r1i1p1f1_pr.nc",
+  // "MPI-ESM1-2-HR_ssp585_r2i1p1f1_pr.nc",
+  // "MRI-ESM2-0_ssp585_r1i1p1f1_pr.nc",
 
   // "CMIP6_taxmax_historical_S3L0.1_ACCESS-CM2_ssp585_r1i1p1f1_tasmax.nc",
   // // "CMIP6_taxmax_historical_S3L0.1_ACCESS-CM2_ssp585_r2i1p1f1_tasmax.nc",
@@ -585,6 +609,20 @@ export const ssp585Labels = [
   // // "CMIP6_taxmax_historical_S3L0.1_MPI-ESM1-2-HR_ssp585_r2i1p1f1_tasmax.nc",
   // // "CMIP6_taxmax_historical_S3L0.1_MRI-ESM2-0_ssp585_r1i1p1f1_tasmax.nc"
 ];
+
+export const sspAllLabels = [
+  ...historicalLabels,
+  ...ssp245Labels,
+  ...ssp370Labels,
+  ...ssp585Labels,
+].map((d) => prefix + d);
+
+ssp370Labels = [
+  ...historicalLabels,
+  ...ssp245Labels,
+  ...ssp370Labels,
+  ...ssp585Labels,
+].map((d) => prefix + d);
 
 export const historicalLabelsSfbay = [
   "CMIP6_pr_historical_sfbay_S3L0.1_20x20_ACCESS-CM2_historical_r1i1p1f1_pr_sfbay.nc",

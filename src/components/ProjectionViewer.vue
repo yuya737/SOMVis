@@ -1,6 +1,5 @@
 <template>
   <div class="relative h-full w-full">
-    <img class="absolute bottom-0 right-0 z-[4] p-4" :src="imgSrc" />
     <div class="relative h-full w-full">
       <canvas :id="deckglCanvas" class="z-[2] h-full w-full" />
       <InfoPanel
@@ -174,7 +173,8 @@ onMounted(() => {
   deck = new Deck({
     ...DECKGL_SETTINGS,
     canvas: deckglCanvas,
-    views: orbitView,
+    // views: orbitView,
+    views: orthoView,
     getTooltip: ({ object }) => {
       if (!object) return;
       console.log(object);
@@ -282,7 +282,6 @@ async function initializeLayers() {
     getSubsetType,
     getHoveredFile,
   } = storeToRefs(store);
-  console.log("SDFSDF", pathData);
   let somLayerGenerator = new SOMLayer(
     pathData,
     getYearsSelected,

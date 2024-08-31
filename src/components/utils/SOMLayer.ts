@@ -16,6 +16,7 @@ import kde2d from "@stdlib/stats-kde2d";
 
 import {
   colorSim,
+  addJitter,
   getModelType,
   pointsToCurve,
   generateMonthRangeList,
@@ -143,14 +144,13 @@ export class SOMLayer extends AbstractLayerGenerator {
     return ret;
   }
 
-  _subsetData() {
+  _subsetData(): BMUMata[] {
     const selectData = (files) => {
       let curBMUData = this.BMUData;
       if (!files.includes("All")) {
         // curBlockedCenterofMass = this.blockedCenterofMassData.filter((d) =>
         //   this.selectedModel.value.includes(d.name)
         // );
-        console.log(this.BMUData);
         curBMUData = this.BMUData.filter((d) => files.includes(d.name));
       }
       // curBlockedCenterofMass = curBlockedCenterofMass.filter((d) =>
@@ -200,7 +200,7 @@ export class SOMLayer extends AbstractLayerGenerator {
     return curBMUData;
   }
 
-  _getFreq(curBMUData) {
+  _getFreq(curBMUData: BMUMata[]) {
     const countFrequecy = (arr) => {
       let freq = {};
       arr.forEach((d) => {
@@ -380,8 +380,10 @@ export class SOMLayer extends AbstractLayerGenerator {
       cellSize: 0.25,
     });
     ret = [...ret, gridcell];
+
     const resolution = 200;
-    const heightMultiplier = 750;
+    let heightMultiplier = 350;
+
     if (this.mode == "single") {
       let kdeResult = kde2d(
         curBMUData.map((d) => d.coords[0]),
@@ -482,7 +484,7 @@ export class SOMLayer extends AbstractLayerGenerator {
               .replace(/[^\d,]/g, "")
               .split(",")
               .map((d) => Number(d));
-            t.push((z / 8) * 255);
+            t.push((z / 4) * 255);
             return t;
           },
           uCount: resolution,
@@ -599,30 +601,21 @@ export class SOMLayer extends AbstractLayerGenerator {
         }),
       ];
     }
-    // let heatmap = new ScatterplotLayer({
-    //     id: `curve-heatmap`,
-    //     data: curHeatmapData.map((d) => {
-    //         return { ...d, coords: addJitter(d.coords, 0.1) };
-    //     }),
-    //     getColor: (d) => [...colorSim(d.name)],
-    //     getPosition: (d) => d.coords,
-    //     getRadius: 0.1,
-    //     radiusPixels: 100,
-    //     debounceTimeout: 750,
-    //     opacity: 0.7,
-    //     weightsTextureSize: 256,
-    //     // threshold: 0.2,
-    //     // colorDomain: [30, 200],
-    //     extensions: [new DataFilterExtension({ filterSize: 2 })],
-    //     getFilterValue: (d) => [d.month, d.year],
-    //     filterRange: [
-    //         [this.selectedMonthRange.value, this.selectedMonthRange.value],
-    //         [
-    //             this.selectedTimeRange.value[0],
-    //             this.selectedTimeRange.value[1],
-    //         ],
-    //     ],
-    // });
+    let heatmap = new HeatmapLayer({
+      id: `curve-heatmap`,
+      data: curBMUData.map((d) => {
+        return { ...d, coords: addJitter(d.coords, 0) };
+      }),
+      getColor: (d) => [...colorSim(d.name)],
+      getPosition: (d) => d.coords,
+      aggregation: "SUM",
+      // getRadius: 2,
+      radiusPixels: 100,
+      threshold: 0.1,
+      debounceTimeout: 750,
+      opacity: 0.7,
+      weightsTextureSize: 256,
+    });
     // let te = new TextLayer({
     //     id: `curve-text-${this.name}`,
     //     data: this.month_divided_data.map((d) => {
@@ -647,7 +640,7 @@ export class SOMLayer extends AbstractLayerGenerator {
     //     //     console.log("Clicked:", info.object, event);
     //     // },
     // });
-    // ret = [...ret, te];
+    ret = [...ret, heatmap];
     // let ret = [monthlyCOMPath, blockedMonthlyCOMScatter];
     // let ret = [heatmap, monthlyCOMPath];
     // ret = [...ret, blockedMonthlyCOMScatter];

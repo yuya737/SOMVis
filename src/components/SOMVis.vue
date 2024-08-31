@@ -8,10 +8,11 @@
       <!-- <ProjectionViewer class="h-full" /> -->
       <Splitter class="h-full w-full" layout="vertical">
         <SplitterPanel class="h-full">
-          <MapViewer class="h-full" />
+          <!-- <MapViewer class="h-full" /> -->
+          <TimelineViewer class="h-full" />
           <!-- <ForceGraph class="h-full" /> -->
         </SplitterPanel>
-        <SplitterPanel style="height: 100%" :size="50">
+        <SplitterPanel style="height: 100%" :size="40">
           <HeatmapViewer class="h-full" />
         </SplitterPanel>
       </Splitter>
@@ -25,5 +26,5 @@ import SplitterPanel from "primevue/splitterpanel";
 import ProjectionViewer from "./ProjectionViewer.vue";
 import MapViewer from "./MapViewer.vue";
 import HeatmapViewer from "./HeatmapViewer.vue";
-import ForceGraph from "./ForceGraph.vue";
+import TimelineViewer from "./TimelineViewer.vue";
 </script>
