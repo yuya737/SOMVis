@@ -78,51 +78,65 @@ const colors = [
   "#4e79a7",
   "#d3d3d3",
 ];
-
-const fileNames = [
-  "CMIP6_pr_delta_historical_S5L0.02_30x30_ACCESS-CM2_historical_r1i1p1f1_pr.nc",
-  "CMIP6_pr_delta_historical_S5L0.02_30x30_ACCESS-CM2_ssp370_r1i1p1f1_pr.nc",
-  "CMIP6_pr_delta_historical_S5L0.02_30x30_ACCESS-CM2_ssp585_r1i1p1f1_pr.nc",
-  "CMIP6_pr_delta_historical_S5L0.02_30x30_CESM2-LENS_historical_r1i1p1f1_pr.nc",
-  "CMIP6_pr_delta_historical_S5L0.02_30x30_CESM2-LENS_ssp370_r1i1p1f1_pr.nc",
-  "CMIP6_pr_delta_historical_S5L0.02_30x30_CNRM-ESM2-1_historical_r1i1p1f2_pr.nc",
-  "CMIP6_pr_delta_historical_S5L0.02_30x30_CNRM-ESM2-1_ssp370_r1i1p1f2_pr.nc",
-  "CMIP6_pr_delta_historical_S5L0.02_30x30_CNRM-ESM2-1_ssp585_r1i1p1f2_pr.nc",
-  "CMIP6_pr_delta_historical_S5L0.02_30x30_EC-Earth3-Veg_historical_r1i1p1f1_pr.nc",
-  "CMIP6_pr_delta_historical_S5L0.02_30x30_EC-Earth3-Veg_ssp370_r1i1p1f1_pr.nc",
-  "CMIP6_pr_delta_historical_S5L0.02_30x30_EC-Earth3-Veg_ssp585_r1i1p1f1_pr.nc",
-  "CMIP6_pr_delta_historical_S5L0.02_30x30_EC-Earth3_historical_r1i1p1f1_pr.nc",
-  "CMIP6_pr_delta_historical_S5L0.02_30x30_EC-Earth3_ssp370_r1i1p1f1_pr.nc",
-  "CMIP6_pr_delta_historical_S5L0.02_30x30_EC-Earth3_ssp585_r1i1p1f1_pr.nc",
-  "CMIP6_pr_delta_historical_S5L0.02_30x30_FGOALS-g3_historical_r1i1p1f1_pr.nc",
-  "CMIP6_pr_delta_historical_S5L0.02_30x30_FGOALS-g3_ssp370_r1i1p1f1_pr.nc",
-  "CMIP6_pr_delta_historical_S5L0.02_30x30_FGOALS-g3_ssp585_r1i1p1f1_pr.nc",
-  "CMIP6_pr_delta_historical_S5L0.02_30x30_GFDL-ESM4_historical_r1i1p1f1_pr.nc",
-  "CMIP6_pr_delta_historical_S5L0.02_30x30_GFDL-ESM4_ssp370_r1i1p1f1_pr.nc",
-  "CMIP6_pr_delta_historical_S5L0.02_30x30_GFDL-ESM4_ssp585_r1i1p1f1_pr.nc",
-  "CMIP6_pr_delta_historical_S5L0.02_30x30_HadGEM3-GC31-LL_historical_r1i1p1f3_pr.nc",
-  "CMIP6_pr_delta_historical_S5L0.02_30x30_HadGEM3-GC31-LL_ssp585_r1i1p1f3_pr.nc",
-  "CMIP6_pr_delta_historical_S5L0.02_30x30_INM-CM5-0_historical_r1i1p1f1_pr.nc",
-  "CMIP6_pr_delta_historical_S5L0.02_30x30_INM-CM5-0_ssp370_r1i1p1f1_pr.nc",
-  "CMIP6_pr_delta_historical_S5L0.02_30x30_INM-CM5-0_ssp585_r1i1p1f1_pr.nc",
-  "CMIP6_pr_delta_historical_S5L0.02_30x30_IPSL-CM6A-LR_historical_r1i1p1f1_pr.nc",
-  "CMIP6_pr_delta_historical_S5L0.02_30x30_IPSL-CM6A-LR_ssp370_r1i1p1f1_pr.nc",
-  "CMIP6_pr_delta_historical_S5L0.02_30x30_IPSL-CM6A-LR_ssp585_r1i1p1f1_pr.nc",
-  "CMIP6_pr_delta_historical_S5L0.02_30x30_KACE-1-0-G_historical_r1i1p1f1_pr.nc",
-  "CMIP6_pr_delta_historical_S5L0.02_30x30_KACE-1-0-G_ssp370_r1i1p1f1_pr.nc",
-  "CMIP6_pr_delta_historical_S5L0.02_30x30_KACE-1-0-G_ssp585_r1i1p1f1_pr.nc",
-  "CMIP6_pr_delta_historical_S5L0.02_30x30_MIROC6_historical_r1i1p1f1_pr.nc",
-  "CMIP6_pr_delta_historical_S5L0.02_30x30_MIROC6_ssp370_r1i1p1f1_pr.nc",
-  "CMIP6_pr_delta_historical_S5L0.02_30x30_MIROC6_ssp585_r1i1p1f1_pr.nc",
-  "CMIP6_pr_delta_historical_S5L0.02_30x30_MPI-ESM1-2-HR_historical_r1i1p1f1_pr.nc",
-  "CMIP6_pr_delta_historical_S5L0.02_30x30_MPI-ESM1-2-HR_ssp370_r1i1p1f1_pr.nc",
-  "CMIP6_pr_delta_historical_S5L0.02_30x30_MPI-ESM1-2-HR_ssp585_r1i1p1f1_pr.nc",
-  "CMIP6_pr_delta_historical_S5L0.02_30x30_MRI-ESM2-0_historical_r1i1p1f1_pr.nc",
-  "CMIP6_pr_delta_historical_S5L0.02_30x30_MRI-ESM2-0_ssp370_r1i1p1f1_pr.nc",
-  "CMIP6_pr_delta_historical_S5L0.02_30x30_MRI-ESM2-0_ssp585_r1i1p1f1_pr.nc",
-  "CMIP6_pr_delta_historical_S5L0.02_30x30_TaiESM1_historical_r1i1p1f1_pr.nc",
-  "CMIP6_pr_delta_historical_S5L0.02_30x30_TaiESM1_ssp370_r1i1p1f1_pr.nc",
-];
+const fileNames = sspAllLabels;
+// const fileNames = [
+//   "CMIP6_pr_delta_historical_S5L0.02_30x30_ACCESS-CM2_historical_r1i1p1f1_pr.nc",
+//   "CMIP6_pr_delta_historical_S5L0.02_30x30_ACCESS-CM2_ssp245_r1i1p1f1_pr.nc",
+//   "CMIP6_pr_delta_historical_S5L0.02_30x30_ACCESS-CM2_ssp370_r1i1p1f1_pr.nc",
+//   "CMIP6_pr_delta_historical_S5L0.02_30x30_ACCESS-CM2_ssp585_r1i1p1f1_pr.nc",
+//   "CMIP6_pr_delta_historical_S5L0.02_30x30_CESM2-LENS_historical_r1i1p1f1_pr.nc",
+//   "CMIP6_pr_delta_historical_S5L0.02_30x30_CESM2-LENS_ssp370_r1i1p1f1_pr.nc",
+//   "CMIP6_pr_delta_historical_S5L0.02_30x30_CNRM-ESM2-1_historical_r1i1p1f2_pr.nc",
+//   "CMIP6_pr_delta_historical_S5L0.02_30x30_CNRM-ESM2-1_ssp245_r1i1p1f2_pr.nc",
+//   "CMIP6_pr_delta_historical_S5L0.02_30x30_CNRM-ESM2-1_ssp370_r1i1p1f2_pr.nc",
+//   "CMIP6_pr_delta_historical_S5L0.02_30x30_CNRM-ESM2-1_ssp585_r1i1p1f2_pr.nc",
+//   "CMIP6_pr_delta_historical_S5L0.02_30x30_EC-Earth3-Veg_historical_r1i1p1f1_pr.nc",
+//   "CMIP6_pr_delta_historical_S5L0.02_30x30_EC-Earth3-Veg_ssp245_r1i1p1f1_pr.nc",
+//   "CMIP6_pr_delta_historical_S5L0.02_30x30_EC-Earth3-Veg_ssp370_r1i1p1f1_pr.nc",
+//   "CMIP6_pr_delta_historical_S5L0.02_30x30_EC-Earth3-Veg_ssp585_r1i1p1f1_pr.nc",
+//   "CMIP6_pr_delta_historical_S5L0.02_30x30_EC-Earth3_historical_r1i1p1f1_pr.nc",
+//   "CMIP6_pr_delta_historical_S5L0.02_30x30_EC-Earth3_ssp245_r1i1p1f1_pr.nc",
+//   "CMIP6_pr_delta_historical_S5L0.02_30x30_EC-Earth3_ssp370_r1i1p1f1_pr.nc",
+//   "CMIP6_pr_delta_historical_S5L0.02_30x30_EC-Earth3_ssp585_r1i1p1f1_pr.nc",
+//   "CMIP6_pr_delta_historical_S5L0.02_30x30_FGOALS-g3_historical_r1i1p1f1_pr.nc",
+//   "CMIP6_pr_delta_historical_S5L0.02_30x30_FGOALS-g3_ssp245_r1i1p1f1_pr.nc",
+//   "CMIP6_pr_delta_historical_S5L0.02_30x30_FGOALS-g3_ssp370_r1i1p1f1_pr.nc",
+//   "CMIP6_pr_delta_historical_S5L0.02_30x30_FGOALS-g3_ssp585_r1i1p1f1_pr.nc",
+//   "CMIP6_pr_delta_historical_S5L0.02_30x30_GFDL-ESM4_historical_r1i1p1f1_pr.nc",
+//   "CMIP6_pr_delta_historical_S5L0.02_30x30_GFDL-ESM4_ssp245_r1i1p1f1_pr.nc",
+//   "CMIP6_pr_delta_historical_S5L0.02_30x30_GFDL-ESM4_ssp370_r1i1p1f1_pr.nc",
+//   "CMIP6_pr_delta_historical_S5L0.02_30x30_GFDL-ESM4_ssp585_r1i1p1f1_pr.nc",
+//   "CMIP6_pr_delta_historical_S5L0.02_30x30_HadGEM3-GC31-LL_historical_r1i1p1f3_pr.nc",
+//   "CMIP6_pr_delta_historical_S5L0.02_30x30_HadGEM3-GC31-LL_ssp245_r1i1p1f3_pr.nc",
+//   "CMIP6_pr_delta_historical_S5L0.02_30x30_HadGEM3-GC31-LL_ssp585_r1i1p1f3_pr.nc",
+//   "CMIP6_pr_delta_historical_S5L0.02_30x30_INM-CM5-0_historical_r1i1p1f1_pr.nc",
+//   "CMIP6_pr_delta_historical_S5L0.02_30x30_INM-CM5-0_ssp245_r1i1p1f1_pr.nc",
+//   "CMIP6_pr_delta_historical_S5L0.02_30x30_INM-CM5-0_ssp370_r1i1p1f1_pr.nc",
+//   "CMIP6_pr_delta_historical_S5L0.02_30x30_INM-CM5-0_ssp585_r1i1p1f1_pr.nc",
+//   "CMIP6_pr_delta_historical_S5L0.02_30x30_IPSL-CM6A-LR_historical_r1i1p1f1_pr.nc",
+//   "CMIP6_pr_delta_historical_S5L0.02_30x30_IPSL-CM6A-LR_ssp245_r1i1p1f1_pr.nc",
+//   "CMIP6_pr_delta_historical_S5L0.02_30x30_IPSL-CM6A-LR_ssp370_r1i1p1f1_pr.nc",
+//   "CMIP6_pr_delta_historical_S5L0.02_30x30_IPSL-CM6A-LR_ssp585_r1i1p1f1_pr.nc",
+//   "CMIP6_pr_delta_historical_S5L0.02_30x30_KACE-1-0-G_historical_r1i1p1f1_pr.nc",
+//   "CMIP6_pr_delta_historical_S5L0.02_30x30_KACE-1-0-G_ssp245_r1i1p1f1_pr.nc",
+//   "CMIP6_pr_delta_historical_S5L0.02_30x30_KACE-1-0-G_ssp370_r1i1p1f1_pr.nc",
+//   "CMIP6_pr_delta_historical_S5L0.02_30x30_KACE-1-0-G_ssp585_r1i1p1f1_pr.nc",
+//   "CMIP6_pr_delta_historical_S5L0.02_30x30_MIROC6_historical_r1i1p1f1_pr.nc",
+//   "CMIP6_pr_delta_historical_S5L0.02_30x30_MIROC6_ssp245_r1i1p1f1_pr.nc",
+//   "CMIP6_pr_delta_historical_S5L0.02_30x30_MIROC6_ssp370_r1i1p1f1_pr.nc",
+//   "CMIP6_pr_delta_historical_S5L0.02_30x30_MIROC6_ssp585_r1i1p1f1_pr.nc",
+//   "CMIP6_pr_delta_historical_S5L0.02_30x30_MPI-ESM1-2-HR_historical_r1i1p1f1_pr.nc",
+//   "CMIP6_pr_delta_historical_S5L0.02_30x30_MPI-ESM1-2-HR_ssp245_r1i1p1f1_pr.nc",
+//   "CMIP6_pr_delta_historical_S5L0.02_30x30_MPI-ESM1-2-HR_ssp370_r1i1p1f1_pr.nc",
+//   "CMIP6_pr_delta_historical_S5L0.02_30x30_MPI-ESM1-2-HR_ssp585_r1i1p1f1_pr.nc",
+//   "CMIP6_pr_delta_historical_S5L0.02_30x30_MRI-ESM2-0_historical_r1i1p1f1_pr.nc",
+//   "CMIP6_pr_delta_historical_S5L0.02_30x30_MRI-ESM2-0_ssp245_r1i1p1f1_pr.nc",
+//   "CMIP6_pr_delta_historical_S5L0.02_30x30_MRI-ESM2-0_ssp370_r1i1p1f1_pr.nc",
+//   "CMIP6_pr_delta_historical_S5L0.02_30x30_MRI-ESM2-0_ssp585_r1i1p1f1_pr.nc",
+//   "CMIP6_pr_delta_historical_S5L0.02_30x30_TaiESM1_historical_r1i1p1f1_pr.nc",
+//   "CMIP6_pr_delta_historical_S5L0.02_30x30_TaiESM1_ssp245_r1i1p1f1_pr.nc",
+//   "CMIP6_pr_delta_historical_S5L0.02_30x30_TaiESM1_ssp370_r1i1p1f1_pr.nc",
+// ];
 
 // const cities = ref(
 //   fileNames.map((fileName) => {
@@ -142,35 +156,36 @@ const models = ref(
   )
 );
 
-const monthlyMDS = {
-  1: [-60.48460452386658, 60.48460452386658],
-  2: [
-    -58.35699554933664, 22.082520836554114, -84.31039378515354,
-    120.58486846890054,
-  ],
-  3: [-58.99908299309351, 58.99908299309351],
-  4: [-52.76784974875045, 52.76784974875045],
-  5: [-3.8243457595546873, -62.45500571775372, 66.27935148202184],
-  6: [35.90798359834169, 0.7258520588195637, -36.63383565308662],
-  7: [
-    -15.034233972736136, 34.9318640088883, -72.17780389521027,
-    52.28017385896895,
-  ],
-  8: [-28.91615066005589, 28.91615066005589],
-  9: [
-    -52.499638886043215, 68.8565399612014, 10.615661527484376,
-    -26.97256260014477,
-  ],
-  10: [69.11744244437034, 2.82353971038528, -71.94098217317824],
-  11: [74.07991469889366, -1.0163887348363057, -73.06352596908818],
-  12: [
-    -74.08971868558595, 78.70062893531168, 12.386626041040053,
-    -16.997536311258227,
-  ],
-};
+// const monthlyMDS = {
+//   1: [-60.48460452386658, 60.48460452386658],
+//   2: [
+//     -58.35699554933664, 22.082520836554114, -84.31039378515354,
+//     120.58486846890054,
+//   ],
+//   3: [-58.99908299309351, 58.99908299309351],
+//   4: [-52.76784974875045, 52.76784974875045],
+//   5: [-3.8243457595546873, -62.45500571775372, 66.27935148202184],
+//   6: [35.90798359834169, 0.7258520588195637, -36.63383565308662],
+//   7: [
+//     -15.034233972736136, 34.9318640088883, -72.17780389521027,
+//     52.28017385896895,
+//   ],
+//   8: [-28.91615066005589, 28.91615066005589],
+//   9: [
+//     -52.499638886043215, 68.8565399612014, 10.615661527484376,
+//     -26.97256260014477,
+//   ],
+//   10: [69.11744244437034, 2.82353971038528, -71.94098217317824],
+//   11: [74.07991469889366, -1.0163887348363057, -73.06352596908818],
+//   12: [
+//     -74.08971868558595, 78.70062893531168, 12.386626041040053,
+//     -16.997536311258227,
+//   ],
+// };
 
 const data = reactive([]);
 const dataT = reactive([]);
+const monthlyMDS = reactive({});
 // const data = [
 //   [
 //     0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0,
@@ -294,8 +309,9 @@ function calculateClusterBoxes({
       numElements: value,
       x: xScale(month) - rectWidth / 2,
       y:
-        // yScale(month)(parseInt(key)) -
-        yScale(month).bandwidth() / 2 - clusterHeightScale(value) / 2,
+        yScale(month)(parseInt(key)) +
+        yScale(month).bandwidth() / 2 -
+        clusterHeightScale(value) / 2,
       width: rectWidth,
       height: clusterHeightScale(value),
     };
@@ -514,18 +530,8 @@ function computeClusterPositionModifier({
               nextClusterAValue > nextClusterBValue
             ) {
               return Math.abs(prevClusterAValue - prevClusterBValue);
-              // Math.abs(nextClusterAValue - nextClusterBValue)
             } else {
-              // if (prevClusterAValue == prevClusterBValue) {
-              //   return nextClusterAValue - nextClusterBValue;
-              // } else {
               return prevClusterAValue - prevClusterBValue;
-              return nextClusterAValue - nextClusterBValue;
-              return -(
-                Math.abs(prevClusterAValue - prevClusterBValue) +
-                Math.abs(nextClusterAValue - nextClusterBValue)
-              );
-              // }
             }
           });
         }
@@ -630,34 +636,6 @@ function drawTimeline() {
       .range([MARGIN, HEIGHT - MARGIN])
       .padding(0.1);
   };
-  // const yScale = (month) => {
-  //   return (clusterId) =>
-  //     d3
-  //       .scaleLinear()
-  //       .domain([-100, 100])
-  //       .range([
-  //         MARGIN + (HEIGHT - 2 * MARGIN) * 0.2,
-  //         HEIGHT - MARGIN - (HEIGHT - 2 * MARGIN) * 0.2,
-  //       ])(monthlyMDS[month][clusterId]);
-  //   // .padding(0.1);
-  // };
-
-  // const yScale = d3
-  //   .scaleBand()
-  //   .domain(d3.range(4))
-  //   .range([MARGIN, HEIGHT - MARGIN])
-  //   .padding(0.1);
-  // svg
-  //   .append("g")
-  //   .call(d3.axisLeft(yScale).tickFormat((d) => d))
-  //   .attr("transform", `translate(${MARGIN}, 0)`);
-  // svg
-  //   .append("text")
-  //   .attr("y", 15)
-  //   .attr("x", -HEIGHT / 2)
-  //   .attr("text-anchor", "middle")
-  //   .attr("transform", "rotate(-90)")
-  //   .text("Clusters");
 
   const clusterHeightScale = d3
     .scaleLinear()
@@ -676,6 +654,7 @@ function drawTimeline() {
     prevModifierScale: modifierScales,
     clusterHeightScale: clusterHeightScale,
   });
+  console.log("DEBUG: MODIFIERSCALES ", modifierScales);
 
   let pathData = [];
   for (let ensembleID = 0; ensembleID < dataT.length; ensembleID++) {
@@ -685,7 +664,7 @@ function drawTimeline() {
       return {
         x: xScale(month + 1),
         y:
-          // yScale(month + 1)(d) +
+          yScale(month + 1)(d) +
           yScale(month + 1).bandwidth() / 2 +
           modifierScales[month + 1][currentCluster](ensembleID) +
           modifierScales[month + 1][currentCluster].bandwidth() / 2,
@@ -702,57 +681,20 @@ function drawTimeline() {
       cluster: clusterHistory,
     });
   }
-  // for (let i = 0; i < data[0].length; i++) {
-  //   const pathString = getPath(
-  //     data.map((d, index) => {
-  //       let currentCluster = d[i];
-  //       console.log("DEBUG: CURRENTCLUSTER ", currentCluster);
-  //       let positionModifier = 0;
-
-  //       let sizeCurrentCluster = data
-  //         .map((d) => d[i])
-  //         .filter((d) => d === currentCluster).length;
-
-  //       data.slice(0, index).forEach((d) => {
-  //         if (d[i] === currentCluster) {
-  //           positionModifier += 1;
-  //         }
-  //       });
-  //       console.log("DEBUG: POSITIONMODIFIER ", positionModifier);
-
-  //       let positionModifierScale = d3
-  //         .scaleLinear()
-  //         .domain([0, sizeCurrentCluster])
-  //         .range([
-  //           yScale(d[i]) +
-  //             yScale.bandwidth() / 2 -
-  //             clusterHeightScale(maxClusterSize),
-  //           yScale(d[i]) +
-  //             yScale.bandwidth() / 2 +
-  //             clusterHeightScale(maxClusterSize),
-  //         ]);
-
-  //       return {
-  //         x: xScale(index + 1),
-  //         y: yScale(d[i]) + yScale.bandwidth() / 2,
-  //         // positionModifierScale(positionModifier),
-  //       };
-  //     })
-  //   );
-  //   pathData.push({ index: i, path: pathString });
-  // }
+  console.log("DEBUG: PATHDATA ", pathData);
 
   for (let i = 1; i < 13; i++) {
-    let temp = calculateClusterBoxes({
+    let clusterBoxes = calculateClusterBoxes({
       month: i,
       monthlyClustering: data[i - 1],
       clusterHeightScale,
       xScale,
       yScale,
     });
+    console.log("DEBUG: CLUSTERBOXES ", clusterBoxes);
     svg
       .selectAll(`rect${i}`)
-      .data(temp)
+      .data(clusterBoxes)
       .join("rect")
       .attr("x", (d) => d.x)
       .attr("y", (d) => d.y)
@@ -847,6 +789,7 @@ function drawTimeline() {
 }
 async function getData() {
   for (let month = 1; month < 13; month += 1) {
+    // for (let month = 1; month < 2; month += 1) {
     const { distances } = await API.fetchData("distance_matrix", true, {
       files: sspAllLabels,
       nodeMap: "CMIP6_pr_delta_historical_S5L0.02_umap_mapping.json",
@@ -854,11 +797,20 @@ async function getData() {
       months: [month],
       years: [-1],
     });
+    console.log("DEBUG: DISTANCES ", distances);
     const { clustering } = await API.fetchData("run_clustering", true, {
       distance_matrix: distances,
-      threshold: 130,
+      linkage_method: "average",
+      threshold: 250,
     });
     data.push(clustering);
+    console.log("DEBUG: CLUSTERING ", clustering);
+
+    const { MDSClusterEmbedding } = await API.fetchData("run_MDS", true, {
+      distance_matrix: distances,
+      clustering: clustering,
+    });
+    monthlyMDS[month] = MDSClusterEmbedding == 0 ? [0] : MDSClusterEmbedding;
   }
   sspAllLabels.forEach((model, i) => {
     dataT.push(data.map((d) => d[i]));
@@ -869,12 +821,15 @@ async function getData() {
       return acc;
     }, {});
   });
+  console.log("DEBUG: PER TIMESTEP CLUSTER COUNTS ", perTimeStepClusterCounts);
   maxClusterSize = Math.max(
     ...data.map((d) => {
       return Math.max(...Object.values(counts(d)));
     })
   );
   console.log("DEBUG: DATA ", data);
+  // console.log("DEBUG: DATA T ", dataT);
+  // console.log("DEBUG MDS: ", monthlyMDS);
 }
 const arrToI = (i) => Array.from({ length: i }, (_, index) => index);
 </script>
