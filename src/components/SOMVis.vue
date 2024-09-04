@@ -1,12 +1,12 @@
 <template>
-  <Splitter style="height: 100%" layout="horizontal">
+  <Splitter style="height: 100%" layout="vertical">
     <SplitterPanel style="height: 100%" :size="40">
       <!-- <ProjectionViewer class="h-full" isHistorical /> -->
     </SplitterPanel>
 
     <SplitterPanel class="h-full w-full" :size="60">
       <!-- <ProjectionViewer class="h-full" /> -->
-      <Splitter class="h-full w-full" layout="vertical">
+      <Splitter class="h-full w-full" layout="horizontal">
         <SplitterPanel class="h-full">
           <!-- <MapViewer class="h-full" /> -->
           <TimelineViewer class="h-full" />

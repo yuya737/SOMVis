@@ -15,3 +15,9 @@ declare type BMUMata = {
   year: number;
   coords: number[];
 };
+
+declare type EnsembleMember = {
+  model_name: string;
+  variant: number;
+  ssp: string;
+};
