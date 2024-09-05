@@ -225,7 +225,7 @@ async function initializeLayers() {
   // Get all the data
   let mappingData = await API.fetchData(
     // "mapping/CMIP6_pr_historical_S3L0.02_umap",
-    "mapping/CMIP6_pr_delta_historical_S5L0.02_umap",
+    "mapping/CMIP6_pr_delta_historical_S5L0.02_30x30_umap",
     // "mapping/CMIP6_pr_historical_sfbay_S3L0.1_20x20_umap",
     // "mapping/CMIP6_taxmax_historical_S3L0.1_umap",
     true,

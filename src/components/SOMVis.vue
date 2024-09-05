@@ -1,12 +1,16 @@
 <template>
-  <Splitter style="height: 100%" layout="vertical">
+  <Splitter style="height: 100%" layout="vertical" @resizeend="splitterResized">
     <SplitterPanel style="height: 100%" :size="40">
-      <!-- <ProjectionViewer class="h-full" isHistorical /> -->
+      <ProjectionViewer class="h-full" isHistorical />
     </SplitterPanel>
 
     <SplitterPanel class="h-full w-full" :size="60">
       <!-- <ProjectionViewer class="h-full" /> -->
-      <Splitter class="h-full w-full" layout="horizontal">
+      <Splitter
+        class="h-full w-full"
+        layout="horizontal"
+        @resizeend="splitterResized"
+      >
         <SplitterPanel class="h-full">
           <!-- <MapViewer class="h-full" /> -->
           <TimelineViewer class="h-full" />
@@ -27,4 +31,14 @@ import ProjectionViewer from "./ProjectionViewer.vue";
 import MapViewer from "./MapViewer.vue";
 import HeatmapViewer from "./HeatmapViewer.vue";
 import TimelineViewer from "./TimelineViewer.vue";
+
+import { provide, ref } from "vue";
+
+let resizeFlag = ref(false);
+provide("splitterResized", resizeFlag);
+
+const splitterResized = () => {
+  console.log("Splitter resized");
+  resizeFlag.value = !resizeFlag.value;
+};
 </script>

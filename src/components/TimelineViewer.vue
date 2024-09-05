@@ -28,15 +28,19 @@
 <script setup lang="ts">
 import * as d3 from "d3";
 import API from "@/api/api";
-import { onMounted, ref, reactive, watch, nextTick } from "vue";
+import { onMounted, ref, inject, reactive, watch, nextTick } from "vue";
 import Dropdown from "primevue/dropdown";
 import TooltipView from "./TooltipView.vue";
-import { sspAllLabels } from "./utils/utils";
+import { sspAllLabels, months } from "./utils/utils";
+import { useStore } from "@/store/main";
 
+const store = useStore();
 const showTooltip = ref(false);
 const tooltipData = ref("");
 const selectedTimelineCluster = ref([]);
 const isMDS = ref(true);
+
+const splitterResized = inject("splitterResized");
 
 const selectedModel = ref();
 watch(selectedModel, (value) => {
@@ -56,6 +60,25 @@ watch(selectedModel, (value) => {
     .attr("stroke", "crimson")
     .attr("stroke-opacity", "1")
     .attr("stroke-width", "4");
+});
+
+onMounted(() => {
+  getData().then(() => {
+    nextTick(() => {
+      const element = document.getElementById("timelineSVG");
+      if (element) {
+        drawTimeline();
+      }
+    });
+  });
+  watch(splitterResized, () => {
+    // remove the svg
+    const element = document.getElementById("timelineSVG");
+    if (element) {
+      element.innerHTML = "";
+      drawTimeline();
+    }
+  });
 });
 
 const colors = [
@@ -100,33 +123,6 @@ const models = ref(
   )
 );
 
-// const monthlyMDS = {
-//   1: [-60.48460452386658, 60.48460452386658],
-//   2: [
-//     -58.35699554933664, 22.082520836554114, -84.31039378515354,
-//     120.58486846890054,
-//   ],
-//   3: [-58.99908299309351, 58.99908299309351],
-//   4: [-52.76784974875045, 52.76784974875045],
-//   5: [-3.8243457595546873, -62.45500571775372, 66.27935148202184],
-//   6: [35.90798359834169, 0.7258520588195637, -36.63383565308662],
-//   7: [
-//     -15.034233972736136, 34.9318640088883, -72.17780389521027,
-//     52.28017385896895,
-//   ],
-//   8: [-28.91615066005589, 28.91615066005589],
-//   9: [
-//     -52.499638886043215, 68.8565399612014, 10.615661527484376,
-//     -26.97256260014477,
-//   ],
-//   10: [69.11744244437034, 2.82353971038528, -71.94098217317824],
-//   11: [74.07991469889366, -1.0163887348363057, -73.06352596908818],
-//   12: [
-//     -74.08971868558595, 78.70062893531168, 12.386626041040053,
-//     -16.997536311258227,
-//   ],
-// };
-
 const data = reactive([]); // data[i] is the clustering for month i
 const dataT = reactive([]); // dataT[i] is the clustering for ensemble i
 let monthlyMDS = reactive({}); // monthlyMDS[i] is the MDS for month i
@@ -152,10 +148,19 @@ function calculateClusterBoxes({
   const monthlyCounts = counts(monthlyClustering);
 
   const data = Object.entries(monthlyCounts).map(([key, value]) => {
+    const prefix = "CMIP6_pr_delta_historical_S5L0.02_30x30_";
     return {
       month: month,
       cluster: parseInt(key),
       numElements: value,
+      memberNames: monthlyClustering
+        .map((cluster, index) => {
+          return cluster === parseInt(key) ? index : -1;
+        })
+        .filter((d) => d !== -1)
+        .map((d) => fileNames[d]) // remove prefix
+        .map((d) => d.slice(prefix.length)),
+
       members: monthlyClustering
         .map((cluster, index) => {
           return cluster === parseInt(key) ? index : -1;
@@ -425,17 +430,6 @@ function getPath({ controlPoints, xScale }) {
   return path.toString();
 }
 
-onMounted(() => {
-  getData().then(() => {
-    nextTick(() => {
-      const element = document.getElementById("timelineSVG");
-      if (element) {
-        drawTimeline();
-      }
-    });
-  });
-});
-
 function adjustMDS({
   minDistBetweenMDS,
   yScale,
@@ -468,17 +462,6 @@ function adjustMDS({
       const currentCluster = sorted[i];
       const prevCluster = sorted[i - 1];
 
-      if (month == 8) {
-        console.log(
-          "DEBUG CURRENT: ",
-          month,
-          currentCluster[0],
-          currentCluster[1]
-        );
-        console.log("DEBUG PREV: ", month, prevCluster[0], prevCluster[1]);
-      }
-      // console.log("DEBUG: ", month, prevCluster[1]);
-
       const currentClusterBottom =
         yScale(month)(parseInt(currentCluster[0])) -
         clusterHeightScale(
@@ -494,7 +477,7 @@ function adjustMDS({
           2;
 
       // This is a conflict - resolve it
-      if (currentClusterBottom < prevClusterTop + 20) {
+      if (currentClusterBottom < prevClusterTop + minDistBetweenMDS) {
         const reverseScale = d3
           .scaleLinear()
           .domain([margin, height - margin])
@@ -507,11 +490,9 @@ function adjustMDS({
               perTimeStepClusterCounts[month - 1][parseInt(currentCluster[0])]
             ) /
               2 +
-            20
+            minDistBetweenMDS
         );
-
         sorted[i][1] = monthlyMDS[month][parseInt(currentCluster[0])];
-        console.log("DEBUG: ADJUSTED ", month, currentCluster, sorted[i][1]);
       }
     }
     // Force the midpoint to be 0
@@ -546,7 +527,9 @@ function drawTimeline() {
     .call(
       d3
         .axisBottom(xScale)
-        .tickFormat((d) => `Month ${d}, #C: ${monthlyMDS[parseInt(d)].length}`)
+        .tickFormat(
+          (d) => `${months[d - 1]}: #C-${monthlyMDS[parseInt(d)].length}`
+        )
     );
   svg
     .append("text")
@@ -601,7 +584,6 @@ function drawTimeline() {
         : [yScale(1).bandwidth() / 10, yScale(1).bandwidth()]
     );
 
-  console.log("DEBUG: BEFORE ADJUSTMENT ", monthlyMDS);
   adjustMDS({
     minDistBetweenMDS: minDistBetweenMDS,
     yScale: yScale,
@@ -632,8 +614,6 @@ function drawTimeline() {
     }
   };
 
-  console.log("DEBUG: AFTER ADJUSTMENT ", monthlyMDS);
-
   // Twice to optimize the timeline
   let modifierScales = computeClusterPositionModifier({
     yScale: yScale,
@@ -645,6 +625,26 @@ function drawTimeline() {
     prevModifierScale: modifierScales,
     clusterHeightScale: clusterHeightScale,
   });
+
+  // Store the order in the timeline to the store
+  store.clusterOrders = Object.entries(modifierScales).map(
+    ([month, scales]) => {
+      let clusterOrder = [];
+      let scalesSorted = Object.entries(scales).sort((a, b) => {
+        const clusterA = parseInt(a[0]);
+        const clusterB = parseInt(b[0]);
+        return (
+          monthlyMDS[parseInt(month)][clusterB] -
+          monthlyMDS[parseInt(month)][clusterA]
+        );
+      });
+      scalesSorted.map(([key, value]) => {
+        console.log(value.domain());
+        clusterOrder = [...value.domain(), ...clusterOrder];
+      });
+      return clusterOrder;
+    }
+  );
   console.log("DEBUG: MODIFIERSCALES ", modifierScales);
 
   let pathData = [];
@@ -714,6 +714,7 @@ function drawTimeline() {
         d3.selectAll("path").attr("stroke-opacity", 1).attr("stroke-width", 1);
       })
       .on("click", (event, d) => {
+        console.log("DEBUG: CLICK ", d);
         selectedTimelineCluster.value = d.members.map((member) => {
           return {
             model_name: fileNames[member].split("_")[6],
@@ -724,6 +725,9 @@ function drawTimeline() {
         // tooltipData.value = `Cluster: ${d.cluster}, Num Elements: ${d.numElements}`;
 
         showTooltip.value = true;
+        // store.setHoveredFile(d.memberNames);
+        store.monthsSelected = [d.month];
+        store.setFiles({ group1: d.memberNames, group2: [] });
         console.log(
           "DEBUG: CLUSTER CLICK ",
           d.cluster,
@@ -800,8 +804,6 @@ async function getData() {
     console.log("DEBUG: DISTANCES ", month, distances);
     const { clustering } = await API.fetchData("run_clustering", true, {
       distance_matrix: distances,
-      linkage_method: "average",
-      threshold: 250,
     });
     data.push(clustering);
     console.log("DEBUG: CLUSTERING ", month, clustering);

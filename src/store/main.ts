@@ -11,6 +11,7 @@ export const useStore = defineStore("main", {
       // subsetType: "month",
       yearsSelected: [-1], // -1 means all years
       hoveredFile: null,
+      clusterOrders: [],
     };
   },
   getters: {
