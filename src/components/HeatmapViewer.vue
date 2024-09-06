@@ -219,9 +219,18 @@ function makeHeatmap({ distances, month }) {
     ])
     .attr("id", "heatmap");
 
-  const labelsReordered = store.clusterOrders[month - 1].map(
-    (i) => sspAllLabels[i]
+  const labelsReordered = store.clusterOrders[month - 1].map((i) =>
+    i < 0 ? `DUMMY${i}` : sspAllLabels[i]
   );
+
+  const bracketIndices = [
+    -1,
+    ...labelsReordered
+      .map((d, i) => (d.startsWith("DUMMY") ? i : null))
+      .filter((d) => d !== null),
+  ];
+  console.log("DEBUG bracketIndices", bracketIndices);
+
   let data = distances.flat().map((item, index) => ({
     value: item,
     row: labelsReordered[
@@ -233,6 +242,7 @@ function makeHeatmap({ distances, month }) {
       )
     ],
   }));
+  console.log("DEBUG labelsReordered", labelsReordered);
 
   const x = d3
     .scaleBand()
@@ -246,7 +256,7 @@ function makeHeatmap({ distances, month }) {
     .call(d3.axisBottom(x).tickSize(0));
   xAxis
     .selectAll(".tick text") // Select all text elements under elements with class 'tick'
-    .text((d) => getModelType(d))
+    .text((d) => (d.startsWith("DUMMY") ? "" : getModelType(d)))
     .style("fill", (d) => {
       return stripSOMprefix(d).includes("historical")
         ? "midnightblue"
@@ -254,7 +264,8 @@ function makeHeatmap({ distances, month }) {
     })
     .attr("id", (d) => "label_x" + getModelType(d))
     .attr("transform", "rotate(-45)") // Rotate each text element by -45 degrees
-    .style("text-anchor", "end"); // Align the text to the end of the text element (right side when not rotated)
+    .style("text-anchor", "end") // Align the text to the end of the text element (right side when not rotated)
+    .style("font-size", "small");
 
   xAxis.select(".domain").remove();
 
@@ -277,8 +288,9 @@ function makeHeatmap({ distances, month }) {
         : "firebrick";
     })
     // change text
-    .text((d) => getModelType(d))
+    .text((d) => (d.startsWith("DUMMY") ? "" : getModelType(d)))
     .attr("id", (d) => "label_y" + getModelType(d))
+    .style("font-size", "small")
     .on("mouseover", (event, d) => {
       // d.isClicked = false;
       highlightOneOnHover(true, "class0", event, getModelType(d));
@@ -318,54 +330,6 @@ function makeHeatmap({ distances, month }) {
     .style("stroke-width", 4)
     .style("stroke", "none")
     .style("opacity", 0.8);
-  //   // .on("mouseover", mouseover)
-  //   // .on("mousemove", mousemove)
-  //   // .on("mouseleave", mouseleave)
-  //   .attr("id", function (d) {
-  //     return "rect" + getModelType(d.row) + ":" + getModelType(d.col);
-  //   })
-  //   .on("click", function (event, d) {
-  //     store.setFiles([[stripSOMprefix(d.row)], [stripSOMprefix(d.col)]]);
-
-  //     d3.selectAll("text#label_y" + getModelType(d.row)).classed(
-  //       "label--active--class1",
-  //       true
-  //     );
-  //     d3.selectAll("text#label_x" + getModelType(d.col)).classed(
-  //       "label--active--class2",
-  //       true
-  //     );
-
-  //     d3.selectAll("rect").classed("rect--not--active", true);
-  //     d3.selectAll(`rect[id^="rect${getModelType(d.row)}:"]`).classed(
-  //       "rect--active--class1",
-  //       true
-  //     );
-  //     d3.selectAll(`rect[id$=":${getModelType(d.col)}"]`).classed(
-  //       "rect--active--class2",
-  //       true
-  //     );
-
-  //     watch(clearFlag, () => {
-  //       d3.selectAll("text#label_y" + getModelType(d.row)).classed(
-  //         "label--active--class1",
-  //         false
-  //       );
-  //       d3.selectAll("text#label_x" + getModelType(d.col)).classed(
-  //         "label--active--class2",
-  //         false
-  //       );
-  //     });
-  //   });
-
-  // Add title to graph
-  // svg
-  //   .append("text")
-  //   .attr("x", 0)
-  //   .attr("y", -30)
-  //   .attr("text-anchor", "left")
-  //   .style("font-size", "xx-large")
-  //   .text("Ensemble Model Comparison");
 
   // Add subtitle to graph
   svg
@@ -377,6 +341,102 @@ function makeHeatmap({ distances, month }) {
     .style("fill", "grey")
     .style("max-width", 400)
     .text(`Ensemble Model Comparison: ${months.value[month - 1].name}`);
+
+  let bracketData = [];
+  for (let i = 0; i < bracketIndices.length - 1; i += 1) {
+    bracketData.push({
+      x1: -margin.left + 50,
+      y1: y(labelsReordered[bracketIndices[i] + 1]),
+      x2: -margin.left + 50,
+      y2: y(labelsReordered[bracketIndices[i + 1]]),
+      cluster: i,
+    });
+  }
+  svg
+    .selectAll()
+    .data(bracketData)
+    .join("path")
+    .attr("d", function (d) {
+      console.log(makeCurlyBrace(d.x1, d.y1, d.x2, d.y2, 10, 1.6));
+      return makeCurlyBrace(d.x1, d.y1, d.x2, d.y2, 25, 0.6);
+    })
+    .attr("stroke", "black")
+    .attr("stroke-width", 3)
+    .attr("fill", "none");
+
+  svg
+    .selectAll()
+    .data(bracketData)
+    .join("text")
+    .attr("y", -margin.left + 20)
+    .attr("x", function (d) {
+      return -(
+        (y(labelsReordered[bracketIndices[bracketData.indexOf(d)] + 1]) +
+          y(labelsReordered[bracketIndices[bracketData.indexOf(d) + 1]])) /
+        2
+      );
+    })
+    .attr("text-anchor", "middle")
+    .style("font-size", "large")
+    .style("fill", "black")
+    .style("transform", "rotate(-90deg)")
+    .text((d) => `Cluster ${d.cluster + 1}`);
   return svg.node();
+}
+
+function makeCurlyBrace(x1, y1, x2, y2, w, q) {
+  //Calculate unit vector
+  var dx = x1 - x2;
+  var dy = y1 - y2;
+  var len = Math.sqrt(dx * dx + dy * dy);
+  dx = dx / len;
+  dy = dy / len;
+
+  //Calculate Control Points of path,
+  var qx1 = x1 + q * w * dy;
+  var qy1 = y1 - q * w * dx;
+  var qx2 = x1 - 0.25 * len * dx + (1 - q) * w * dy;
+  var qy2 = y1 - 0.25 * len * dy - (1 - q) * w * dx;
+  var tx1 = x1 - 0.5 * len * dx + w * dy;
+  var ty1 = y1 - 0.5 * len * dy - w * dx;
+  var qx3 = x2 + q * w * dy;
+  var qy3 = y2 - q * w * dx;
+  var qx4 = x1 - 0.75 * len * dx + (1 - q) * w * dy;
+  var qy4 = y1 - 0.75 * len * dy - (1 - q) * w * dx;
+
+  return (
+    "M " +
+    x1 +
+    " " +
+    y1 +
+    " Q " +
+    qx1 +
+    " " +
+    qy1 +
+    " " +
+    qx2 +
+    " " +
+    qy2 +
+    " T " +
+    tx1 +
+    " " +
+    ty1 +
+    " M " +
+    x2 +
+    " " +
+    y2 +
+    " Q " +
+    qx3 +
+    " " +
+    qy3 +
+    " " +
+    qx4 +
+    " " +
+    qy4 +
+    " T " +
+    tx1 +
+    " " +
+    ty1
+  );
 }
 </script>

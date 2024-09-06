@@ -1,12 +1,34 @@
 <template>
   <div id="timelineContainer" class="relative h-full w-full">
-    <Dropdown
-      v-model="selectedModel"
-      :options="models"
-      optionLabel="name"
-      placeholder="Select a Model"
-      class="absolute left-0 top-0 w-fit z-[2] bg-gray-200 m-4 text-black text-lg"
-    />
+    <div
+      class="absolute left-0 top-0 w-fit z-[2] h-fit text-black text-lg flex flex-row justify-normal items-center"
+    >
+      <Dropdown
+        v-model="selectedModel"
+        :options="models"
+        optionLabel="name"
+        class="m-2"
+        placeholder="Select a Model"
+      />
+      <Button
+        @click="selectedModel = null"
+        icon="pi pi-times"
+        class="m-2 p-2 bg-red-200 aspect-square w-fit h-fit flex flex-row justify-normal items-center"
+      />
+
+      <Dropdown
+        v-model="selectedType"
+        :options="types"
+        optionLabel="name"
+        class="m-2"
+        placeholder="Select a Type"
+      />
+      <Button
+        @click="selectedType = null"
+        icon="pi pi-times"
+        class="m-2 p-2 bg-red-200 aspect-square w-fit h-fit flex flex-row justify-normal items-center"
+      />
+    </div>
     <!-- <div
       id="tooltip"
       v-show="showTooltip"
@@ -21,7 +43,10 @@
       @close-card="showTooltip = false"
       class="absolute bg-white border border-gray-300 shadow-lg rounded-lg text-black bottom-0 right-0"
     />
-    <div id="timelineSVG" class="w-full h-full text-black"></div>
+    <div
+      id="timelineSVG"
+      class="w-full h-full text-black flex justify-around"
+    ></div>
   </div>
 </template>
 
@@ -30,36 +55,89 @@ import * as d3 from "d3";
 import API from "@/api/api";
 import { onMounted, ref, inject, reactive, watch, nextTick } from "vue";
 import Dropdown from "primevue/dropdown";
+import Button from "primevue/button";
 import TooltipView from "./TooltipView.vue";
 import { sspAllLabels, months } from "./utils/utils";
 import { useStore } from "@/store/main";
 
 const store = useStore();
 const showTooltip = ref(false);
-const tooltipData = ref("");
 const selectedTimelineCluster = ref([]);
 const isMDS = ref(true);
 
 const splitterResized = inject("splitterResized");
 
 const selectedModel = ref();
+const selectedType = ref();
+
 watch(selectedModel, (value) => {
-  console.log(value.name);
+  if (value == null) {
+    d3.selectAll("path")
+      .filter(function () {
+        return (
+          d3.select(this)?.attr("id") &&
+          d3.select(this).attr("id").startsWith("clusterPath")
+        );
+      })
+      .classed("black", false)
+      .classed("selected", false);
+    return;
+  }
+
   d3.selectAll("path")
-    .attr("stroke", "black")
-    .attr("stroke-opacity", "0.5")
-    .attr("stroke-width", "1");
+    .filter(function () {
+      return (
+        d3.select(this)?.attr("id") &&
+        d3.select(this).attr("id").startsWith("clusterPath")
+      );
+    })
+    .classed("selected", false)
+    .classed("black", true);
   d3.selectAll("path")
     // Filter elements based on the stroke-width attribute
     .filter(function () {
       return (
         d3.select(this).datum() &&
+        fileNames[d3.select(this).datum()["index"]] &&
         fileNames[d3.select(this).datum()["index"]].includes(value.name + "_")
       );
     })
-    .attr("stroke", "crimson")
-    .attr("stroke-opacity", "1")
-    .attr("stroke-width", "4");
+    .classed("selected", true);
+});
+
+watch(selectedType, (value) => {
+  if (value == null) {
+    d3.selectAll("path")
+      .filter(function () {
+        return (
+          d3.select(this)?.attr("id") &&
+          d3.select(this).attr("id").startsWith("clusterPath")
+        );
+      })
+      .classed("black", false)
+      .classed("selected", false);
+    return;
+  }
+
+  d3.selectAll("path")
+    .filter(function () {
+      return (
+        d3.select(this)?.attr("id") &&
+        d3.select(this).attr("id").startsWith("clusterPath")
+      );
+    })
+    .classed("selected", false)
+    .classed("black", true);
+  d3.selectAll("path")
+    // Filter elements based on the stroke-width attribute
+    .filter(function () {
+      return (
+        d3.select(this).datum() &&
+        fileNames[d3.select(this).datum()["index"]] &&
+        fileNames[d3.select(this).datum()["index"]].includes(value.name + "_r")
+      );
+    })
+    .classed("selected", true);
 });
 
 onMounted(() => {
@@ -121,6 +199,13 @@ const models = ref(
       };
     }
   )
+);
+const types = ref(
+  ["historical", "ssp245", "ssp370", "ssp585"].map((name) => {
+    return {
+      name,
+    };
+  })
 );
 
 const data = reactive([]); // data[i] is the clustering for month i
@@ -188,7 +273,7 @@ function computeClusterPositionModifier({
   let modifierScales = {};
 
   if (prevModifierScale == null) {
-    for (let month = 1; month < 13; month += 1) {
+    for (let month = 1; month <= 12; month += 1) {
       const numClusters = Object.keys(
         perTimeStepClusterCounts[month - 1]
       ).length;
@@ -296,7 +381,7 @@ function computeClusterPositionModifier({
     }
   } else {
     modifierScales = { ...prevModifierScale };
-    for (let month = 1; month < 13; month += 1) {
+    for (let month = 1; month <= 12; month += 1) {
       const numClusters = Object.keys(
         perTimeStepClusterCounts[month - 1]
       ).length;
@@ -438,7 +523,7 @@ function adjustMDS({
   margin,
 }) {
   // iterate over the monthlyMDS object
-  for (let month = 1; month < 13; month += 1) {
+  for (let month = 1; month <= 12; month += 1) {
     let mds = monthlyMDS[month];
     // iterate over the clusters in the month
     const sorted = Object.entries(mds).sort((a, b) => {
@@ -501,11 +586,63 @@ function adjustMDS({
   }
 }
 
+function checkFlipMDS({ yScale, HEIGHT, MARGIN }) {
+  // Do a greedy optimization where we flip the MDS if it reduces the total distance with respect to the previous month
+  for (let month = 2; month <= 12; month += 1) {
+    const flippedYScale = (month) => {
+      return (clusterId) =>
+        d3
+          .scaleLinear()
+          .domain([150, -150])
+          .range([
+            // MARGIN + (HEIGHT - 2 * MARGIN) * 0.2,
+            // HEIGHT - MARGIN - (HEIGHT - 2 * MARGIN) * 0.2,
+            MARGIN,
+            HEIGHT - MARGIN,
+          ])(monthlyMDS[month][clusterId]);
+    };
+
+    let totalDistance = 0;
+    let totalDistanceFlipped = 0;
+
+    for (let ensembleID = 0; ensembleID < dataT.length; ensembleID += 1) {
+      // Current
+      let prevCluster = dataT[ensembleID][month - 2];
+      let currentCluster = dataT[ensembleID][month - 1];
+
+      let prevClusterValueCurrent = yScale(month - 1)(prevCluster);
+      let currentClusterValueCurrent = yScale(month)(currentCluster);
+
+      let prevClusterValueFlipped = yScale(month - 1)(prevCluster);
+      let currentClusterValueFlipped = flippedYScale(month)(currentCluster);
+
+      totalDistance += Math.abs(
+        prevClusterValueCurrent - currentClusterValueCurrent
+      );
+      totalDistanceFlipped += Math.abs(
+        prevClusterValueFlipped - currentClusterValueFlipped
+      );
+    }
+
+    console.log(
+      "DEBUG: DISTANCES ",
+      totalDistance,
+      totalDistanceFlipped,
+      month
+    );
+    if (totalDistance > totalDistanceFlipped) {
+      // Flip the MDS
+      console.log("DEBUG: FLIPPING MDS ", month);
+      monthlyMDS[month] = monthlyMDS[month].map((d) => -d);
+    }
+  }
+}
+
 function drawTimeline() {
   const WIDTH = document.getElementById("timelineSVG").clientWidth;
   const HEIGHT = document.getElementById("timelineSVG").clientHeight;
 
-  const clusterHeightMax = HEIGHT / 10;
+  const clusterHeightMax = HEIGHT / 8;
   const MARGIN = 40;
 
   const svg = d3
@@ -514,6 +651,18 @@ function drawTimeline() {
     .attr("width", WIDTH)
     .attr("height", HEIGHT)
     .attr("viewBox", `0 0 ${WIDTH} ${HEIGHT}`);
+
+  // add a black style class
+  svg.append("style").text(`
+    .black {
+      stroke: black;
+    }
+    .selected {
+      stroke: crimson; !important
+      stroke-opacity: 1;
+      stroke-width: 4;
+    }
+  `);
 
   // add a x-axis legend for months
   const xScale = d3
@@ -524,17 +673,13 @@ function drawTimeline() {
   svg
     .append("g")
     .attr("transform", `translate(0, ${HEIGHT - MARGIN * 2})`)
-    .call(
-      d3
-        .axisBottom(xScale)
-        .tickFormat(
-          (d) => `${months[d - 1]}: #C-${monthlyMDS[parseInt(d)].length}`
-        )
-    );
+    .call(d3.axisBottom(xScale).tickFormat((d) => `${months[d - 1]}`))
+    .style("font-size", "large");
   svg
     .append("text")
     .attr("x", WIDTH / 2)
     .attr("y", HEIGHT - 10)
+    .style("font-size", "large")
     .attr("text-anchor", "middle")
     .text("Months");
 
@@ -542,7 +687,7 @@ function drawTimeline() {
     d3
       .scaleLinear()
       .range([-150, 150])
-      .domain([MARGIN, HEIGHT - MARGIN])(clusterHeightMax) -
+      .domain([MARGIN, HEIGHT - MARGIN])(clusterHeightMax / 2) -
     d3
       .scaleLinear()
       .range([-150, 150])
@@ -614,6 +759,12 @@ function drawTimeline() {
     }
   };
 
+  checkFlipMDS({
+    yScale: yScale,
+    HEIGHT: HEIGHT,
+    MARGIN: MARGIN,
+  });
+
   // Twice to optimize the timeline
   let modifierScales = computeClusterPositionModifier({
     yScale: yScale,
@@ -638,9 +789,9 @@ function drawTimeline() {
           monthlyMDS[parseInt(month)][clusterA]
         );
       });
+      console.log("DEBUG: SCALES ", scalesSorted);
       scalesSorted.map(([key, value]) => {
-        console.log(value.domain());
-        clusterOrder = [...value.domain(), ...clusterOrder];
+        clusterOrder = [...value.domain(), -parseInt(key + 1), ...clusterOrder];
       });
       return clusterOrder;
     }
@@ -673,7 +824,7 @@ function drawTimeline() {
   }
   console.log("DEBUG: PATHDATA ", pathData);
 
-  for (let i = 1; i < 13; i++) {
+  for (let i = 1; i <= 12; i++) {
     let clusterBoxes = calculateClusterBoxes({
       month: i,
       monthlyClustering: data[i - 1],
@@ -725,7 +876,6 @@ function drawTimeline() {
         // tooltipData.value = `Cluster: ${d.cluster}, Num Elements: ${d.numElements}`;
 
         showTooltip.value = true;
-        // store.setHoveredFile(d.memberNames);
         store.monthsSelected = [d.month];
         store.setFiles({ group1: d.memberNames, group2: [] });
         console.log(
@@ -742,6 +892,7 @@ function drawTimeline() {
     .join("path")
     .attr("d", (d) => d.path)
     .attr("fill", "none")
+    .attr("id", (d) => `clusterPath${d.index}`)
     .attr("stroke", (d) => {
       if (fileNames[d.index].includes("historical_r")) {
         return "steelblue";
@@ -793,7 +944,7 @@ function drawTimeline() {
   // });
 }
 async function getData() {
-  for (let month = 1; month < 13; month += 1) {
+  for (let month = 1; month <= 12; month += 1) {
     // for (let month = 1; month < 2; month += 1) {
     const { distances } = await API.fetchData("distance_matrix", true, {
       files: sspAllLabels,
@@ -813,7 +964,6 @@ async function getData() {
       clustering: clustering,
     });
     // Force the midpoint to be 0
-    const [max, min] = d3.extent(MDSClusterEmbedding);
     monthlyMDS[month] = MDSClusterEmbedding == 0 ? [0] : MDSClusterEmbedding;
     console.log("DEBUG: MDS ", month, MDSClusterEmbedding);
   }

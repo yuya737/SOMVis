@@ -237,128 +237,18 @@ export class SOMLayer extends AbstractLayerGenerator {
     if (this.layerList && !this.needsToRedraw) {
       return this.layerList;
     }
+    console.log("Staring to generate layers");
     let ret = [];
     let curBMUData = this._subsetData();
+    console.log("Done subset data");
     let freq = this._getFreq(curBMUData);
+    console.log("Done freq");
 
     // if freq is an empty dict
     if (freq.length == 0) {
       this.layerList = [];
       return ret;
     }
-
-    // console.log(curHeatmapData);
-
-    // let monthlyCOMPath = new PathLayer({
-    //   id: `curve-monthly-com-path`,
-    //   // data: this.blockedCenterofMass,
-    //   data: curBlockedCenterofMass,
-    //   positionFormat: "XY",
-    //   getPath: (d) => pointsToCurve(d.path).flat(),
-    //   getColor: (d) => [...colorSim(d.name), 125],
-    //   getWidth: 0.1,
-    //   // opacity: (d) => 0.1 * d.decade,
-    //   // d.name.includes("historical") ? [255, 0, 0] : [0, 0, 255],
-    //   getRadius: 0.2,
-    //   pickable: true,
-    //   autoHighlight: true,
-    //   onHover: (info, event) => {
-    //     // imgSrc.value = `http://localhost:5002/node_images/${info.object.id}.png`;
-    //     // console.log("Clicked:", info.object, event);
-    //   },
-    //   getFilterValue: (d) => d.month,
-    //   filterRange: [
-    //     this.selectedMonthRange.value[0],
-    //     this.selectedMonthRange.value[1],
-    //   ],
-    //   // getFilterCategory: (d) => getModelType(d.name),
-    //   // filterCategories: ["ACCESS-CM2", "CNRM-ESM2-1"],
-    //   // getFilterCategory: (d) => d.name,
-    //   // filterCategories: ["ACCESS-CM2"],
-    //   onFilteredItemsChange: (e) => {
-    //     console.log("Filtered", e);
-    //   },
-    //   extensions: [
-    //     new DataFilterExtension({
-    //       filterSize: 1,
-    //       countItems: true,
-    //     }),
-    //     // new DataFilterExtension({ categorySize: 1, countItems: true }),
-    //   ],
-    // });
-    // let blockedMonthlyCOMScatter = new ScatterplotLayer({
-    //   id: `curve-blocked-com-center`,
-    //   data: curBlockedCenterofMass
-    //     .map((d) =>
-    //       d.path.map((e) => {
-    //         return {
-    //           coords: e,
-    //           month: d.month,
-    //           name: getModelType(d.name),
-    //         };
-    //       })
-    //     )
-    //     .flat(),
-    //   getPosition: (d) => d.coords,
-    //   // getColor: (d) => [
-    //   //     ...colorSim(getModelType(d.name)),
-    //   //     (255 / 10) * d.block + 30,
-    //   // ],
-    //   getRadius: 0.1,
-    //   extensions: [new DataFilterExtension({ filterSize: 1 })],
-    //   getFilterValue: (d) => d.month,
-    //   filterRange: [
-    //     this.selectedMonthRange.value[0],
-    //     this.selectedMonthRange.value[1],
-    //   ],
-    //   // getFilterCategory: (d) => {
-    //   //     console.log(d);
-    //   //     return d.name;
-    //   // },
-    //   // filterCategories: [this.selectedModel.value],
-    // });
-    // debugger;
-    // let cd = [50, 175].map(
-    //   (d) =>
-    //     d *
-    //       (this.selectedModel.value.includes("All")
-    //         ? 15
-    //         : this.selectedModel.value.length) *
-    //       this.selectedMonthRangeList.length +
-    //     1 *
-    //       ((this.selectedTimeRange.value[1] -
-    //         this.selectedTimeRange.value[0] +
-    //         1) /
-    //         65)
-    // );
-
-    // let cd = [curHeatmapData.length, curHeatmapData.length * 2];
-    // console.log(curHeatmapData);
-
-    // let heatmap = new HeatmapLayer({
-    //   id: "curve-heatmap",
-    //   data: curHeatmapData,
-    //   // data: [{ coords: [0, 0], name: "ACCESS-CM2", month: 1, year: 0 }],
-    //   getPosition: (d) => d.coords,
-    //   radiusPixels: 120,
-    //   debounceTimeout: 750,
-    //   opacity: 0.7,
-    //   weightsTextureSize: 256,
-    //   // threshold: 0.2,
-    //   colorDomain: cd,
-    //   // colorDomain: [50, 150],
-    //   // aggregation: "MEAN",
-    //   // extensions: [new DataFilterExtension({ filterSize: 1, categorySize: 1 })],
-    //   getFilterValue: (d) => d.year,
-    //   // getFilterCategory: (d) => d.month,
-    //   // filterCategories: ["1"],
-    //   filterRange: [
-    //     // [this.selectedMonthRange.value[0], this.selectedMonthRange.value[1]],
-    //     this.selectedTimeRange.value[0],
-    //     this.selectedTimeRange.value[1],
-    //   ],
-    //   extensions: [new DataFilterExtension({ filterSize: 1 })],
-    // });
 
     let gridcell = new GridCellLayer({
       id: "grid-cell-layer",
@@ -381,7 +271,7 @@ export class SOMLayer extends AbstractLayerGenerator {
     });
     ret = [...ret, gridcell];
 
-    const resolution = 200;
+    const resolution = 20;
     let heightMultiplier = 350;
 
     if (this.mode == "single") {
@@ -397,6 +287,7 @@ export class SOMLayer extends AbstractLayerGenerator {
           yMax: this.extent[1][1] * 1.2,
         }
       );
+      console.log("Done KDE");
       // const sum = kdeResult.z._buffer.reduce((acc, curr) => acc + curr, 0);
       // console.log(kdeResult.z._buffer, sum);
       // Estimate the normal of the KDE surface

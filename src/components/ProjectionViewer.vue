@@ -21,7 +21,7 @@
       style="display: none"
     />
     <div
-      class="absolute bottom-0 z-[4] flex h-32 w-full flex-col items-center justify-around px-32"
+      class="absolute bottom-0 z-[4] flex h-32 w-full flex-col items-center justify-around px-32 hidden"
     >
       <!-- <div
         id="message"

@@ -1,12 +1,14 @@
 <template>
   <div class="card w-fit">
-    <Button @click="$emit('closeCard')" class="absolute m-3 top-0 right-0"
-      >Close</Button
+    <Button
+      @click="$emit('closeCard')"
+      class="absolute m-2 p-3 z-[1] top-0 right-0 bg-red-200 aspect-square"
+      >X</Button
     >
     <DataTable
       :value="members"
       scrollable
-      scrollHeight="400px"
+      scrollHeight="75%"
       showGridlines
       class="tight-rows"
     >
