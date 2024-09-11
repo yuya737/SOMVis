@@ -28,14 +28,13 @@
         icon="pi pi-times"
         class="m-2 p-2 bg-red-200 aspect-square w-fit h-fit flex flex-row justify-normal items-center"
       />
+      <ToggleButton
+        v-model="isShowingClusterMean"
+        @change="toggleIsShowingClusterMean"
+        onLabel="Color by cluster means"
+        offLabel="Remove cluster means color"
+      />
     </div>
-    <!-- <div
-      id="tooltip"
-      v-show="showTooltip"
-      class="absolute bg-white border border-gray-300 shadow-lg rounded-lg p-2 text-black"
-    >
-      {{ tooltipData }}
-    </div> -->
     <TooltipView
       id="tooltip"
       v-if="showTooltip"
@@ -48,6 +47,14 @@
       class="w-full h-full text-black flex justify-around"
     ></div>
   </div>
+  <div
+    id="tooltipText"
+    v-show="showTooltipText"
+    @click="showTooltipText = false"
+    class="absolute bg-white border border-gray-300 shadow-lg rounded-lg p-2 text-black"
+  >
+    {{ tooltipData }}
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -57,18 +64,36 @@ import { onMounted, ref, inject, reactive, watch, nextTick } from "vue";
 import Dropdown from "primevue/dropdown";
 import Button from "primevue/button";
 import TooltipView from "./TooltipView.vue";
+
+import ToggleButton from "primevue/togglebutton";
+
 import { sspAllLabels, months } from "./utils/utils";
 import { useStore } from "@/store/main";
 
 const store = useStore();
 const showTooltip = ref(false);
+const showTooltipText = ref(false);
 const selectedTimelineCluster = ref([]);
+
 const isMDS = ref(true);
+const isShowingClusterMean = ref(true);
 
 const splitterResized = inject("splitterResized");
 
 const selectedModel = ref();
 const selectedType = ref();
+const tooltipData = ref();
+
+function toggleIsShowingClusterMean() {
+  d3.selectAll("rect")
+    .filter(function () {
+      return (
+        d3.select(this)?.attr("id") &&
+        d3.select(this).attr("id").startsWith("clusterRect")
+      );
+    })
+    .classed("grey-rect", isShowingClusterMean.value);
+}
 
 watch(selectedModel, (value) => {
   if (value == null) {
@@ -79,7 +104,7 @@ watch(selectedModel, (value) => {
           d3.select(this).attr("id").startsWith("clusterPath")
         );
       })
-      .classed("black", false)
+      .classed("not-selected", false)
       .classed("selected", false);
     return;
   }
@@ -91,8 +116,8 @@ watch(selectedModel, (value) => {
         d3.select(this).attr("id").startsWith("clusterPath")
       );
     })
-    .classed("selected", false)
-    .classed("black", true);
+    .classed("not-selected", true)
+    .classed("selected", false);
   d3.selectAll("path")
     // Filter elements based on the stroke-width attribute
     .filter(function () {
@@ -102,6 +127,7 @@ watch(selectedModel, (value) => {
         fileNames[d3.select(this).datum()["index"]].includes(value.name + "_")
       );
     })
+    .classed("not-selected", false)
     .classed("selected", true);
 });
 
@@ -114,7 +140,7 @@ watch(selectedType, (value) => {
           d3.select(this).attr("id").startsWith("clusterPath")
         );
       })
-      .classed("black", false)
+      .classed("not-selected", false)
       .classed("selected", false);
     return;
   }
@@ -126,8 +152,8 @@ watch(selectedType, (value) => {
         d3.select(this).attr("id").startsWith("clusterPath")
       );
     })
-    .classed("selected", false)
-    .classed("black", true);
+    .classed("not-selected", true)
+    .classed("selected", false);
   d3.selectAll("path")
     // Filter elements based on the stroke-width attribute
     .filter(function () {
@@ -137,6 +163,7 @@ watch(selectedType, (value) => {
         fileNames[d3.select(this).datum()["index"]].includes(value.name + "_r")
       );
     })
+    .classed("not-selected", false)
     .classed("selected", true);
 });
 
@@ -221,7 +248,7 @@ const counts = (d) =>
     return acc;
   }, {});
 
-function calculateClusterBoxes({
+async function calculateClusterBoxes({
   month,
   monthlyClustering,
   clusterHeightScale,
@@ -232,47 +259,53 @@ function calculateClusterBoxes({
 
   const monthlyCounts = counts(monthlyClustering);
 
-  const data = Object.entries(monthlyCounts).map(([key, value]) => {
-    const prefix = "CMIP6_pr_delta_historical_S5L0.02_30x30_";
-    return {
-      month: month,
-      cluster: parseInt(key),
-      numElements: value,
-      memberNames: monthlyClustering
+  const data = await Promise.all(
+    Object.entries(monthlyCounts).map(async ([key, value]) => {
+      const prefix = "CMIP6_pr_delta_historical_S5L0.02_30x30_";
+      const memberFileNames = monthlyClustering
         .map((cluster, index) => {
           return cluster === parseInt(key) ? index : -1;
         })
         .filter((d) => d !== -1)
         .map((d) => fileNames[d]) // remove prefix
-        .map((d) => d.slice(prefix.length)),
+        .map((d) => d.slice(prefix.length));
 
-      members: monthlyClustering
-        .map((cluster, index) => {
-          return cluster === parseInt(key) ? index : -1;
-        })
-        .filter((d) => d !== -1),
-      x: xScale(month) - rectWidth / 2,
-      y:
-        yScale(month)(parseInt(key)) -
-        // yScale(month).bandwidth() / 2 -
-        clusterHeightScale(value) / 2,
-      width: rectWidth,
-      height: clusterHeightScale(value),
-    };
-  });
+      const { means } = await API.fetchData("get_all_means", true, {
+        files: memberFileNames,
+        months: [month],
+        years: [-1],
+      });
+      console.log("DEBUG: MEANS ", means, memberFileNames);
+
+      return {
+        month: month,
+        cluster: parseInt(key),
+        numElements: value,
+        memberNames: memberFileNames,
+        clusterMean: means,
+
+        members: monthlyClustering
+          .map((cluster, index) => {
+            return cluster === parseInt(key) ? index : -1;
+          })
+          .filter((d) => d !== -1),
+        x: xScale(month) - rectWidth / 2,
+        y:
+          yScale(month)(parseInt(key)) -
+          // yScale(month).bandwidth() / 2 -
+          clusterHeightScale(value) / 2,
+        width: rectWidth,
+        height: clusterHeightScale(value),
+      };
+    })
+  );
   return data;
 }
 
-function computeClusterPositionModifier({
-  yScale,
-  prevModifierScale,
-  clusterHeightScale,
-}) {
-  // HH, HL, LH LL
-
+function computeClusterPositionModifier({ yScale, clusterHeightScale }) {
+  // // HH, HL, LH LL
   let modifierScales = {};
-
-  if (prevModifierScale == null) {
+  for (let iteration = 0; iteration < 2; iteration += 1) {
     for (let month = 1; month <= 12; month += 1) {
       const numClusters = Object.keys(
         perTimeStepClusterCounts[month - 1]
@@ -290,123 +323,16 @@ function computeClusterPositionModifier({
           allEnsembleIds.sort((ensembleIDA, ensembleIDB) => {
             const nextClusterA = dataT[ensembleIDA][month];
             const nextClusterB = dataT[ensembleIDB][month];
-            return (
-              yScale(month + 1)(nextClusterA) - yScale(month + 1)(nextClusterB)
-            );
-          });
-        } else if (month == 12) {
-          allEnsembleIds = data[month - 1]
-            .map((cluster, ensembleID) =>
-              cluster === clusterNum ? ensembleID : -1
-            )
-            .filter((d) => d !== -1);
-          allEnsembleIds.sort((ensembleIDA, ensembleIDB) => {
-            const prevClusterA = dataT[ensembleIDA][month - 2];
-            const prevClusterB = dataT[ensembleIDB][month - 2];
-            return (
-              yScale(month - 1)(prevClusterA) - yScale(month - 1)(prevClusterB)
-            );
-          });
-          // allEnsembleIds.sort(
-          //   (a, b) => yScale(month - 1)(a) - yScale(month - 1)(b)
-          // );
-        } else {
-          allEnsembleIds = data[month - 1]
-            .map((cluster, ensembleID) =>
-              cluster === clusterNum ? ensembleID : -1
-            )
-            .filter((d) => d !== -1);
-          allEnsembleIds.sort((ensembleIDA, ensembleIDB) => {
-            const prevClusterA = dataT[ensembleIDA][month - 2];
-            const prevClusterB = dataT[ensembleIDB][month - 2];
-            const nextClusterA = dataT[ensembleIDA][month + 0];
-            const nextClusterB = dataT[ensembleIDB][month + 0];
-            if (
-              yScale(month - 1)(prevClusterA) <
-                yScale(month - 1)(prevClusterB) &&
-              yScale(month + 1)(nextClusterA) < yScale(month + 1)(nextClusterB)
-            ) {
-              return (
-                Math.abs(
-                  yScale(month - 1)(prevClusterA) -
-                    yScale(month - 1)(prevClusterB)
-                ) +
-                Math.abs(
-                  yScale(month + 1)(nextClusterA) -
-                    yScale(month + 1)(nextClusterB)
-                )
-              );
-            } else if (
-              yScale(month - 1)(prevClusterA) >
-                yScale(month - 1)(prevClusterB) &&
-              yScale(month + 1)(nextClusterA) > yScale(month + 1)(nextClusterB)
-            ) {
-              return -(
-                Math.abs(
-                  yScale(month - 1)(prevClusterA) -
-                    yScale(month - 1)(prevClusterB)
-                ) +
-                Math.abs(
-                  yScale(month + 1)(nextClusterA) -
-                    yScale(month + 1)(nextClusterB)
-                )
-              );
-            } else {
-              if (
-                yScale(month - 1)(prevClusterA) ==
-                yScale(month - 1)(prevClusterB)
-              ) {
-                return (
-                  yScale(month + 1)(nextClusterA) -
-                  yScale(month + 1)(nextClusterB)
-                );
-              } else {
-                return (
-                  yScale(month - 1)(prevClusterA) -
-                  yScale(month - 1)(prevClusterB)
-                );
-              }
+
+            let nextClusterAValue = yScale(month + 1)(nextClusterA);
+            let nextClusterBValue = yScale(month + 1)(nextClusterB);
+
+            if (iteration == 1) {
+              nextClusterAValue +=
+                modifierScales[month + 1][nextClusterA](ensembleIDA);
+              nextClusterBValue +=
+                modifierScales[month + 1][nextClusterB](ensembleIDB);
             }
-          });
-        }
-        scales[clusterNum] = d3
-          .scaleBand()
-          .domain(allEnsembleIds)
-          .range([
-            (-clusterHeightScale(allEnsembleIds.length) / 2) * 0.9,
-            (clusterHeightScale(allEnsembleIds.length) / 2) * 0.9,
-          ]);
-      }
-      modifierScales[month] = scales;
-    }
-  } else {
-    modifierScales = { ...prevModifierScale };
-    for (let month = 1; month <= 12; month += 1) {
-      const numClusters = Object.keys(
-        perTimeStepClusterCounts[month - 1]
-      ).length;
-
-      const scales = {};
-
-      for (let clusterNum = 0; clusterNum < numClusters; clusterNum += 1) {
-        let allEnsembleIds;
-        if (month == 1) {
-          allEnsembleIds = data[month - 1]
-            .map((cluster, ensembleID) =>
-              cluster === clusterNum ? ensembleID : -1
-            )
-            .filter((d) => d !== -1);
-
-          allEnsembleIds.sort((ensembleIDA, ensembleIDB) => {
-            const nextClusterA = dataT[ensembleIDA][month];
-            const nextClusterB = dataT[ensembleIDB][month];
-
-            const nextClusterAValue =
-              yScale(month + 1)(nextClusterA) +
-              modifierScales[month + 1][nextClusterA](ensembleIDA);
-            const nextClusterBValue =
-              yScale(month + 1)(nextClusterB) +
-              modifierScales[month + 1][nextClusterB](ensembleIDB);
 
             return nextClusterAValue - nextClusterBValue;
           });
@@ -419,16 +345,19 @@ function computeClusterPositionModifier({
           allEnsembleIds.sort((ensembleIDA, ensembleIDB) => {
             const prevClusterA = dataT[ensembleIDA][month - 2];
             const prevClusterB = dataT[ensembleIDB][month - 2];
-            return (
-              yScale(month - 1)(prevClusterA) +
-              modifierScales[month - 1][prevClusterA](ensembleIDA) -
-              (yScale(month - 1)(prevClusterB) +
-                modifierScales[month - 1][prevClusterB](ensembleIDB))
-            );
+
+            let prevClusterAValue = yScale(month - 1)(prevClusterA);
+            let prevClusterBValue = yScale(month - 1)(prevClusterB);
+
+            if (iteration == 1) {
+              prevClusterAValue +=
+                modifierScales[month - 1][prevClusterA](ensembleIDA);
+              prevClusterBValue +=
+                modifierScales[month - 1][prevClusterB](ensembleIDB);
+            }
+
+            return prevClusterAValue - prevClusterBValue;
           });
-          // allEnsembleIds.sort(
-          //   (a, b) => yScale(month - 1)(a) - yScale(month - 1)(b)
-          // );
         } else {
           allEnsembleIds = data[month - 1]
             .map((cluster, ensembleID) =>
@@ -441,18 +370,21 @@ function computeClusterPositionModifier({
             const nextClusterA = dataT[ensembleIDA][month + 0];
             const nextClusterB = dataT[ensembleIDB][month + 0];
 
-            const prevClusterAValue =
-              yScale(month - 1)(prevClusterA) +
-              modifierScales[month - 1][prevClusterA](ensembleIDA);
-            const prevClusterBValue =
-              yScale(month - 1)(prevClusterB) +
-              modifierScales[month - 1][prevClusterB](ensembleIDB);
-            const nextClusterAValue =
-              yScale(month + 1)(nextClusterA) +
-              modifierScales[month + 1][nextClusterA](ensembleIDA);
-            const nextClusterBValue =
-              yScale(month + 1)(nextClusterB) +
-              modifierScales[month + 1][nextClusterB](ensembleIDB);
+            let prevClusterAValue = yScale(month - 1)(prevClusterA);
+            let prevClusterBValue = yScale(month - 1)(prevClusterB);
+            let nextClusterAValue = yScale(month + 1)(nextClusterA);
+            let nextClusterBValue = yScale(month + 1)(nextClusterB);
+
+            if (iteration == 1) {
+              prevClusterAValue +=
+                modifierScales[month - 1][prevClusterA](ensembleIDA);
+              prevClusterBValue +=
+                modifierScales[month - 1][prevClusterB](ensembleIDB);
+              nextClusterAValue +=
+                modifierScales[month + 1][nextClusterA](ensembleIDA);
+              nextClusterBValue +=
+                modifierScales[month + 1][nextClusterB](ensembleIDB);
+            }
 
             if (
               prevClusterAValue < prevClusterBValue &&
@@ -476,8 +408,8 @@ function computeClusterPositionModifier({
           .scaleBand()
           .domain(allEnsembleIds)
           .range([
-            (-clusterHeightScale(allEnsembleIds.length) / 2) * 0.7,
-            (clusterHeightScale(allEnsembleIds.length) / 2) * 0.7,
+            (-clusterHeightScale(allEnsembleIds.length) / 2) * 0.8,
+            (clusterHeightScale(allEnsembleIds.length) / 2) * 0.8,
           ]);
       }
       modifierScales[month] = scales;
@@ -638,7 +570,7 @@ function checkFlipMDS({ yScale, HEIGHT, MARGIN }) {
   }
 }
 
-function drawTimeline() {
+async function drawTimeline() {
   const WIDTH = document.getElementById("timelineSVG").clientWidth;
   const HEIGHT = document.getElementById("timelineSVG").clientHeight;
 
@@ -657,11 +589,29 @@ function drawTimeline() {
     .black {
       stroke: black;
     }
-    .selected {
-      stroke: crimson; !important
-      stroke-opacity: 1;
-      stroke-width: 4;
+    .not-selected {
+      stroke: black;
+      stroke-opacity: 0.2;
     }
+    .selected {
+      stroke: crimson !important;
+      stroke-opacity: 1 !important;
+      stroke-width: 4 !important;
+    }
+    .path-highlighted {
+      stroke-width: 4 !important;
+    }
+    .path-not-highlighted {
+      stroke-opacity: 0.5 !important;
+    }
+    .selected-rect {
+      opacity: 1 !important;
+      stroke: crimson !important;
+      stroke-opacity: 1 !important;
+      stroke-width: 4 !important;
+    }
+    .grey-rect{
+      fill: darkgrey !important;
   `);
 
   // add a x-axis legend for months
@@ -683,15 +633,16 @@ function drawTimeline() {
     .attr("text-anchor", "middle")
     .text("Months");
 
-  const minDistBetweenMDS =
-    d3
-      .scaleLinear()
-      .range([-150, 150])
-      .domain([MARGIN, HEIGHT - MARGIN])(clusterHeightMax / 2) -
-    d3
-      .scaleLinear()
-      .range([-150, 150])
-      .domain([MARGIN, HEIGHT - MARGIN])(0);
+  // const minDistBetweenMDS =
+  //   d3
+  //     .scaleLinear()
+  //     .range([-150, 150])
+  //     .domain([MARGIN, HEIGHT - MARGIN])(clusterHeightMax / 2) -
+  //   d3
+  //     .scaleLinear()
+  //     .range([-150, 150])
+  //     .domain([MARGIN, HEIGHT - MARGIN])(0);
+  let minDistBetweenMDS = 10;
 
   // add a y-axis legend for clusters:
   /**
@@ -765,15 +716,8 @@ function drawTimeline() {
     MARGIN: MARGIN,
   });
 
-  // Twice to optimize the timeline
   let modifierScales = computeClusterPositionModifier({
     yScale: yScale,
-    prevModifierScale: null,
-    clusterHeightScale: clusterHeightScale,
-  });
-  modifierScales = computeClusterPositionModifier({
-    yScale: yScale,
-    prevModifierScale: modifierScales,
     clusterHeightScale: clusterHeightScale,
   });
 
@@ -802,13 +746,16 @@ function drawTimeline() {
   for (let ensembleID = 0; ensembleID < dataT.length; ensembleID++) {
     const clusterHistory = dataT[ensembleID];
     const controlPoints = clusterHistory.map((currentCluster, month) => {
+      // const bandwidth =
+      //   (yScale(month + 1)(currentCluster)(1) -
+      //     yScale(month + 1)(currentCluster)(0)) /
+      //   2;
       return {
         x: xScale(month + 1),
         y:
           yScale(month + 1)(currentCluster) +
-          // yScale(month + 1).bandwidth() / 2 +
-          modifierScales[month + 1][currentCluster](ensembleID),
-        // modifierScales[month + 1][currentCluster].bandwidth() / 2,
+          modifierScales[month + 1][currentCluster](ensembleID) +
+          modifierScales[month + 1][currentCluster].bandwidth() / 2,
       };
     });
     // console.log("DEBUG: CONTROLPOINTS ", controlPoints);
@@ -824,14 +771,30 @@ function drawTimeline() {
   }
   console.log("DEBUG: PATHDATA ", pathData);
 
+  let clusterBoxData = await Promise.all(
+    arrToI(12, 1).map((month) => {
+      return calculateClusterBoxes({
+        month: month,
+        monthlyClustering: data[month - 1],
+        clusterHeightScale: clusterHeightScale,
+        xScale: xScale,
+        yScale: yScale,
+      });
+    })
+  );
+  let clusterMeanMax = Math.max(
+    ...clusterBoxData.flat().map((i) => i.clusterMean)
+  );
+  let clusterMeanMin = Math.min(
+    ...clusterBoxData.flat().map((i) => i.clusterMean)
+  );
+  const meanDivergingScale = d3
+    .scaleDiverging()
+    .domain([clusterMeanMin, 0, clusterMeanMax])
+    .interpolator(d3.interpolateRdBu);
+
   for (let i = 1; i <= 12; i++) {
-    let clusterBoxes = calculateClusterBoxes({
-      month: i,
-      monthlyClustering: data[i - 1],
-      clusterHeightScale,
-      xScale,
-      yScale,
-    });
+    let clusterBoxes = clusterBoxData[i - 1];
     console.log("DEBUG: CLUSTERBOXES ", clusterBoxes);
     svg
       .selectAll(`rect${i}`)
@@ -841,14 +804,22 @@ function drawTimeline() {
       .attr("y", (d) => d.y)
       .attr("width", (d) => d.width)
       .attr("height", (d) => d.height)
-      // .attr("fill", (d) => colors[d.cluster])
-      .attr("fill", (d) => "darkgrey")
+      .attr("id", (d) => `clusterRect${d.month}`)
+      .attr("fill", (d) => meanDivergingScale(d.clusterMean))
       .attr("fill-opacity", 0.5)
       .attr("stroke", "black")
       .attr("transform", `translate(${xScale.bandwidth() / 2}, ${0})`)
       .on("mouseover", function (event, d) {
-        d3.select(this).attr("fill", "black");
-        d3.selectAll("path").attr("stroke-opacity", 0.2);
+        d3.select(this).classed("selected-rect", true);
+        d3.selectAll("path")
+          .filter(function () {
+            return (
+              d3.select(this)?.attr("id") &&
+              d3.select(this).attr("id").startsWith("clusterPath")
+            );
+          })
+          .classed("path-not-highlighted", true)
+          .classed("path-highlighted", false);
         d3.selectAll("path")
           // Filter elements based on the stroke-width attribute
           .filter(function () {
@@ -857,12 +828,23 @@ function drawTimeline() {
               d3.select(this).datum()["cluster"][d.month - 1] === d.cluster
             );
           })
-          .attr("stroke-opacity", 1)
-          .attr("stroke-width", 2);
+          // .attr("stroke-opacity", 1)
+          // .attr("stroke-width", 2);
+          .classed("path-not-highlighted", false)
+          .classed("path-highlighted", true);
       })
       .on("mouseout", function (event, d) {
-        d3.select(this).attr("fill", "darkgrey");
-        d3.selectAll("path").attr("stroke-opacity", 1).attr("stroke-width", 1);
+        d3.select(this).classed("selected-rect", false);
+        d3.selectAll("path")
+          .filter(function () {
+            return (
+              d3.select(this)?.attr("id") &&
+              d3.select(this).attr("id").startsWith("clusterPath")
+            );
+          })
+          .classed("path-not-highlighted", false)
+          .classed("path-highlighted", false);
+        // d3.selectAll("path").attr("stroke-opacity", 1).attr("stroke-width", 1);
       })
       .on("click", (event, d) => {
         console.log("DEBUG: CLICK ", d);
@@ -929,19 +911,104 @@ function drawTimeline() {
     })
     .on("mouseout", function (event, d) {
       d3.select(this).attr("stroke-width", 1);
+    })
+    .on("click", function (event, d) {
+      tooltipData.value = `${fileNames[d.index].split("_")[7]} ${
+        fileNames[d.index].split("_")[6]
+      }`;
+      showTooltipText.value = true;
+      console.log("DEBUG: Tooltip ", tooltipData.value);
+      document
+        .getElementById("tooltipText")
+        ?.style.setProperty("top", `${event.clientY}px`);
+      document
+        .getElementById("tooltipText")
+        ?.style.setProperty("left", `${event.clientX}px`);
     });
-  // .on("click", function (event, d) {
 
-  //   tooltipData.value = `${fileNames[d.index].split("_")[7]} ${
-  //     fileNames[d.index].split("_")[6]
-  //   }`;
-  //   document
-  //     .getElementById("tooltip")
-  //     ?.style.setProperty("top", `${event.clientY}px`);
-  //   document
-  //     .getElementById("tooltip")
-  //     ?.style.setProperty("left", `${event.clientX}px`);
-  // });
+  const pathLegend = [
+    { name: "Historical", color: "steelblue", dash: "10,10" },
+    { name: "SSP245", color: "darkkhaki", dash: "0" },
+    { name: "SSP370", color: "crimson", dash: "0" },
+    { name: "SSP585", color: "forestgreen", dash: "0" },
+  ];
+
+  const pathLegendGroup = svg
+    .append("g")
+    .attr("transform", `translate(${WIDTH - MARGIN * 2 - 200}, 50)`);
+  pathLegendGroup
+    .append("text")
+    .text("Path style")
+    .attr("alignment-baseline", "before-edge")
+    .attr("font-size", "large")
+    .attr("font-weight", "bold");
+  const pathLegendItems = pathLegendGroup
+    .selectAll("g")
+    .data(pathLegend)
+    .enter()
+    .append("g");
+
+  pathLegendItems
+    .append("line")
+    .attr("x1", 0)
+    .attr("x2", 50)
+    .attr("y1", (d, i) => i * 20 + 30)
+    .attr("y2", (d, i) => i * 20 + 30)
+    .attr("stroke", (d) => d.color)
+    .attr("stroke-dasharray", (d) => d.dash);
+
+  pathLegendItems
+    .append("text")
+    .attr("x", 70)
+    .attr("y", (d, i) => i * 20 + 30)
+    .text((d) => d.name)
+    .attr("alignment-baseline", "central");
+
+  const rectLegend = arrToI(7).map((i) => {
+    let adjustedI = i - 3;
+
+    let value =
+      adjustedI < 0
+        ? d3.interpolate(0, clusterMeanMin)(-adjustedI / 3)
+        : d3.interpolate(0, clusterMeanMax)(adjustedI / 3);
+    // format number as a string in scientific notation
+    return {
+      name: value.toExponential(2),
+      color: meanDivergingScale(value),
+    };
+  });
+
+  const rectLegendGroup = svg
+    .append("g")
+    .attr("transform", `translate(${WIDTH - MARGIN * 2 - 400}, 50)`);
+
+  rectLegendGroup
+    .append("text")
+    .text("Mean Δhistorical (kg/m^2/s)")
+    .attr("alignment-baseline", "before-edge")
+    .attr("font-size", "large")
+    .attr("font-weight", "bold");
+
+  const rectLegendItems = rectLegendGroup
+    .selectAll("g")
+    .data(rectLegend)
+    .enter()
+    .append("g");
+
+  rectLegendItems
+    .append("rect")
+    .attr("x", 0)
+    .attr("y", (d, i) => i * 20 + 30)
+    .attr("width", 20)
+    .attr("height", 20)
+    .attr("fill", (d) => d.color);
+
+  rectLegendItems
+    .append("text")
+    .attr("x", 30)
+    .attr("y", (d, i) => i * 20 + 30)
+    .text((d) => d.name)
+    .attr("alignment-baseline", "before-edge");
 }
 async function getData() {
   for (let month = 1; month <= 12; month += 1) {
@@ -986,5 +1053,8 @@ async function getData() {
   console.log("DEBUG: DATA T ", dataT);
   console.log("DEBUG MDS: ", monthlyMDS);
 }
-const arrToI = (i) => Array.from({ length: i }, (_, index) => index);
+// const arrToI = (i, start=) => Array.from({ length: i }, (_, index) => index);
+function arrToI(i, start = 0) {
+  return Array.from({ length: i }, (_, index) => index + start);
+}
 </script>

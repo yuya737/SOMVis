@@ -8,7 +8,7 @@ import {
 import { line, curveNatural } from "d3";
 import { pointsOnPath } from "points-on-path";
 
-import { OrthographicView, OrbitView } from "@deck.gl/core/typed";
+import { OrthographicView, MapView, OrbitView } from "@deck.gl/core/typed";
 
 // const prefix = 'CMIP6_pr_historical_S3L0.02_'
 const prefix = "CMIP6_pr_delta_historical_S5L0.02_30x30_";

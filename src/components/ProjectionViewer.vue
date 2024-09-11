@@ -21,7 +21,7 @@
       style="display: none"
     />
     <div
-      class="absolute bottom-0 z-[4] flex h-32 w-full flex-col items-center justify-around px-32 hidden"
+      class="absolute bottom-0 z-[4] flex h-32 w-full flex-col items-center justify-around px-32"
     >
       <!-- <div
         id="message"
@@ -29,19 +29,19 @@
       >
         {{ message }}
       </div> -->
-      <Slider
+      <!-- <Slider
         v-model="timeRange"
         :format="formatTooltipTime"
         :min="timeMin"
         :max="timeMax"
         class="slider z-[4] w-3/4"
-      />
+      /> -->
 
       <div
         class="flex flex-row w-fit items-center justify-evenly bg-gray-200 p-2 rounded-lg text-center"
       >
-        <span class="flex items-center font-bold px-5"> Start: </span>
-        <Dropdown
+        <!-- <span class="flex items-center font-bold px-5"> Start: </span> -->
+        <!-- <Dropdown
           v-model="monthTemp1"
           :disabled="isWaterYearMean"
           :options="months"
@@ -65,15 +65,21 @@
           onLabel="Disable Water Year Mean"
           offLabel="Enable Water Year Mean"
           class="px-5"
-        />
-        <ToggleButton
+        /> -->
+        <!-- <ToggleButton
           v-model="isHidingSurface"
           @change="toggleShowSurface"
           onLabel="Show Surface"
           offLabel="Hide Surface"
+        /> -->
+        <ToggleButton
+          v-model="isHidingSurface"
+          @change="toggleShowHeatmap"
+          onLabel="Show Distribution"
+          offLabel="Hide Distribution"
         />
         <!-- <Divider layout="vertical" /> -->
-        <Button label="Apply" @click="yearMonthChanged" class="px-5" />
+        <!-- <Button label="Apply" @click="yearMonthChanged" class="px-5" /> -->
       </div>
       <!-- <Slider
         v-model="monthRange"
@@ -85,6 +91,7 @@
         @change="drawAllLayers"
       /> -->
     </div>
+    <img :src="imgSrc" v-if="imgSrc != ''" />
   </div>
 </template>
 
@@ -378,6 +385,16 @@ function setLayerProps() {
 function toggleShowSurface() {
   layerList = layerList.map((l) => {
     let ret = l.id.startsWith("surface-layer")
+      ? l.clone({ visible: !isHidingSurface.value })
+      : l.clone();
+    return ret;
+  });
+  setLayerProps();
+}
+
+function toggleShowHeatmap() {
+  layerList = layerList.map((l) => {
+    let ret = l.id.startsWith("curve-heatmap")
       ? l.clone({ visible: !isHidingSurface.value })
       : l.clone();
     return ret;

@@ -8,7 +8,7 @@
     <DataTable
       :value="members"
       scrollable
-      scrollHeight="75%"
+      scrollHeight="400px"
       showGridlines
       class="tight-rows"
     >

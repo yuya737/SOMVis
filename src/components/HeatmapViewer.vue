@@ -381,7 +381,97 @@ function makeHeatmap({ distances, month }) {
     .style("fill", "black")
     .style("transform", "rotate(-90deg)")
     .text((d) => `Cluster ${d.cluster + 1}`);
+
+  // add the scale
+  // svg
+  //   .append("g")
+  //   .attr("transform", `translate(${width + 10}, 0)`)
+  //   .call(
+  //     d3
+  //       .axisRight(myColor)
+  //       .tickSize(5)
+  //       .tickFormat((d) => Math.round(d))
+  //   );
+  // svg
+  // .append("g")
+  // .attr("transform", `translate(0,${margin.top})`)
+  // .call(colorAxisTop(myColor).range([margin.left, width - margin.right]));
+
   return svg.node();
+}
+function colorAxisTop(scale) {
+  var rampSteps = 64,
+    rampSize = 24,
+    x = d3.scaleLinear(),
+    x0 = 0,
+    x1 = 1,
+    xAxis = d3.axisTop(x);
+
+  function colorAxis(selection) {
+    var domain = scale.domain(),
+      context = DOM.context2d(rampSteps, 1, 1);
+
+    // Render the axis.
+    x.domain([domain[0], domain[domain.length - 1]]).range([x0, x1]);
+    selection.call(xAxis);
+
+    // Render the color ramp.
+    x.range([0, 1]);
+    for (var i = 0; i < rampSteps; ++i) {
+      context.fillStyle = scale(x.invert(i / (rampSteps - 1)));
+      context.fillRect(i, 0, 1, 1);
+    }
+
+    var image = selection.selectAll("image").data([null]);
+
+    image = image
+      .enter()
+      .insert("image", "*")
+      .attr("preserveAspectRatio", "none")
+      .merge(image);
+
+    image
+      .attr("x", x0)
+      .attr("width", x1 - x0 + 1)
+      .attr("height", rampSize)
+      .attr("xlink:href", context.canvas.toDataURL());
+  }
+
+  colorAxis.range = function (_) {
+    return arguments.length
+      ? ((x0 = +_[0]), (x1 = +_[1]), colorAxis)
+      : [x0, x1];
+  };
+
+  colorAxis.scale = function (_) {
+    return arguments.length ? ((scale = _), colorAxis) : scale;
+  };
+
+  colorAxis.rampSteps = function (_) {
+    return arguments.length ? ((rampSteps = +_), colorAxis) : rampSteps;
+  };
+
+  colorAxis.rampSize = function (_) {
+    return arguments.length ? ((rampSize = +_), colorAxis) : rampSize;
+  };
+
+  function extendAxis(method) {
+    colorAxis[method] = function () {
+      var result = xAxis[method].apply(xAxis, arguments);
+      return result === xAxis ? colorAxis : result;
+    };
+  }
+
+  extendAxis("ticks");
+  extendAxis("tickArguments");
+  extendAxis("tickValues");
+  extendAxis("tickFormat");
+  extendAxis("tickSize");
+  extendAxis("tickSizeInner");
+  extendAxis("tickSizeOuter");
+  extendAxis("tickPadding");
+
+  return colorAxis;
 }
 
 function makeCurlyBrace(x1, y1, x2, y2, w, q) {

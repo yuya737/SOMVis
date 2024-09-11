@@ -271,7 +271,7 @@ export class SOMLayer extends AbstractLayerGenerator {
     });
     ret = [...ret, gridcell];
 
-    const resolution = 20;
+    const resolution = 50;
     let heightMultiplier = 350;
 
     if (this.mode == "single") {
@@ -531,7 +531,7 @@ export class SOMLayer extends AbstractLayerGenerator {
     //     //     console.log("Clicked:", info.object, event);
     //     // },
     // });
-    ret = [...ret, heatmap];
+    ret = [heatmap];
     // let ret = [monthlyCOMPath, blockedMonthlyCOMScatter];
     // let ret = [heatmap, monthlyCOMPath];
     // ret = [...ret, blockedMonthlyCOMScatter];
