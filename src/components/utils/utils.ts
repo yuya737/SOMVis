@@ -379,19 +379,36 @@ export const ssp585Labels = [
   "MRI-ESM2-0_ssp585_r1i1p1f1_pr.nc",
 ];
 
-export const sspAllLabels = [
-  ...historicalLabels,
-  ...ssp245Labels,
-  ...ssp370Labels,
-  ...ssp585Labels,
-].map((d) => prefix + d);
-
-ssp370Labels = [
-  ...historicalLabels,
-  ...ssp245Labels,
-  ...ssp370Labels,
-  ...ssp585Labels,
-].map((d) => prefix + d);
+export const sspAllLabels: EnsembleMember[] = [
+  ...historicalLabels.map((d) => {
+    return {
+      model_name: d.split("_")[0],
+      ssp: d.split("_")[1],
+      variant: d.split("_")[2],
+    };
+  }),
+  ...ssp245Labels.map((d) => {
+    return {
+      model_name: d.split("_")[0],
+      ssp: d.split("_")[1],
+      variant: d.split("_")[2],
+    };
+  }),
+  ...ssp370Labels.map((d) => {
+    return {
+      model_name: d.split("_")[0],
+      ssp: d.split("_")[1],
+      variant: d.split("_")[2],
+    };
+  }),
+  ...ssp585Labels.map((d) => {
+    return {
+      model_name: d.split("_")[0],
+      ssp: d.split("_")[1],
+      variant: d.split("_")[2],
+    };
+  }),
+];
 
 export const historicalLabelsSfbay = [
   "CMIP6_pr_historical_sfbay_S3L0.1_20x20_ACCESS-CM2_historical_r1i1p1f1_pr_sfbay.nc",

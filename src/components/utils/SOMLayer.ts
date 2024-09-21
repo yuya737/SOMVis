@@ -26,7 +26,7 @@ import {
 } from "./utils";
 
 import { AbstractLayerGenerator } from "./AbstractLayerGenerator";
-import { watch } from "vue";
+import { ComputedRef, watch } from "vue";
 import { useStore } from "@/store/main";
 
 export class SOMLayer extends AbstractLayerGenerator {
@@ -35,12 +35,12 @@ export class SOMLayer extends AbstractLayerGenerator {
   // readonly name: string;
   readonly selectedTimeRange: any;
   readonly selectedMonthRange: any;
-  readonly selectedModel: any;
+  readonly selectedModel: ComputedRef<[EnsembleMember[], EnsembleMember[]]>;
   readonly selectedSubsetType: any;
   readonly hoveredFile: any;
 
   readonly blockedCenterofMassData: any;
-  readonly BMUData: any;
+  readonly BMUData: BMUMata[];
 
   // Need to have two ranges for the heatmap to account for Dec-Feb type queries that wrap around the year
   selectedMonthRangeList: any = [];
@@ -54,7 +54,7 @@ export class SOMLayer extends AbstractLayerGenerator {
     data,
     timeRange,
     monthRange,
-    model,
+    model: ComputedRef<[EnsembleMember[], EnsembleMember[]]>,
     subsetType: subsetType,
     hoveredFile,
     extent
@@ -79,17 +79,15 @@ export class SOMLayer extends AbstractLayerGenerator {
     this.selectedSubsetType = subsetType;
 
     this.BMUData = Object.entries(this.data)
-      .map(([model, monthDividedData]) =>
-        monthDividedData.map((d) =>
-          d.coords.map((e, i) => {
-            return {
-              name: stripSOMprefix(model),
-              coords: e,
-              id: d.id,
-              year: i,
-            };
-          })
-        )
+      .map(([model, BMUs]) =>
+        BMUs.map((d) => {
+          return {
+            name: model,
+            coords: d.coords,
+            month: d.month,
+            year: d.year,
+          };
+        })
       )
       .flat(2);
     watch(
@@ -145,24 +143,27 @@ export class SOMLayer extends AbstractLayerGenerator {
   }
 
   _subsetData(): BMUMata[] {
-    const selectData = (files) => {
+    const selectData = (files: EnsembleMember[]) => {
       let curBMUData = this.BMUData;
-      if (!files.includes("All")) {
-        // curBlockedCenterofMass = this.blockedCenterofMassData.filter((d) =>
-        //   this.selectedModel.value.includes(d.name)
-        // );
-        curBMUData = this.BMUData.filter((d) => files.includes(d.name));
-      }
+      // if (!files.includes("All")) {
+      // curBlockedCenterofMass = this.blockedCenterofMassData.filter((d) =>
+      //   this.selectedModel.value.includes(d.name)
+      // );
+      let fileStrings = files.map(
+        (d) => `${d.model_name}:${d.ssp}:${d.variant}`
+      );
+      curBMUData = this.BMUData.filter((d) => fileStrings.includes(d.name));
+      // }
       // curBlockedCenterofMass = curBlockedCenterofMass.filter((d) =>
       //   this.selectedMonthRangeList.includes(d.month)
       // );
       if (this.selectedSubsetType.value == subsetType.month) {
         curBMUData = curBMUData.filter((d) =>
-          this.selectedMonthRangeList.value.includes(parseInt(d.id))
+          this.selectedMonthRangeList.value.includes(d.month)
         );
         if (this.selectedTimeRange.value[0] != -1) {
           curBMUData = curBMUData.filter(
-            (d) => this.selectedTimeRange.value.includes(parseInt(d.year))
+            (d) => this.selectedTimeRange.value.includes(d.year)
 
             // d.year >= this.selectedTimeRange.value[0] &&
             // d.year <= this.selectedTimeRange.value[1]
@@ -174,7 +175,7 @@ export class SOMLayer extends AbstractLayerGenerator {
         ).filter((d) => files.includes(d.name));
         if (this.selectedTimeRange.value[0] != -1) {
           curBMUData = curBMUData.filter((d) =>
-            this.selectedTimeRange.value.includes(parseInt(d.year))
+            this.selectedTimeRange.value.includes(d.year)
           );
         }
       }
@@ -250,248 +251,248 @@ export class SOMLayer extends AbstractLayerGenerator {
       return ret;
     }
 
-    let gridcell = new GridCellLayer({
-      id: "grid-cell-layer",
-      data: freq,
-      getPosition: (d) => d[0],
-      getElevation: (d) => Math.abs(d[1] * 100),
-      getColor: (d) => {
-        if (this.mode == "single") {
-          return interpolateGreens(d[1] / 0.05)
-            .replace(/[^\d,]/g, "")
-            .split(",")
-            .map((d) => Number(d));
-        } else {
-          return d.group == "group1"
-            ? hexToRgb("#2b9e77")
-            : hexToRgb("#d95f02");
-        }
-      },
-      cellSize: 0.25,
-    });
-    ret = [...ret, gridcell];
+    // let gridcell = new GridCellLayer({
+    //   id: "grid-cell-layer",
+    //   data: freq,
+    //   getPosition: (d) => d[0],
+    //   getElevation: (d) => Math.abs(d[1] * 100),
+    //   getColor: (d) => {
+    //     if (this.mode == "single") {
+    //       return interpolateGreens(d[1] / 0.05)
+    //         .replace(/[^\d,]/g, "")
+    //         .split(",")
+    //         .map((d) => Number(d));
+    //     } else {
+    //       return d.group == "group1"
+    //         ? hexToRgb("#2b9e77")
+    //         : hexToRgb("#d95f02");
+    //     }
+    //   },
+    //   cellSize: 0.25,
+    // });
+    // ret = [...ret, gridcell];
 
-    const resolution = 50;
-    let heightMultiplier = 350;
+    // const resolution = 50;
+    // let heightMultiplier = 350;
 
-    if (this.mode == "single") {
-      let kdeResult = kde2d(
-        curBMUData.map((d) => d.coords[0]),
-        curBMUData.map((d) => d.coords[1]),
-        {
-          n: resolution,
-          h: [1, 1],
-          xMin: this.extent[0][0] * 1.2,
-          xMax: this.extent[0][1] * 1.2,
-          yMin: this.extent[1][0] * 1.2,
-          yMax: this.extent[1][1] * 1.2,
-        }
-      );
-      console.log("Done KDE");
-      // const sum = kdeResult.z._buffer.reduce((acc, curr) => acc + curr, 0);
-      // console.log(kdeResult.z._buffer, sum);
-      // Estimate the normal of the KDE surface
-      const getAdjacentIndices = (i) => {
-        let ret = [];
-        if (i % resolution > 0 && i % resolution < resolution - 1) {
-          ret = [...ret, i - 1, i + 1];
-        }
-        if (
-          Math.floor(i / resolution) > 0 &&
-          Math.floor(i / resolution) < resolution - 1
-        ) {
-          ret = [...ret, i - resolution, i + resolution];
-        }
-        return ret;
-      };
+    // if (this.mode == "single") {
+    //   let kdeResult = kde2d(
+    //     curBMUData.map((d) => d.coords[0]),
+    //     curBMUData.map((d) => d.coords[1]),
+    //     {
+    //       n: resolution,
+    //       h: [1, 1],
+    //       xMin: this.extent[0][0] * 1.2,
+    //       xMax: this.extent[0][1] * 1.2,
+    //       yMin: this.extent[1][0] * 1.2,
+    //       yMax: this.extent[1][1] * 1.2,
+    //     }
+    //   );
+    //   console.log("Done KDE");
+    //   // const sum = kdeResult.z._buffer.reduce((acc, curr) => acc + curr, 0);
+    //   // console.log(kdeResult.z._buffer, sum);
+    //   // Estimate the normal of the KDE surface
+    //   const getAdjacentIndices = (i) => {
+    //     let ret = [];
+    //     if (i % resolution > 0 && i % resolution < resolution - 1) {
+    //       ret = [...ret, i - 1, i + 1];
+    //     }
+    //     if (
+    //       Math.floor(i / resolution) > 0 &&
+    //       Math.floor(i / resolution) < resolution - 1
+    //     ) {
+    //       ret = [...ret, i - resolution, i + resolution];
+    //     }
+    //     return ret;
+    //   };
 
-      const crossProduct3DandNorm = (a, b) => {
-        let ret = [
-          a[1] * b[2] - a[2] * b[1],
-          a[2] * b[0] - a[0] * b[2],
-          a[0] * b[1] - a[1] * b[0],
-        ];
-        return ret.map(
-          (d) => d / Math.sqrt(ret.reduce((acc, curr) => acc + curr ** 2, 0))
-        );
-      };
-      // let normal = Array.from(kdeResult.z._buffer).map((d, i) => {
-      //   let adj = getAdjacentIndices(i);
-      //   if (adj.length < 4) {
-      //     return [0, 0, 0];
-      //   } else {
-      //     let x = kdeResult.x[Math.floor(adj[0] / resolution)];
-      //     let y = kdeResult.y[adj[0] % resolution];
-      //     let z = kdeResult.z._buffer[adj[0]] * heightMultiplier;
-      //     let a = [x, y, z];
-      //     x = kdeResult.x[Math.floor(adj[1] / resolution)];
-      //     y = kdeResult.y[adj[1] % resolution];
-      //     z = kdeResult.z._buffer[adj[1]] * heightMultiplier;
-      //     let b = [x, y, z];
-      //     x = kdeResult.x[Math.floor(adj[2] / resolution)];
-      //     y = kdeResult.y[adj[2] % resolution];
-      //     z = kdeResult.z._buffer[adj[2]] * heightMultiplier;
-      //     let c = [x, y, z];
-      //     x = kdeResult.x[Math.floor(adj[3] / resolution)];
-      //     y = kdeResult.y[adj[3] % resolution];
-      //     z = kdeResult.z._buffer[adj[3]] * heightMultiplier;
-      //     let d = [x, y, z];
-      //     let v1 = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
-      //     let v2 = [d[0] - c[0], d[1] - c[1], d[2] - c[2]];
-      //     return crossProduct3DandNorm(v2, v1);
-      //   }
-      // });
-      // console.log(normal);
+    //   const crossProduct3DandNorm = (a, b) => {
+    //     let ret = [
+    //       a[1] * b[2] - a[2] * b[1],
+    //       a[2] * b[0] - a[0] * b[2],
+    //       a[0] * b[1] - a[1] * b[0],
+    //     ];
+    //     return ret.map(
+    //       (d) => d / Math.sqrt(ret.reduce((acc, curr) => acc + curr ** 2, 0))
+    //     );
+    //   };
+    //   // let normal = Array.from(kdeResult.z._buffer).map((d, i) => {
+    //   //   let adj = getAdjacentIndices(i);
+    //   //   if (adj.length < 4) {
+    //   //     return [0, 0, 0];
+    //   //   } else {
+    //   //     let x = kdeResult.x[Math.floor(adj[0] / resolution)];
+    //   //     let y = kdeResult.y[adj[0] % resolution];
+    //   //     let z = kdeResult.z._buffer[adj[0]] * heightMultiplier;
+    //   //     let a = [x, y, z];
+    //   //     x = kdeResult.x[Math.floor(adj[1] / resolution)];
+    //   //     y = kdeResult.y[adj[1] % resolution];
+    //   //     z = kdeResult.z._buffer[adj[1]] * heightMultiplier;
+    //   //     let b = [x, y, z];
+    //   //     x = kdeResult.x[Math.floor(adj[2] / resolution)];
+    //   //     y = kdeResult.y[adj[2] % resolution];
+    //   //     z = kdeResult.z._buffer[adj[2]] * heightMultiplier;
+    //   //     let c = [x, y, z];
+    //   //     x = kdeResult.x[Math.floor(adj[3] / resolution)];
+    //   //     y = kdeResult.y[adj[3] % resolution];
+    //   //     z = kdeResult.z._buffer[adj[3]] * heightMultiplier;
+    //   //     let d = [x, y, z];
+    //   //     let v1 = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
+    //   //     let v2 = [d[0] - c[0], d[1] - c[1], d[2] - c[2]];
+    //   //     return crossProduct3DandNorm(v2, v1);
+    //   //   }
+    //   // });
+    //   // console.log(normal);
 
-      // Print the sum
-      // let maxValue = Math.max(...kdeResult.z._buffer);
-      // console.log(kdeResult);
+    //   // Print the sum
+    //   // let maxValue = Math.max(...kdeResult.z._buffer);
+    //   // console.log(kdeResult);
 
-      ret = [
-        ...ret,
-        new PlotLayer({
-          id: "surface-layer",
-          getPosition: (u, v) => {
-            return [
-              kdeResult.x[Math.round(u * (resolution - 1))],
-              kdeResult.y[Math.round(v * (resolution - 1))],
-              kdeResult.z._buffer[
-                Math.round(
-                  u * resolution * (resolution - 1) + v * (resolution - 1)
-                )
-              ] * heightMultiplier,
-            ];
-          },
-          // getNormal: (u, v) => {
-          //   return normal[
-          //     parseInt(u * resolution * (resolution - 1) + v * (resolution - 1))
-          //   ];
-          // },
-          // getColor: (x, z, y) => [40, interpolateGreens(z/15), 160, (z / 15) * 255],
-          getColor: (x, y, z) => {
-            let t = interpolateGreens(
-              scaleLinear().domain([0, 25]).range([0, 1])(z)
-            )
-              .replace(/[^\d,]/g, "")
-              .split(",")
-              .map((d) => Number(d));
-            t.push((z / 4) * 255);
-            return t;
-          },
-          uCount: resolution,
-          vCount: resolution,
-          drawAxes: false,
-          axesPadding: 0.25,
-          axesColor: [0, 0, 0, 128],
-          pickable: true,
-          updateTriggers: {
-            getPosition: curBMUData,
-          },
-        }),
-      ];
-    } else {
-      let kdeResult1 = kde2d(
-        curBMUData[0].map((d) => d.coords[0]),
-        curBMUData[0].map((d) => d.coords[1]),
-        {
-          n: resolution,
-          h: [1, 1],
-          xMin: this.extent[0][0] * 1.2,
-          xMax: this.extent[0][1] * 1.2,
-          yMin: this.extent[1][0] * 1.2,
-          yMax: this.extent[1][1] * 1.2,
-        }
-      );
-      let kdeResult2 = kde2d(
-        curBMUData[1].map((d) => d.coords[0]),
-        curBMUData[1].map((d) => d.coords[1]),
-        {
-          n: resolution,
-          h: [1, 1],
-          xMin: this.extent[0][0] * 1.2,
-          xMax: this.extent[0][1] * 1.2,
-          yMin: this.extent[1][0] * 1.2,
-          yMax: this.extent[1][1] * 1.2,
-        }
-      );
+    //   ret = [
+    //     ...ret,
+    //     new PlotLayer({
+    //       id: "surface-layer",
+    //       getPosition: (u, v) => {
+    //         return [
+    //           kdeResult.x[Math.round(u * (resolution - 1))],
+    //           kdeResult.y[Math.round(v * (resolution - 1))],
+    //           kdeResult.z._buffer[
+    //             Math.round(
+    //               u * resolution * (resolution - 1) + v * (resolution - 1)
+    //             )
+    //           ] * heightMultiplier,
+    //         ];
+    //       },
+    //       // getNormal: (u, v) => {
+    //       //   return normal[
+    //       //     parseInt(u * resolution * (resolution - 1) + v * (resolution - 1))
+    //       //   ];
+    //       // },
+    //       // getColor: (x, z, y) => [40, interpolateGreens(z/15), 160, (z / 15) * 255],
+    //       getColor: (x, y, z) => {
+    //         let t = interpolateGreens(
+    //           scaleLinear().domain([0, 25]).range([0, 1])(z)
+    //         )
+    //           .replace(/[^\d,]/g, "")
+    //           .split(",")
+    //           .map((d) => Number(d));
+    //         t.push((z / 4) * 255);
+    //         return t;
+    //       },
+    //       uCount: resolution,
+    //       vCount: resolution,
+    //       drawAxes: false,
+    //       axesPadding: 0.25,
+    //       axesColor: [0, 0, 0, 128],
+    //       pickable: true,
+    //       updateTriggers: {
+    //         getPosition: curBMUData,
+    //       },
+    //     }),
+    //   ];
+    // } else {
+    //   let kdeResult1 = kde2d(
+    //     curBMUData[0].map((d) => d.coords[0]),
+    //     curBMUData[0].map((d) => d.coords[1]),
+    //     {
+    //       n: resolution,
+    //       h: [1, 1],
+    //       xMin: this.extent[0][0] * 1.2,
+    //       xMax: this.extent[0][1] * 1.2,
+    //       yMin: this.extent[1][0] * 1.2,
+    //       yMax: this.extent[1][1] * 1.2,
+    //     }
+    //   );
+    //   let kdeResult2 = kde2d(
+    //     curBMUData[1].map((d) => d.coords[0]),
+    //     curBMUData[1].map((d) => d.coords[1]),
+    //     {
+    //       n: resolution,
+    //       h: [1, 1],
+    //       xMin: this.extent[0][0] * 1.2,
+    //       xMax: this.extent[0][1] * 1.2,
+    //       yMin: this.extent[1][0] * 1.2,
+    //       yMax: this.extent[1][1] * 1.2,
+    //     }
+    //   );
 
-      ret = [
-        ...ret,
-        new PlotLayer({
-          id: "surface-layer-1",
-          getPosition: (u, v) => {
-            return [
-              kdeResult1.x[Math.round(u * (resolution - 1))],
-              kdeResult1.y[Math.round(v * (resolution - 1))],
-              kdeResult1.z._buffer[
-                Math.round(
-                  u * resolution * (resolution - 1) + v * (resolution - 1)
-                )
-              ] * heightMultiplier,
-            ];
-          },
-          // getColor: (x, z, y) => [40, interpolateGreens(z/15), 160, (z / 15) * 255],
-          getColor: (x, y, z) => {
-            let t = interpolateRgb(
-              "white",
-              "#1b9e77"
-            )(scaleLinear().domain([0, 25]).range([0, 1])(z))
-              .replace(/[^\d,]/g, "")
-              .split(",")
-              .map((d) => Number(d));
-            t.push((z / 8) * 255);
-            return t;
-          },
-          uCount: resolution,
-          vCount: resolution,
-          drawAxes: false,
-          axesPadding: 0.25,
-          axesColor: [0, 0, 0, 128],
-          pickable: true,
-          updateTriggers: {
-            getPosition: curBMUData,
-          },
-          parameters: { depthTest: false },
-        }),
-        new PlotLayer({
-          id: "surface-layer-2",
-          getPosition: (u, v) => {
-            return [
-              kdeResult2.x[Math.round(u * (resolution - 1))],
-              kdeResult2.y[Math.round(v * (resolution - 1))],
-              kdeResult2.z._buffer[
-                Math.round(
-                  u * resolution * (resolution - 1) + v * (resolution - 1)
-                )
-              ] * heightMultiplier,
-            ];
-          },
-          // getColor: (x, z, y) => [40, interpolateGreens(z/15), 160, (z / 15) * 255],
-          getColor: (x, y, z) => {
-            let t = interpolateRgb(
-              "white",
-              "#d95f02"
-            )(scaleLinear().domain([0, 25]).range([0, 1])(z))
-              .replace(/[^\d,]/g, "")
-              .split(",")
-              .map((d) => Number(d));
-            t.push((z / 8) * 255);
-            // t.push(255);
-            return t;
-          },
-          uCount: resolution,
-          vCount: resolution,
-          drawAxes: false,
-          axesPadding: 0.25,
-          axesColor: [0, 0, 0, 128],
-          pickable: true,
-          updateTriggers: {
-            getPosition: curBMUData,
-          },
-          parameters: { depthTest: false },
-        }),
-      ];
-    }
+    //   ret = [
+    //     ...ret,
+    //     new PlotLayer({
+    //       id: "surface-layer-1",
+    //       getPosition: (u, v) => {
+    //         return [
+    //           kdeResult1.x[Math.round(u * (resolution - 1))],
+    //           kdeResult1.y[Math.round(v * (resolution - 1))],
+    //           kdeResult1.z._buffer[
+    //             Math.round(
+    //               u * resolution * (resolution - 1) + v * (resolution - 1)
+    //             )
+    //           ] * heightMultiplier,
+    //         ];
+    //       },
+    //       // getColor: (x, z, y) => [40, interpolateGreens(z/15), 160, (z / 15) * 255],
+    //       getColor: (x, y, z) => {
+    //         let t = interpolateRgb(
+    //           "white",
+    //           "#1b9e77"
+    //         )(scaleLinear().domain([0, 25]).range([0, 1])(z))
+    //           .replace(/[^\d,]/g, "")
+    //           .split(",")
+    //           .map((d) => Number(d));
+    //         t.push((z / 8) * 255);
+    //         return t;
+    //       },
+    //       uCount: resolution,
+    //       vCount: resolution,
+    //       drawAxes: false,
+    //       axesPadding: 0.25,
+    //       axesColor: [0, 0, 0, 128],
+    //       pickable: true,
+    //       updateTriggers: {
+    //         getPosition: curBMUData,
+    //       },
+    //       parameters: { depthTest: false },
+    //     }),
+    //     new PlotLayer({
+    //       id: "surface-layer-2",
+    //       getPosition: (u, v) => {
+    //         return [
+    //           kdeResult2.x[Math.round(u * (resolution - 1))],
+    //           kdeResult2.y[Math.round(v * (resolution - 1))],
+    //           kdeResult2.z._buffer[
+    //             Math.round(
+    //               u * resolution * (resolution - 1) + v * (resolution - 1)
+    //             )
+    //           ] * heightMultiplier,
+    //         ];
+    //       },
+    //       // getColor: (x, z, y) => [40, interpolateGreens(z/15), 160, (z / 15) * 255],
+    //       getColor: (x, y, z) => {
+    //         let t = interpolateRgb(
+    //           "white",
+    //           "#d95f02"
+    //         )(scaleLinear().domain([0, 25]).range([0, 1])(z))
+    //           .replace(/[^\d,]/g, "")
+    //           .split(",")
+    //           .map((d) => Number(d));
+    //         t.push((z / 8) * 255);
+    //         // t.push(255);
+    //         return t;
+    //       },
+    //       uCount: resolution,
+    //       vCount: resolution,
+    //       drawAxes: false,
+    //       axesPadding: 0.25,
+    //       axesColor: [0, 0, 0, 128],
+    //       pickable: true,
+    //       updateTriggers: {
+    //         getPosition: curBMUData,
+    //       },
+    //       parameters: { depthTest: false },
+    //     }),
+    //   ];
+    // }
     let heatmap = new HeatmapLayer({
       id: `curve-heatmap`,
       data: curBMUData.map((d) => {

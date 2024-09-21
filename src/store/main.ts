@@ -15,7 +15,7 @@ export const useStore = defineStore("main", {
     };
   },
   getters: {
-    getFiles() {
+    getFiles(): [EnsembleMember[], EnsembleMember[]] {
       return this.files;
     },
     getMonthsSelected() {

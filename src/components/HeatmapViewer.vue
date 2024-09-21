@@ -32,18 +32,7 @@ import { useStore } from "@/store/main";
 import API from "@/api/api";
 import * as d3 from "d3";
 
-import {
-  // ssp370Labels,
-  sspAllLabels,
-  historicalLabels,
-  scalePointsToSquare,
-  getModelType,
-  stripSOMprefix,
-  getNodeOrder,
-  getChildren,
-  months,
-  colorSim,
-} from "./utils/utils";
+import { sspAllLabels } from "./utils/utils";
 
 // const DEFAULT_ALL_CLUSTER = { label: "All", value: "All" };
 const store = useStore();
@@ -126,7 +115,7 @@ async function draw(month) {
     "distance_matrix",
     true,
     {
-      files: sspAllLabels,
+      members: sspAllLabels,
       subsetType: store.getSubsetType,
       // months: store.getMonthsSelected,
       months: [month],
@@ -220,13 +209,13 @@ function makeHeatmap({ distances, month }) {
     .attr("id", "heatmap");
 
   const labelsReordered = store.clusterOrders[month - 1].map((i) =>
-    i < 0 ? `DUMMY${i}` : sspAllLabels[i]
+    i < 0 ? { model_name: "DUMMY", ssp: "DUMMY" } : sspAllLabels[i]
   );
 
   const bracketIndices = [
     -1,
     ...labelsReordered
-      .map((d, i) => (d.startsWith("DUMMY") ? i : null))
+      .map((d, i) => (d.model_name == "DUMMY" ? i : null))
       .filter((d) => d !== null),
   ];
   console.log("DEBUG bracketIndices", bracketIndices);
@@ -256,13 +245,14 @@ function makeHeatmap({ distances, month }) {
     .call(d3.axisBottom(x).tickSize(0));
   xAxis
     .selectAll(".tick text") // Select all text elements under elements with class 'tick'
-    .text((d) => (d.startsWith("DUMMY") ? "" : getModelType(d)))
+    .text((d) => (d.model_name == "DUMMY" ? "" : `${d.model_name}:${d.ssp}`))
     .style("fill", (d) => {
-      return stripSOMprefix(d).includes("historical")
-        ? "midnightblue"
-        : "firebrick";
+      return d.ssp == "historical" ? "midnightblue" : "firebrick";
+      // return stripSOMprefix(d).includes("historical")
+      //   ? "midnightblue"
+      //   : "firebrick";
     })
-    .attr("id", (d) => "label_x" + getModelType(d))
+    .attr("id", (d) => "label_x" + `${d.model_name}:${d.ssp}`)
     .attr("transform", "rotate(-45)") // Rotate each text element by -45 degrees
     .style("text-anchor", "end") // Align the text to the end of the text element (right side when not rotated)
     .style("font-size", "small");
@@ -283,21 +273,22 @@ function makeHeatmap({ distances, month }) {
   yAxis
     .selectAll(".tick text") // Select all tick elements
     .style("fill", (d) => {
-      return stripSOMprefix(d).includes("historical")
-        ? "midnightblue"
-        : "firebrick";
+      return d.ssp == "historical" ? "midnightblue" : "firebrick";
+      // return stripSOMprefix(d).includes("historical")
+      //   ? "midnightblue"
+      //   : "firebrick";
     })
     // change text
-    .text((d) => (d.startsWith("DUMMY") ? "" : getModelType(d)))
-    .attr("id", (d) => "label_y" + getModelType(d))
+    .text((d) => (d.model_name == "DUMMY" ? "" : `${d.model_name}:${d.ssp}`))
+    .attr("id", (d) => "label_y" + `${d.model_name}:${d.ssp}`)
     .style("font-size", "small")
     .on("mouseover", (event, d) => {
       // d.isClicked = false;
-      highlightOneOnHover(true, "class0", event, getModelType(d));
+      highlightOneOnHover(true, "class0", event, `${d.model_name}:${d.ssp}`);
     })
     .on("mouseleave", (event, d) => {
       // if (d.isClicked) return;
-      highlightOneOnHover(false, "class0", event, getModelType(d));
+      highlightOneOnHover(false, "class0", event, `${d.model_name}:${d.ssp}`);
     });
   yAxis.select(".domain").remove();
 

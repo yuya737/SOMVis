@@ -21,7 +21,7 @@
       style="display: none"
     />
     <div
-      class="absolute bottom-0 z-[4] flex h-32 w-full flex-col items-center justify-around px-32"
+      class="absolute bottom-0 z-[4] flex w-fit flex-col items-center justify-around p-4"
     >
       <!-- <div
         id="message"
@@ -91,7 +91,12 @@
         @change="drawAllLayers"
       /> -->
     </div>
-    <img :src="imgSrc" v-if="imgSrc != ''" />
+    <NodeInspector
+      class="absolute top-0 left-0 z-[2]"
+      :img-src="imgSrc"
+      @close-node-inspector="imgSrc = ''"
+      v-if="imgSrc != ''"
+    />
   </div>
 </template>
 
@@ -106,6 +111,7 @@ import API from "@/api/api";
 import { LayersList } from "@deck.gl/core";
 import { AxisLayer } from "./utils/AxisLayer";
 import { useStore } from "@/store/main";
+import NodeInspector from "./ui/NodeInspector.vue";
 import InfoPanel from "./ui/TheInfoPanel.vue";
 import InfoPanelSettings from "@/store/InfoPanelSettingsProj.json";
 
@@ -122,8 +128,7 @@ import {
   DECKGL_SETTINGS,
   historicalLabels,
   historicalLabelsSfbay,
-  ssp370Labels,
-  ssp585Labels,
+  sspAllLabels,
   approx,
   getModelType,
   generateMonthRangeList,
@@ -139,7 +144,7 @@ const props = defineProps({
 
 // let labels = props.isHistorical ? historical_labels : ssp585_labels;
 // let labels = props.isHistorical ? historicalLabels : ssp370Labels;
-let labels = ssp370Labels;
+let labels = sspAllLabels;
 // let labels = props.isHistorical ? historical_labels_sfbay : ssp370_labels;
 // InfoPanelSettings[0].options[0].values = [
 //   "All",
@@ -157,6 +162,10 @@ let deck: any = null;
 const deckglCanvas = `deck-canvas-projection-viewer-${Math.random()}`;
 
 const imgSrc = ref("");
+watch(imgSrc, (newVal) => {
+  console.log("imgSrc changed", newVal);
+  drawAllLayers();
+});
 const message = ref("");
 const timeRange = ref([0, props.isHistorical ? 64 : 85]);
 const monthTemp1 = ref("October");
@@ -232,7 +241,8 @@ async function initializeLayers() {
   // Get all the data
   let mappingData = await API.fetchData(
     // "mapping/CMIP6_pr_historical_S3L0.02_umap",
-    "mapping/CMIP6_pr_delta_historical_S5L0.02_30x30_umap",
+    // "mapping/CMIP6_pr_delta_historical_S5L0.02_30x30_umap",
+    "mapping/CMIP6_pr_delta_historical_S5.00L0.02_30x30_umap",
     // "mapping/CMIP6_pr_historical_sfbay_S3L0.1_20x20_umap",
     // "mapping/CMIP6_taxmax_historical_S3L0.1_umap",
     true,
@@ -251,19 +261,20 @@ async function initializeLayers() {
   let pathData = {};
   const pathPromises = labels.map(async (d, i) => {
     let data = await API.fetchData("path", true, {
-      file: d,
-      umap: true,
+      model_type: d.model_name,
+      data_type: d.ssp,
+      // umap: true,
     });
-    // id can the month of water_year_mean
-    pathData[d] = Object.entries(data).map(([key, value]) => {
-      return {
-        id: key,
-        coords: value.map((d) => [
-          mappingData[d.id].coords[0],
-          -mappingData[d.id].coords[1],
-        ]),
-      };
-    });
+    pathData[`${d.model_name}:${d.ssp}:${d.variant}`] = data.map(
+      (id, index) => {
+        return {
+          // id: key,
+          year: Math.floor(index / 12),
+          month: (index % 12) + 1,
+          coords: [mappingData[id].coords[0], -mappingData[id].coords[1]],
+        };
+      }
+    );
   });
 
   await Promise.all(pathPromises);

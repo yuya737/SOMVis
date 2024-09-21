@@ -5,7 +5,6 @@
     </SplitterPanel>
 
     <SplitterPanel class="h-full w-full" :size="60">
-      <!-- <ProjectionViewer class="h-full" /> -->
       <Splitter
         class="h-full w-full"
         layout="horizontal"
@@ -17,7 +16,7 @@
           <!-- <ForceGraph class="h-full" /> -->
         </SplitterPanel>
         <SplitterPanel style="height: 100%" :size="40">
-          <HeatmapViewer class="h-full" />
+          <!-- <HeatmapViewer class="h-full" /> -->
         </SplitterPanel>
       </Splitter>
     </SplitterPanel>

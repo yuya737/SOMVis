@@ -123,8 +123,8 @@ watch(selectedModel, (value) => {
     .filter(function () {
       return (
         d3.select(this).datum() &&
-        fileNames[d3.select(this).datum()["index"]] &&
-        fileNames[d3.select(this).datum()["index"]].includes(value.name + "_")
+        members[d3.select(this).datum()["index"]] &&
+        members[d3.select(this).datum()["index"]].includes(value.name + "_")
       );
     })
     .classed("not-selected", false)
@@ -159,8 +159,8 @@ watch(selectedType, (value) => {
     .filter(function () {
       return (
         d3.select(this).datum() &&
-        fileNames[d3.select(this).datum()["index"]] &&
-        fileNames[d3.select(this).datum()["index"]].includes(value.name + "_r")
+        members[d3.select(this).datum()["index"]] &&
+        members[d3.select(this).datum()["index"]].includes(value.name + "_r")
       );
     })
     .classed("not-selected", false)
@@ -216,24 +216,11 @@ const colors = [
   "#4e79a7",
   "#d3d3d3",
 ];
-const fileNames = sspAllLabels;
+const members = sspAllLabels;
 const models = ref(
-  Array.from(new Set(fileNames.map((fileName) => fileName.split("_")[6]))).map(
-    (name) => {
-      return {
-        name,
-        // code: fileNames.find((fileName) => fileName.includes(name)),
-      };
-    }
-  )
+  Array.from(new Set(members.map((member) => member.model_name)))
 );
-const types = ref(
-  ["historical", "ssp245", "ssp370", "ssp585"].map((name) => {
-    return {
-      name,
-    };
-  })
-);
+const types = ref(Array.from(new Set(members.map((member) => member.ssp))));
 
 const data = reactive([]); // data[i] is the clustering for month i
 const dataT = reactive([]); // dataT[i] is the clustering for ensemble i
@@ -261,27 +248,30 @@ async function calculateClusterBoxes({
 
   const data = await Promise.all(
     Object.entries(monthlyCounts).map(async ([key, value]) => {
-      const prefix = "CMIP6_pr_delta_historical_S5L0.02_30x30_";
+      // const prefix = "CMIP6_pr_delta_historical_S5L0.02_30x30_";
       const memberFileNames = monthlyClustering
         .map((cluster, index) => {
           return cluster === parseInt(key) ? index : -1;
         })
         .filter((d) => d !== -1)
-        .map((d) => fileNames[d]) // remove prefix
-        .map((d) => d.slice(prefix.length));
+        .map((d) => members[d]);
+      //   .map((d) => members[d]) // remove prefix
+      //   .map((d) => d.slice(prefix.length));
 
       const { means } = await API.fetchData("get_all_means", true, {
-        files: memberFileNames,
+        members: memberFileNames,
         months: [month],
         years: [-1],
       });
-      console.log("DEBUG: MEANS ", means, memberFileNames);
+      // console.log("DEBUG: MEANS ", means, memberFileNames);
 
       return {
         month: month,
         cluster: parseInt(key),
         numElements: value,
-        memberNames: memberFileNames,
+        memberNames: sspAllLabels.map(
+          (member) => `${member.model_name}:${member.ssp}:${member.variant}`
+        ),
         clusterMean: means,
 
         members: monthlyClustering
@@ -848,18 +838,26 @@ async function drawTimeline() {
       })
       .on("click", (event, d) => {
         console.log("DEBUG: CLICK ", d);
-        selectedTimelineCluster.value = d.members.map((member) => {
+        let selected = d.members.map((member) => {
           return {
-            model_name: fileNames[member].split("_")[6],
-            ssp: fileNames[member].split("_")[7],
-            variant: fileNames[member].split("_")[8],
+            model_name: members[member].model_name,
+            ssp: members[member].ssp,
+            variant: members[member].variant,
           };
         });
+        selectedTimelineCluster.value = selected;
+        // selectedTimelineCluster.value = d.members.map((member) => {
+        //   return {
+        //     model_name: members[member].model_name,
+        //     ssp: members[member].ssp,
+        //     variant: members[member].variant,
+        //   };
+        // });
         // tooltipData.value = `Cluster: ${d.cluster}, Num Elements: ${d.numElements}`;
 
         showTooltip.value = true;
         store.monthsSelected = [d.month];
-        store.setFiles({ group1: d.memberNames, group2: [] });
+        store.setFiles({ group1: selected, group2: [] });
         console.log(
           "DEBUG: CLUSTER CLICK ",
           d.cluster,
@@ -876,32 +874,34 @@ async function drawTimeline() {
     .attr("fill", "none")
     .attr("id", (d) => `clusterPath${d.index}`)
     .attr("stroke", (d) => {
-      if (fileNames[d.index].includes("historical_r")) {
+      if (members[d.index].ssp == "historical") {
         return "steelblue";
       }
-      if (fileNames[d.index].includes("ssp245_r")) {
+      if (members[d.index].ssp == "ssp245") {
         return "darkkhaki";
       }
-      if (fileNames[d.index].includes("ssp370_r")) {
+      if (members[d.index].ssp == "ssp370") {
         return "crimson";
       }
-      if (fileNames[d.index].includes("ssp585_r")) {
+      if (members[d.index].ssp == "ssp585") {
         return "forestgreen";
       }
     })
     .attr("stroke-dasharray", (d) =>
-      fileNames[d.index].includes("historical_r") ? "10,10" : "0"
+      // members[d.index].includes("historical_r") ? "10,10" : "0"
+      members[d.index].ssp == "historical" ? "10,10" : "0"
     )
     .attr("stroke-width", (d) => {
-      if (fileNames[d.index].includes("historical_r")) {
-        return 1;
-      }
-      if (fileNames[d.index].includes("ssp370_r")) {
-        return 1;
-      }
-      if (fileNames[d.index].includes("ssp585_r")) {
-        return 1;
-      }
+      return 1;
+      // if (members[d.index].includes("historical_r")) {
+      //   return 1;
+      // }
+      // if (members[d.index].includes("ssp370_r")) {
+      //   return 1;
+      // }
+      // if (members[d.index].includes("ssp585_r")) {
+      //   return 1;
+      // }
     })
     .attr("stroke-opacity", 1)
     .attr("transform", `translate(${xScale.bandwidth() / 2}, ${0})`)
@@ -913,8 +913,8 @@ async function drawTimeline() {
       d3.select(this).attr("stroke-width", 1);
     })
     .on("click", function (event, d) {
-      tooltipData.value = `${fileNames[d.index].split("_")[7]} ${
-        fileNames[d.index].split("_")[6]
+      tooltipData.value = `${members[d.index].split("_")[7]} ${
+        members[d.index].split("_")[6]
       }`;
       showTooltipText.value = true;
       console.log("DEBUG: Tooltip ", tooltipData.value);
@@ -980,7 +980,7 @@ async function drawTimeline() {
 
   const rectLegendGroup = svg
     .append("g")
-    .attr("transform", `translate(${WIDTH - MARGIN * 2 - 400}, 50)`);
+    .attr("transform", `translate(${WIDTH - MARGIN * 2 - 500}, 50)`);
 
   rectLegendGroup
     .append("text")
@@ -1006,15 +1006,16 @@ async function drawTimeline() {
   rectLegendItems
     .append("text")
     .attr("x", 30)
-    .attr("y", (d, i) => i * 20 + 30)
-    .text((d) => d.name)
-    .attr("alignment-baseline", "before-edge");
+    .attr("y", (d, i) => i * 20 + 30 + 15)
+    .text((d) => d.name);
+  // .attr("alignment-baseline", "before-edge");
 }
 async function getData() {
   for (let month = 1; month <= 12; month += 1) {
     // for (let month = 1; month < 2; month += 1) {
+    console.log("DEBUG MEMBERS: ", sspAllLabels);
     const { distances } = await API.fetchData("distance_matrix", true, {
-      files: sspAllLabels,
+      members: sspAllLabels,
       subsetType: "month",
       months: [month],
       years: [-1],

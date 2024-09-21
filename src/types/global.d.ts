@@ -11,7 +11,7 @@ declare type SOMPath = { id: number }[];
 // id is month here
 declare type BMUMata = {
   name: string;
-  id: string;
+  month: number;
   year: number;
   coords: number[];
 };
