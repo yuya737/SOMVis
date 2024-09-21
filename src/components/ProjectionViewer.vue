@@ -239,12 +239,9 @@ onMounted(() => {
 
 async function initializeLayers() {
   // Get all the data
-  let mappingData = await API.fetchData(
-    // "mapping/CMIP6_pr_historical_S3L0.02_umap",
-    // "mapping/CMIP6_pr_delta_historical_S5L0.02_30x30_umap",
-    "mapping/CMIP6_pr_delta_historical_S5.00L0.02_30x30_umap",
-    // "mapping/CMIP6_pr_historical_sfbay_S3L0.1_20x20_umap",
-    // "mapping/CMIP6_taxmax_historical_S3L0.1_umap",
+  let mappingData: SOMNode[] = await API.fetchData(
+    // "mapping/CMIP6_pr_delta_historical_S5.00L0.02_30x30_umap",
+    "mapping/CMIP6_pr_delta_historicalNW_S5.00L0.02_30x30_umap",
     true,
     null
   );
@@ -258,9 +255,9 @@ async function initializeLayers() {
 
   let classifyData = await API.fetchData("node_means", true, null);
 
-  let pathData = {};
+  let pathData = {} as Record<string, BMUData[]>;
   const pathPromises = labels.map(async (d, i) => {
-    let data = await API.fetchData("path", true, {
+    let data: SOMPath = await API.fetchData("path", true, {
       model_type: d.model_name,
       data_type: d.ssp,
       // umap: true,
@@ -269,6 +266,7 @@ async function initializeLayers() {
       (id, index) => {
         return {
           // id: key,
+          name: d.model_name,
           year: Math.floor(index / 12),
           month: (index % 12) + 1,
           coords: [mappingData[id].coords[0], -mappingData[id].coords[1]],

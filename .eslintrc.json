@@ -27,7 +27,7 @@
   "settings": {},
   "overrides": [
     {
-        "files": ["*.ts"],
+        "files": ["*.vue"],
         "rules": {
             "no-undef": "off"
         }

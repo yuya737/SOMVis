@@ -2,7 +2,7 @@
   <div class="card w-fit">
     <Button
       @click="$emit('closeCard')"
-      class="absolute m-2 p-3 z-[1] top-0 right-0 bg-red-200 aspect-square"
+      class="absolute m-2 p-3 z-[2] top-0 right-0 bg-slate-200 aspect-square"
       >X</Button
     >
     <DataTable

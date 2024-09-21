@@ -3,7 +3,7 @@
     <img class="flip-y" :src="imgSrc" />
     <Button
       @click="$emit('closeNodeInspector')"
-      class="absolute z-[1] m-2 p-2 top-0 right-0 bg-red-200 aspect-square"
+      class="absolute z-[1] m-2 p-2 top-0 right-0 bg-slate-200 aspect-square"
       >X</Button
     >
     <h1 class="text-lg font-bold text-black">SOM Node Viewer</h1>

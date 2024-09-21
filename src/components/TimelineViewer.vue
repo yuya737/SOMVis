@@ -218,9 +218,18 @@ const colors = [
 ];
 const members = sspAllLabels;
 const models = ref(
-  Array.from(new Set(members.map((member) => member.model_name)))
+  Array.from(new Set(members.map((member) => member.model_name))).map(
+    (model) => {
+      return { name: model };
+    }
+  )
 );
-const types = ref(Array.from(new Set(members.map((member) => member.ssp))));
+const types = ref(
+  Array.from(new Set(members.map((member) => member.ssp))).map((type) => {
+    return { name: type };
+  })
+);
+console.log("DEBUG: MODELS ", members, models);
 
 const data = reactive([]); // data[i] is the clustering for month i
 const dataT = reactive([]); // dataT[i] is the clustering for ensemble i
