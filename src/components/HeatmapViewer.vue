@@ -32,7 +32,7 @@ import { useStore } from "@/store/main";
 import API from "@/api/api";
 import * as d3 from "d3";
 
-import { sspAllLabels } from "./utils/utils";
+import { sspAllLabels, dataset_name } from "./utils/utils";
 
 // const DEFAULT_ALL_CLUSTER = { label: "All", value: "All" };
 const store = useStore();
@@ -116,6 +116,7 @@ async function draw(month) {
     true,
     {
       members: sspAllLabels,
+      dataset_type: dataset_name,
       subsetType: store.getSubsetType,
       // months: store.getMonthsSelected,
       months: [month],

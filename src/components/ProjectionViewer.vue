@@ -103,6 +103,7 @@
 <script setup lang="ts">
 import { onMounted, ref, watch, computed, nextTick } from "vue";
 import { storeToRefs } from "pinia";
+import { dataset_name } from "./utils/utils";
 
 import { Deck } from "@deck.gl/core";
 
@@ -246,14 +247,16 @@ async function initializeLayers() {
     null
   );
   mappingData = mappingData.map((d, i) => {
-    return { ...d, coords: d.coords.map((c) => c * 2) };
+    return { ...d, coords: d.coords.map((c) => c * 1) };
   });
   let xMin = Math.min(...mappingData.map((d) => d.coords[0]));
   let xMax = Math.max(...mappingData.map((d) => d.coords[0]));
   let yMin = Math.min(...mappingData.map((d) => d.coords[1]));
   let yMax = Math.max(...mappingData.map((d) => d.coords[1]));
 
-  let classifyData = await API.fetchData("node_means", true, null);
+  let classifyData = await API.fetchData("node_means", true, {
+    dataset_type: dataset_name,
+  });
 
   let pathData = {} as Record<string, BMUData[]>;
   const pathPromises = labels.map(async (d, i) => {
@@ -277,6 +280,14 @@ async function initializeLayers() {
 
   await Promise.all(pathPromises);
 
+  let temp = await API.fetchData("get_smoothed_alpha", true, {
+    dataset_type: dataset_name,
+    members: sspAllLabels,
+    years: [-1],
+    months: [4],
+    kde_bounds: [xMin, xMax, yMin, yMax],
+  });
+
   let data = mappingData.map((d) => {
     return { ...d, value: classifyData[d.id].value };
   });
@@ -287,6 +298,7 @@ async function initializeLayers() {
   let nodeLayerGenerator = new NodeLayer(mappingData, imgSrc, 3, 30);
   let nodeclassifyLayerGenerator = new NodeClassifyLayer(
     mappingData,
+    temp,
     classifyData,
     contourData
   );

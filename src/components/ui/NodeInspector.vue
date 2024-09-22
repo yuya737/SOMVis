@@ -22,7 +22,5 @@ const props = defineProps<{
 <style scoped>
 .flip-y {
   transform: scaleY(-1);
-  width: 300px;
-  height: 400px;
 }
 </style>

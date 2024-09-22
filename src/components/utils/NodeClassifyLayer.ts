@@ -1,4 +1,4 @@
-import { PathLayer, TextLayer } from "@deck.gl/layers";
+import { PathLayer, ScatterplotLayer } from "@deck.gl/layers";
 // import type { LayersList } from "deck.gl/typed";
 import { colorPercentile, pointsToCurve } from "./utils";
 import { AbstractLayerGenerator } from "./AbstractLayerGenerator";
@@ -9,13 +9,15 @@ export class NodeClassifyLayer extends AbstractLayerGenerator {
   readonly contourData;
   readonly needsToRedraw: boolean = false;
 
+  polygon = null;
   layerList: any = null;
 
-  constructor(mappingData, classifyData, contourData) {
+  constructor(mappingData, polygon, classifyData, contourData) {
     super();
     this.mappingData = mappingData;
     this.classifyData = classifyData;
     this.contourData = contourData;
+    this.polygon = polygon;
   }
 
   getLayers() {
@@ -36,6 +38,12 @@ export class NodeClassifyLayer extends AbstractLayerGenerator {
         positionFormat: "XY",
         getWidth: 0.1,
         getColor: (d) => colorPercentile(d.percentile),
+      }),
+      new ScatterplotLayer({
+        id: "classify-layer-scatterplot",
+        data: this.polygon.flat(),
+        getPosition: (d) => [d[0], -d[1]],
+        getRadius: 0.1,
       }),
 
       // new PathLayer({

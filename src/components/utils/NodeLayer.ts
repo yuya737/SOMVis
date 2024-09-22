@@ -41,10 +41,14 @@ export class NodeLayer extends AbstractLayerGenerator {
           // pickable: true,
           bounds: [
             // 0, 0,
+            // this.mappingData[i].coords[0] - 0.4,
+            // -this.mappingData[i].coords[1] - 0.5,
+            // this.mappingData[i].coords[0] + 0.4,
+            // -this.mappingData[i].coords[1] + 0.5,
             this.mappingData[i].coords[0] - 0.4,
-            -this.mappingData[i].coords[1] - 0.5,
+            -this.mappingData[i].coords[1] - 0.2,
             this.mappingData[i].coords[0] + 0.4,
-            -this.mappingData[i].coords[1] + 0.5,
+            -this.mappingData[i].coords[1] + 0.2,
           ],
           index: i,
           loadOptions: {

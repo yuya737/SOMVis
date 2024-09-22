@@ -15,7 +15,8 @@ declare type BMUData = {
 
 // Represents an ensemble member in a climate model ensemble.
 declare type EnsembleMember = {
+  dataset_name: string; // Name of the dataset; 'California' or 'NorthWest'
   model_name: string; // Name of the climate model
-  variant: number; // Variant number of the model run
+  variant: string; // Variant number of the model run
   ssp: string; // Shared Socioeconomic Pathway (SSP) scenario, sspXXX or historical
 };

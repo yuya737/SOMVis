@@ -64,6 +64,7 @@ import { onMounted, ref, inject, reactive, watch, nextTick } from "vue";
 import Dropdown from "primevue/dropdown";
 import Button from "primevue/button";
 import TooltipView from "./TooltipView.vue";
+import { dataset_name } from "./utils/utils";
 
 import ToggleButton from "primevue/togglebutton";
 
@@ -124,7 +125,7 @@ watch(selectedModel, (value) => {
       return (
         d3.select(this).datum() &&
         members[d3.select(this).datum()["index"]] &&
-        members[d3.select(this).datum()["index"]].includes(value.name + "_")
+        members[d3.select(this).datum()["index"]].model_name == value.name
       );
     })
     .classed("not-selected", false)
@@ -160,7 +161,7 @@ watch(selectedType, (value) => {
       return (
         d3.select(this).datum() &&
         members[d3.select(this).datum()["index"]] &&
-        members[d3.select(this).datum()["index"]].includes(value.name + "_r")
+        members[d3.select(this).datum()["index"]].ssp == value.name
       );
     })
     .classed("not-selected", false)
@@ -268,6 +269,7 @@ async function calculateClusterBoxes({
       //   .map((d) => d.slice(prefix.length));
 
       const { means } = await API.fetchData("get_all_means", true, {
+        dataset_type: dataset_name,
         members: memberFileNames,
         months: [month],
         years: [-1],
@@ -1024,6 +1026,7 @@ async function getData() {
     // for (let month = 1; month < 2; month += 1) {
     console.log("DEBUG MEMBERS: ", sspAllLabels);
     const { distances } = await API.fetchData("distance_matrix", true, {
+      dataset_type: dataset_name,
       members: sspAllLabels,
       subsetType: "month",
       months: [month],
