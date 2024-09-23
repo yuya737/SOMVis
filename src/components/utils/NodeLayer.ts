@@ -57,7 +57,7 @@ export class NodeLayer extends AbstractLayerGenerator {
               // imageOrientation: "flipY",
             },
           },
-          pickable: true,
+          // pickable: true,
           onClick: (info, event) => {
             this.imgSrc.value = `http://localhost:5002/node_images/${info.layer.props.index}.png`;
             this.indexClicked = info.layer.props.index;

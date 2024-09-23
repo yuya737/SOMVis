@@ -4,22 +4,35 @@ import { colorPercentile, pointsToCurve } from "./utils";
 import { AbstractLayerGenerator } from "./AbstractLayerGenerator";
 import * as d3 from "d3";
 import { PolygonLayer } from "deck.gl/typed";
+import { watch } from "vue";
 
 export class NodeClassifyLayer extends AbstractLayerGenerator {
   readonly mappingData;
   readonly classifyData;
   readonly contourData;
-  readonly needsToRedraw: boolean = false;
 
   hotspotPolygons = null;
+  monthHovered = null;
   layerList: any = null;
 
-  constructor(mappingData, hotspotPolygons, classifyData, contourData) {
+  constructor(
+    mappingData,
+    hotspotPolygons,
+    classifyData,
+    contourData,
+    monthHovered
+  ) {
     super();
     this.mappingData = mappingData;
     this.classifyData = classifyData;
     this.contourData = contourData;
     this.hotspotPolygons = hotspotPolygons;
+    this.monthHovered = monthHovered;
+
+    watch(monthHovered, (value) => {
+      console.log("DEBUG: NodeClassifyLayer watch", value);
+      this.needsToRedraw = true;
+    });
   }
 
   getLayers() {
@@ -29,7 +42,6 @@ export class NodeClassifyLayer extends AbstractLayerGenerator {
     // let data = this.mapping_data.map((d) => {
     //     return { ...d, classify_data: this.classify_data[d.id].value };
     // });
-    let retd: SOMPath = null;
 
     let ret = [
       new PathLayer({
@@ -99,44 +111,143 @@ export class NodeClassifyLayer extends AbstractLayerGenerator {
       //     },
       // }),
     ];
+    if (this.monthHovered.value) {
+      let month = this.monthHovered.value;
+      console.log("DEBUG HOTSPOT POLYGONS MONTH CHANGED", month);
+      this.hotspotPolygons[month].forEach((polygon, index) => {
+        // debugger;
+        ret.push(
+          new ScatterplotLayer({
+            id: `hotspot-scatter-${month}-${index}`,
+            data: polygon,
+            // data: [this.hotspotPolygons[month]],
+            getPosition: (d) => [d[0], -d[1]],
+            getRadius: 0.1,
+            // getPolygon: (vertices) => {
+            //   let ret = vertices.map((p) => [p[0], -p[1]]);
+            //   console.log("DEBUG HOTSPOT POLYGONS", ret, vertices);
+            //   return ret;
+            // },
+            filled: true,
+            // stroked: true,
+            opacity: 0.2,
+            pickable: true,
+            // getFillColor: d3.interpolateRainbow(month - 1 / 11),
+            // getFillColor: d3
+            //   .interpolateRgbBasis(["purple", "green", "orange"])(
+            //     (month - 1) / 11
+            //   )
+            //   .replace(/[^\d,]/g, "")
+            //   .split(",")
+            //   .map((d) => Number(d)),
+            visible: false,
 
-    console.log("DEBUG HOTSPOT POLYGONS", this.hotspotPolygons);
-    Object.keys(this.hotspotPolygons).forEach((month) => {
-      console.log(
-        "DEBUG HOTSPOT POLYGONS",
-        d3.interpolateRgbBasis(["purple", "green", "orange"])((month - 1) / 11)
-      );
-      ret.push(
-        new PolygonLayer({
-          id: `hotspot-polygon-${month}`,
-          data: [this.hotspotPolygons[month]],
-          getPolygon: (d) => {
-            console.log(d);
-            let ret = d.map((singlePolygon) =>
-              singlePolygon.map((p) => [p[0], -p[1]])
-            );
-            // console.log(ret);
-            return ret;
-          },
-          filled: true,
-          stroked: true,
-          opacity: 0.2,
-          pickable: true,
-          // getFillColor: d3.interpolateRainbow(month - 1 / 11),
-          getFillColor: d3
-            .interpolateRgbBasis(["purple", "green", "orange"])(
-              (month - 1) / 11
-            )
-            .replace(/[^\d,]/g, "")
-            .split(",")
-            .map((d) => Number(d)),
+            onClick: (info, event) => {
+              console.log("Clicked:", month);
+            },
+          })
+        );
+        ret.push(
+          new PolygonLayer({
+            id: `hotspot-polygon-${month}-${index}`,
+            data: [polygon],
+            // data: [this.hotspotPolygons[month]],
+            getPolygon: (vertices) => {
+              let ret = vertices.map((p) => [p[0], -p[1]]);
+              // console.log("DEBUG HOTSPOT POLYGONS", ret, vertices);
+              return ret;
+            },
+            filled: true,
+            // stroked: true,
+            opacity: 0.2,
+            getLineWidth: 0.1,
+            pickable: true,
+            // getFillColor: d3.interpolateRainbow(month - 1 / 11),
+            getFillColor: d3
+              .interpolateRgbBasis(["purple", "green", "orange"])(
+                (month - 1) / 11
+              )
+              .replace(/[^\d,]/g, "")
+              .split(",")
+              .map((d) => Number(d)),
 
-          onClick: (info, event) => {
-            console.log("Clicked:", month);
-          },
-        })
-      );
-    });
+            onClick: (info, event) => {
+              console.log("Clicked:", month);
+            },
+          })
+        );
+      });
+    }
+
+    // Object.keys(this.hotspotPolygons).forEach((month) => {
+    //   console.log(
+    //     "DEBUG HOTSPOT POLYGONS",
+    //     d3.interpolateRgbBasis(["purple", "green", "orange"])((month - 1) / 11)
+    //   );
+    //   this.hotspotPolygons[month].forEach((polygon, index) => {
+    //     // debugger;
+    //     ret.push(
+    //       new ScatterplotLayer({
+    //         id: `hotspot-scatter-${month}-${index}`,
+    //         data: polygon,
+    //         // data: [this.hotspotPolygons[month]],
+    //         getPosition: (d) => [d[0], -d[1]],
+    //         getRadius: 0.1,
+    //         // getPolygon: (vertices) => {
+    //         //   let ret = vertices.map((p) => [p[0], -p[1]]);
+    //         //   console.log("DEBUG HOTSPOT POLYGONS", ret, vertices);
+    //         //   return ret;
+    //         // },
+    //         filled: true,
+    //         // stroked: true,
+    //         opacity: 0.2,
+    //         pickable: true,
+    //         // getFillColor: d3.interpolateRainbow(month - 1 / 11),
+    //         // getFillColor: d3
+    //         //   .interpolateRgbBasis(["purple", "green", "orange"])(
+    //         //     (month - 1) / 11
+    //         //   )
+    //         //   .replace(/[^\d,]/g, "")
+    //         //   .split(",")
+    //         //   .map((d) => Number(d)),
+    //         visible: false,
+
+    //         onClick: (info, event) => {
+    //           console.log("Clicked:", month);
+    //         },
+    //       })
+    //     );
+    //     ret.push(
+    //       new PolygonLayer({
+    //         id: `hotspot-polygon-${month}-${index}`,
+    //         data: [polygon],
+    //         // data: [this.hotspotPolygons[month]],
+    //         getPolygon: (vertices) => {
+    //           let ret = vertices.map((p) => [p[0], -p[1]]);
+    //           console.log("DEBUG HOTSPOT POLYGONS", ret, vertices);
+    //           return ret;
+    //         },
+    //         filled: true,
+    //         // stroked: true,
+    //         opacity: 0.2,
+    //         getLineWidth: 0.1,
+    //         pickable: true,
+    //         // getFillColor: d3.interpolateRainbow(month - 1 / 11),
+    //         getFillColor: d3
+    //           .interpolateRgbBasis(["purple", "green", "orange"])(
+    //             (month - 1) / 11
+    //           )
+    //           .replace(/[^\d,]/g, "")
+    //           .split(",")
+    //           .map((d) => Number(d)),
+
+    //         onClick: (info, event) => {
+    //           console.log("Clicked:", month);
+    //         },
+    //       })
+    //     );
+    //   });
+    // });
 
     this.layerList = ret;
     return ret;

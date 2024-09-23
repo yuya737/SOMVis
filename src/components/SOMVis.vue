@@ -12,11 +12,11 @@
       >
         <SplitterPanel class="h-full">
           <!-- <MapViewer class="h-full" /> -->
-          <!-- <TimelineViewer class="h-full" /> -->
+          <TimelineViewer class="h-full" />
           <!-- <ForceGraph class="h-full" /> -->
         </SplitterPanel>
         <SplitterPanel style="height: 100%" :size="40">
-          <!-- <HeatmapViewer class="h-full" /> -->
+          <HeatmapViewer class="h-full" />
         </SplitterPanel>
       </Splitter>
     </SplitterPanel>

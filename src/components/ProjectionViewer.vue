@@ -38,7 +38,7 @@
       /> -->
 
       <div
-        class="flex flex-row w-fit items-center justify-evenly bg-gray-200 p-2 rounded-lg text-center"
+        class="flex flex-row w-fit items-center justify-evenly p-2 rounded-lg text-center gap-4"
       >
         <!-- <span class="flex items-center font-bold px-5"> Start: </span> -->
         <!-- <Dropdown
@@ -78,6 +78,34 @@
           onLabel="Show Distribution"
           offLabel="Hide Distribution"
         />
+        <div class="flex flex-row items-center gap-4 text-center">
+          <div class="font-bold flex flex-row">
+            Hover on the months to see the patterns!
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-6 w-6"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M9 5l7 7-7 7"
+              />
+            </svg>
+          </div>
+          <Button
+            v-for="month in months"
+            :key="month"
+            class="bg-slate-200 p-2 hover:ring-2 hover:bg-slate-300"
+            :label="month"
+            @mouseover="handleMonthHoveredChanged(month, true)"
+            @mouseout="handleMonthHoveredChanged(month, false)"
+            outlined
+          />
+        </div>
         <!-- <Divider layout="vertical" /> -->
         <!-- <Button label="Apply" @click="yearMonthChanged" class="px-5" /> -->
       </div>
@@ -103,7 +131,6 @@
 <script setup lang="ts">
 import { onMounted, ref, watch, computed, nextTick } from "vue";
 import { storeToRefs } from "pinia";
-import { dataset_name } from "./utils/utils";
 
 import { Deck } from "@deck.gl/core";
 
@@ -122,6 +149,7 @@ import { SOMLayer } from "./utils/SOMLayer";
 import { NodeClassifyLayer } from "./utils/NodeClassifyLayer";
 import { NodeLayer } from "./utils/NodeLayer";
 import ToggleButton from "primevue/togglebutton";
+import Button from "primevue/button";
 
 import {
   orbitView,
@@ -135,6 +163,7 @@ import {
   generateMonthRangeList,
   months,
   subsetType,
+  dataset_name,
 } from "./utils/utils";
 
 // import { subsetType, SOMPath } from "@/types/types";
@@ -184,7 +213,11 @@ const timeMax = computed(() => {
 const selectedModel = ref([[], []]);
 const isHidingSurface = ref(false);
 const isWaterYearMean = ref(false);
-const text = ref(props.isHistorical ? "Historical" : "SSP370");
+const monthHovered = ref(null);
+watch(monthHovered, (newVal) => {
+  console.log("monthHovered changed", newVal);
+});
+// const text = ref(props.isHistorical ? "Historical" : "SSP370");
 
 onMounted(() => {
   deck = new Deck({
@@ -261,6 +294,7 @@ async function initializeLayers() {
   let pathData = {} as Record<string, BMUData[]>;
   const pathPromises = labels.map(async (d, i) => {
     let data: SOMPath = await API.fetchData("path", true, {
+      dataset_type: dataset_name,
       model_type: d.model_name,
       data_type: d.ssp,
       // umap: true,
@@ -281,7 +315,7 @@ async function initializeLayers() {
   await Promise.all(pathPromises);
 
   let hotspotPolygons = {};
-  const hotspotPromises = months.slice(10).map(async (m, i) => {
+  const hotspotPromises = months.map(async (m, i) => {
     let data = await API.fetchData("get_smoothed_alpha", true, {
       dataset_type: dataset_name,
       members: sspAllLabels,
@@ -306,7 +340,8 @@ async function initializeLayers() {
     mappingData,
     hotspotPolygons,
     classifyData,
-    contourData
+    contourData,
+    monthHovered
   );
   let axisLayerGenerator = new AxisLayer(-100, 100, 5, true);
   const {
@@ -427,6 +462,11 @@ function toggleShowHeatmap() {
     return ret;
   });
   setLayerProps();
+}
+
+function handleMonthHoveredChanged(month, hovered) {
+  monthHovered.value = hovered ? months.indexOf(month) + 1 : null;
+  drawAllLayers();
 }
 </script>
 
