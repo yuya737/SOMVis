@@ -2,6 +2,8 @@ import { PathLayer, ScatterplotLayer } from "@deck.gl/layers";
 // import type { LayersList } from "deck.gl/typed";
 import { colorPercentile, pointsToCurve } from "./utils";
 import { AbstractLayerGenerator } from "./AbstractLayerGenerator";
+import * as d3 from "d3";
+import { PolygonLayer } from "deck.gl/typed";
 
 export class NodeClassifyLayer extends AbstractLayerGenerator {
   readonly mappingData;
@@ -9,15 +11,15 @@ export class NodeClassifyLayer extends AbstractLayerGenerator {
   readonly contourData;
   readonly needsToRedraw: boolean = false;
 
-  polygon = null;
+  hotspotPolygons = null;
   layerList: any = null;
 
-  constructor(mappingData, polygon, classifyData, contourData) {
+  constructor(mappingData, hotspotPolygons, classifyData, contourData) {
     super();
     this.mappingData = mappingData;
     this.classifyData = classifyData;
     this.contourData = contourData;
-    this.polygon = polygon;
+    this.hotspotPolygons = hotspotPolygons;
   }
 
   getLayers() {
@@ -39,13 +41,6 @@ export class NodeClassifyLayer extends AbstractLayerGenerator {
         getWidth: 0.1,
         getColor: (d) => colorPercentile(d.percentile),
       }),
-      new ScatterplotLayer({
-        id: "classify-layer-scatterplot",
-        data: this.polygon.flat(),
-        getPosition: (d) => [d[0], -d[1]],
-        getRadius: 0.1,
-      }),
-
       // new PathLayer({
       //     id: "classify-layer",
       //     data: [
@@ -104,6 +99,45 @@ export class NodeClassifyLayer extends AbstractLayerGenerator {
       //     },
       // }),
     ];
+
+    console.log("DEBUG HOTSPOT POLYGONS", this.hotspotPolygons);
+    Object.keys(this.hotspotPolygons).forEach((month) => {
+      console.log(
+        "DEBUG HOTSPOT POLYGONS",
+        d3.interpolateRgbBasis(["purple", "green", "orange"])((month - 1) / 11)
+      );
+      ret.push(
+        new PolygonLayer({
+          id: `hotspot-polygon-${month}`,
+          data: [this.hotspotPolygons[month]],
+          getPolygon: (d) => {
+            console.log(d);
+            let ret = d.map((singlePolygon) =>
+              singlePolygon.map((p) => [p[0], -p[1]])
+            );
+            // console.log(ret);
+            return ret;
+          },
+          filled: true,
+          stroked: true,
+          opacity: 0.2,
+          pickable: true,
+          // getFillColor: d3.interpolateRainbow(month - 1 / 11),
+          getFillColor: d3
+            .interpolateRgbBasis(["purple", "green", "orange"])(
+              (month - 1) / 11
+            )
+            .replace(/[^\d,]/g, "")
+            .split(",")
+            .map((d) => Number(d)),
+
+          onClick: (info, event) => {
+            console.log("Clicked:", month);
+          },
+        })
+      );
+    });
+
     this.layerList = ret;
     return ret;
   }

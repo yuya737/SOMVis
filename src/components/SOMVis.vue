@@ -12,7 +12,7 @@
       >
         <SplitterPanel class="h-full">
           <!-- <MapViewer class="h-full" /> -->
-          <TimelineViewer class="h-full" />
+          <!-- <TimelineViewer class="h-full" /> -->
           <!-- <ForceGraph class="h-full" /> -->
         </SplitterPanel>
         <SplitterPanel style="height: 100%" :size="40">
@@ -30,7 +30,6 @@ import ProjectionViewer from "./ProjectionViewer.vue";
 import MapViewer from "./MapViewer.vue";
 import HeatmapViewer from "./HeatmapViewer.vue";
 import TimelineViewer from "./TimelineViewer.vue";
-
 import { provide, ref } from "vue";
 
 let resizeFlag = ref(false);

@@ -280,13 +280,19 @@ async function initializeLayers() {
 
   await Promise.all(pathPromises);
 
-  let temp = await API.fetchData("get_smoothed_alpha", true, {
-    dataset_type: dataset_name,
-    members: sspAllLabels,
-    years: [-1],
-    months: [4],
-    kde_bounds: [xMin, xMax, yMin, yMax],
+  let hotspotPolygons = {};
+  const hotspotPromises = months.slice(10).map(async (m, i) => {
+    let data = await API.fetchData("get_smoothed_alpha", true, {
+      dataset_type: dataset_name,
+      members: sspAllLabels,
+      years: [-1],
+      months: [i + 1],
+      kde_bounds: [xMin, xMax, yMin, yMax],
+    });
+    hotspotPolygons[i + 1] = data;
   });
+  await Promise.all(hotspotPromises);
+  console.log("DEBUG: hotspotPolygons", hotspotPolygons);
 
   let data = mappingData.map((d) => {
     return { ...d, value: classifyData[d.id].value };
@@ -298,7 +304,7 @@ async function initializeLayers() {
   let nodeLayerGenerator = new NodeLayer(mappingData, imgSrc, 3, 30);
   let nodeclassifyLayerGenerator = new NodeClassifyLayer(
     mappingData,
-    temp,
+    hotspotPolygons,
     classifyData,
     contourData
   );
