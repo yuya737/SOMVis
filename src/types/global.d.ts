@@ -20,3 +20,11 @@ declare type EnsembleMember = {
   variant: string; // Variant number of the model run
   ssp: string; // Shared Socioeconomic Pathway (SSP) scenario, sspXXX or historical
 };
+
+declare type EnsembleMemberTemporal = EnsembleMember & {
+  time: number; // 1-7; 1-3 are historical, 4-7 are future
+};
+
+declare type EnsembleMemberTemporalClustered = EnsembleMemberTemporal & {
+  clustering: number; // clustering
+};

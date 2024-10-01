@@ -38,7 +38,7 @@ export class NodeLayer extends AbstractLayerGenerator {
           image: `http://localhost:5002/node_images/${i}.png`,
           // image: image_data.body,
           // image: "https://raw.githubusercontent.com/visgl/deck.gl-data/master/website/sf-districts.png",
-          // pickable: true,
+          pickable: true,
           bounds: [
             // 0, 0,
             // this.mappingData[i].coords[0] - 0.4,

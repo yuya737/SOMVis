@@ -274,8 +274,8 @@ onMounted(() => {
 async function initializeLayers() {
   // Get all the data
   let mappingData: SOMNode[] = await API.fetchData(
-    // "mapping/CMIP6_pr_delta_historical_S5.00L0.02_30x30_umap",
-    "mapping/CMIP6_pr_delta_historicalNW_S5.00L0.02_30x30_umap",
+    "mapping/CMIP6_pr_delta_historical_S5.00L0.02_30x30_umap",
+    // "mapping/CMIP6_pr_delta_historicalNW_S5.00L0.02_30x30_umap",
     true,
     null
   );
@@ -367,8 +367,8 @@ async function initializeLayers() {
   layerGenerators = [
     axisLayerGenerator,
     nodeLayerGenerator,
-    nodeclassifyLayerGenerator,
     somLayerGenerator,
+    nodeclassifyLayerGenerator,
   ];
 
   // Get the layers

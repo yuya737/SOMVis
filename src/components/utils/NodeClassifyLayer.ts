@@ -130,7 +130,7 @@ export class NodeClassifyLayer extends AbstractLayerGenerator {
             // },
             filled: true,
             // stroked: true,
-            opacity: 0.2,
+            opacity: 0.1,
             pickable: true,
             // getFillColor: d3.interpolateRainbow(month - 1 / 11),
             // getFillColor: d3
