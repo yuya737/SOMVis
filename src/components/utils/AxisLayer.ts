@@ -55,6 +55,7 @@ export class AxisLayer extends AbstractLayerGenerator {
       ret.push(
         new PathLayer({
           id: `grid-x-layer-${index}`,
+          // coordinateSystem: COORDINATE_SYSTEM.CARTESIAN,
           data: [
             [
               [i, this.min],

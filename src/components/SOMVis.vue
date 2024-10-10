@@ -1,7 +1,20 @@
 <template>
   <Splitter style="height: 100%" layout="vertical" @resizeend="splitterResized">
     <SplitterPanel style="height: 100%" :size="40">
-      <!-- <ProjectionViewer class="h-full" isHistorical /> -->
+      <!-- <ProjectionViewer class="h-full" v-if="store.isDataReady" /> -->
+      <Splitter
+        class="h-full w-full"
+        layout="horizontal"
+        v-if="store.isDataReady"
+        @resizeend="splitterResized"
+      >
+        <SplitterPanel class="h-full">
+          <ProjectionViewer class="h-full" :time_type="timeType.AprSep" />
+        </SplitterPanel>
+        <SplitterPanel style="height: 100%" :size="50">
+          <ProjectionViewer class="h-full" :time_type="timeType.OctMar" />
+        </SplitterPanel>
+      </Splitter>
     </SplitterPanel>
 
     <SplitterPanel class="h-full w-full" :size="60">
@@ -12,12 +25,12 @@
       >
         <SplitterPanel class="h-full">
           <!-- <MapViewer class="h-full" /> -->
-          <!-- <TimelineViewer class="h-full" /> -->
+          <TimelineViewer class="h-full" v-if="store.isDataReady" />
           <!-- <TimelineViewerTemporal class="h-full" /> -->
           <!-- <ForceGraph class="h-full" /> -->
         </SplitterPanel>
         <SplitterPanel style="height: 100%" :size="40">
-          <!-- <HeatmapViewer class="h-full" /> -->
+          <HeatmapViewer class="h-full" />
         </SplitterPanel>
       </Splitter>
     </SplitterPanel>
@@ -34,6 +47,7 @@ import HeatmapViewer from "./HeatmapViewer.vue";
 import TimelineViewer from "./TimelineViewer.vue";
 import TimelineViewerTemporal from "./TimelineViewerTemporal.vue";
 import { provide, ref, watch } from "vue";
+import { timeType } from "./utils/utils";
 
 const store = useStore();
 watch(

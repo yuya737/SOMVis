@@ -18,6 +18,18 @@ export enum subsetType {
   waterYear = "water_year_mean",
 }
 
+export enum timeType {
+  All = "All",
+  OctMar = "OctMar",
+  AprSep = "AprSep",
+}
+
+export const timeTypeMonths = {
+  [timeType.All]: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+  [timeType.OctMar]: [1, 2, 3, 10, 11, 12],
+  [timeType.AprSep]: [4, 5, 6, 7, 8, 9],
+};
+
 export function scalePointsToSquare(
   points: number[][],
   maxWidth = 40,
@@ -224,6 +236,10 @@ export const orbitView = new OrbitView({
   minRotationX: 0,
 });
 
+export const mapView = new MapView({
+  id: "main",
+});
+
 export const orthoView = new OrthographicView({
   id: "main",
   controller: true,
@@ -256,8 +272,13 @@ export const DECKGL_SETTINGS = {
   // },
   initialViewState: {
     target: [0, 0, 0],
-    rotationX: 60,
-    zoom: 5,
+    rotationX: 90,
+    zoom: 20,
+    latitude: 0,
+    longitude: 0,
+    maxZoom: 25,
+    minZoom: 18,
+    maxPitch: 89,
   },
 };
 

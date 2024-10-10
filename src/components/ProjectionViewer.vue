@@ -2,11 +2,11 @@
   <div class="relative h-full w-full">
     <div class="relative h-full w-full">
       <canvas :id="deckglCanvas" class="z-[2] h-full w-full" />
-      <InfoPanel
+      <!-- <InfoPanel
         class="z-[4]"
         :settings="InfoPanelSettings"
         @settings-changed="settingsChanged"
-      />
+      /> -->
     </div>
 
     <!-- <div
@@ -78,9 +78,10 @@
           onLabel="Show Distribution"
           offLabel="Hide Distribution"
         />
-        <div class="flex flex-row items-center gap-4 text-center">
+        <div class="flex flex-row items-center gap-4 text-center bg-white">
           <div class="font-bold flex flex-row">
-            Hover on the months to see the patterns!
+            Showing {{ time_type }}
+            <!-- Hover on the months to see the patterns! -->
             <svg
               xmlns="http://www.w3.org/2000/svg"
               class="h-6 w-6"
@@ -97,7 +98,7 @@
             </svg>
           </div>
           <Button
-            v-for="month in months"
+            v-for="month in timeTypeMonths[time_type].map((d) => months[d - 1])"
             :key="month"
             class="bg-slate-200 p-2 hover:ring-2 hover:bg-slate-300"
             :label="month"
@@ -142,6 +143,7 @@ import { useStore } from "@/store/main";
 import NodeInspector from "./ui/NodeInspector.vue";
 import InfoPanel from "./ui/TheInfoPanel.vue";
 import InfoPanelSettings from "@/store/InfoPanelSettingsProj.json";
+import { COORDINATE_SYSTEM } from "@deck.gl/core";
 
 import { AbstractLayerGenerator } from "./utils/AbstractLayerGenerator";
 
@@ -154,6 +156,7 @@ import Button from "primevue/button";
 import {
   orbitView,
   orthoView,
+  mapView,
   DECKGL_SETTINGS,
   historicalLabels,
   historicalLabelsSfbay,
@@ -164,23 +167,16 @@ import {
   months,
   subsetType,
   dataset_name,
+  timeType,
+  timeTypeMonths,
 } from "./utils/utils";
-
-// import { subsetType, SOMPath } from "@/types/types";
-
+import { Layer } from "deck.gl/typed";
 const props = defineProps({
   isHistorical: Boolean,
+  time_type: timeType,
 });
 
-// let labels = props.isHistorical ? historical_labels : ssp585_labels;
-// let labels = props.isHistorical ? historicalLabels : ssp370Labels;
 let labels = sspAllLabels;
-// let labels = props.isHistorical ? historical_labels_sfbay : ssp370_labels;
-// InfoPanelSettings[0].options[0].values = [
-//   "All",
-//   ...labels.map((d) => getModelType(d)),
-// ];
-
 let layerList: LayersList = [];
 let settings = {};
 
@@ -217,14 +213,16 @@ const monthHovered = ref(null);
 watch(monthHovered, (newVal) => {
   console.log("monthHovered changed", newVal);
 });
+
 // const text = ref(props.isHistorical ? "Historical" : "SSP370");
 
 onMounted(() => {
   deck = new Deck({
     ...DECKGL_SETTINGS,
     canvas: deckglCanvas,
+    views: mapView,
     // views: orbitView,
-    views: orthoView,
+    // views: orthoView,
     getTooltip: ({ object }) => {
       if (!object) return;
       console.log(object);
@@ -237,10 +235,19 @@ onMounted(() => {
         },
       };
     },
+    onViewStateChange: ({ viewState }) => {
+      // console.log(viewState);
+      // deckInstance.setProps({viewState});
+    },
   });
 
   initializeLayers().then((layers) => {
-    layerList = layers;
+    layerList = layers.map((d) =>
+      d.clone({
+        coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
+        coordinateOrigin: [0, 0, 0],
+      })
+    );
     setLayerProps();
   });
 
@@ -272,78 +279,28 @@ onMounted(() => {
 });
 
 async function initializeLayers() {
-  // Get all the data
-  let mappingData: SOMNode[] = await API.fetchData(
-    "mapping/CMIP6_pr_delta_historical_S5.00L0.02_30x30_umap",
-    // "mapping/CMIP6_pr_delta_historicalNW_S5.00L0.02_30x30_umap",
-    true,
-    null
-  );
-  mappingData = mappingData.map((d, i) => {
-    return { ...d, coords: d.coords.map((c) => c * 1) };
-  });
-  let xMin = Math.min(...mappingData.map((d) => d.coords[0]));
-  let xMax = Math.max(...mappingData.map((d) => d.coords[0]));
-  let yMin = Math.min(...mappingData.map((d) => d.coords[1]));
-  let yMax = Math.max(...mappingData.map((d) => d.coords[1]));
-
-  let classifyData = await API.fetchData("node_means", true, {
-    dataset_type: dataset_name,
-  });
-
-  let pathData = {} as Record<string, BMUData[]>;
-  const pathPromises = labels.map(async (d, i) => {
-    let data: SOMPath = await API.fetchData("path", true, {
-      dataset_type: dataset_name,
-      model_type: d.model_name,
-      data_type: d.ssp,
-      // umap: true,
-    });
-    pathData[`${d.model_name}:${d.ssp}:${d.variant}`] = data.map(
-      (id, index) => {
-        return {
-          // id: key,
-          name: d.model_name,
-          year: Math.floor(index / 12),
-          month: (index % 12) + 1,
-          coords: [mappingData[id].coords[0], -mappingData[id].coords[1]],
-        };
-      }
-    );
-  });
-
-  await Promise.all(pathPromises);
-
-  let hotspotPolygons = {};
-  const hotspotPromises = months.map(async (m, i) => {
-    let data = await API.fetchData("get_smoothed_alpha", true, {
-      dataset_type: dataset_name,
-      members: sspAllLabels,
-      years: [-1],
-      months: [i + 1],
-      kde_bounds: [xMin, xMax, yMin, yMax],
-    });
-    hotspotPolygons[i + 1] = data;
-  });
-  await Promise.all(hotspotPromises);
-  console.log("DEBUG: hotspotPolygons", hotspotPolygons);
-
-  let data = mappingData.map((d) => {
-    return { ...d, value: classifyData[d.id].value };
-  });
-
-  let contourData = await API.fetchData("contours", true, { data: data });
-
   // Set up layer generators
-  let nodeLayerGenerator = new NodeLayer(mappingData, imgSrc, 3, 30);
-  let nodeclassifyLayerGenerator = new NodeClassifyLayer(
-    mappingData,
-    hotspotPolygons,
-    classifyData,
-    contourData,
-    monthHovered
+  let nodeLayerGenerator = new NodeLayer(
+    dataset_name,
+    props.time_type,
+    store.nodeMap[props.time_type],
+    imgSrc,
+    3,
+    30
   );
+  let nodeclassifyLayerGenerator = new NodeClassifyLayer({
+    mappingData: store.nodeMap[props.time_type],
+    hotspotPolygons: store.hotspotPolygons[props.time_type],
+    classifyData: store.classifyData[props.time_type],
+    contourData: store.contourData[props.time_type],
+    // hotspotPolygons,
+    // classifyData,
+    // contourData,
+    monthHovered: monthHovered,
+    interpolatedSurface: store.interpolatedSurfaceData[props.time_type],
+  });
   let axisLayerGenerator = new AxisLayer(-100, 100, 5, true);
+  // let axisLayerGenerator = new AxisLayer(-1000, 1000, 50, true);
   const {
     getYearsSelected,
     getMonthsSelected,
@@ -351,18 +308,33 @@ async function initializeLayers() {
     getSubsetType,
     getHoveredFile,
   } = storeToRefs(store);
-  let somLayerGenerator = new SOMLayer(
-    pathData,
-    getYearsSelected,
-    getMonthsSelected,
-    getFiles,
-    getSubsetType,
-    getHoveredFile,
-    [
+
+  let xMin = Math.min(
+    ...store.nodeMap[props.time_type].map((d) => d.coords[0])
+  );
+  let xMax = Math.max(
+    ...store.nodeMap[props.time_type].map((d) => d.coords[0])
+  );
+  let yMin = Math.min(
+    ...store.nodeMap[props.time_type].map((d) => d.coords[1])
+  );
+  let yMax = Math.max(
+    ...store.nodeMap[props.time_type].map((d) => d.coords[1])
+  );
+
+  let somLayerGenerator = new SOMLayer({
+    data: store.pathData[props.time_type],
+    timeRange: getYearsSelected,
+    monthRange: getMonthsSelected,
+    model: getFiles,
+    subsetType: getSubsetType,
+    hoveredFile: getHoveredFile,
+    extent: [
       [xMin, xMax],
       [yMin, yMax],
-    ]
-  );
+    ],
+    interpolatedSurface: store.interpolatedSurfaceData[props.time_type],
+  });
 
   layerGenerators = [
     axisLayerGenerator,
@@ -386,7 +358,12 @@ function drawAllLayers() {
   nextTick(() => {
     layerList = layerGenerators
       .map((g) => {
-        return g.getLayers();
+        return g.getLayers().map((d: Layer) =>
+          d.clone({
+            coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
+            coordinateOrigin: [0, 0, 0],
+          })
+        );
       })
       .flat();
 

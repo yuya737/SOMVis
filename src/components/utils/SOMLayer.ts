@@ -42,6 +42,8 @@ export class SOMLayer extends AbstractLayerGenerator {
   readonly blockedCenterofMassData: any;
   readonly BMUData: BMUMata[];
 
+  readonly interpolatedSurface: any;
+
   // Need to have two ranges for the heatmap to account for Dec-Feb type queries that wrap around the year
   selectedMonthRangeList: any = [];
   needsToRedraw: boolean = false;
@@ -50,15 +52,16 @@ export class SOMLayer extends AbstractLayerGenerator {
   mode: string = "single"; // either single or compare
 
   // constructor(coords, name: string, timeRange: any, monthRange: any) {
-  constructor(
+  constructor({
     data,
     timeRange,
     monthRange,
-    model: ComputedRef<[EnsembleMember[], EnsembleMember[]]>,
-    subsetType: subsetType,
+    model,
+    subsetType,
     hoveredFile,
-    extent
-  ) {
+    extent,
+    interpolatedSurface,
+  }) {
     super();
     this.data = data;
     this.selectedTimeRange = timeRange;
@@ -66,6 +69,7 @@ export class SOMLayer extends AbstractLayerGenerator {
     this.selectedModel = model;
     this.hoveredFile = hoveredFile;
     this.extent = extent;
+    this.interpolatedSurface = interpolatedSurface;
     this.selectedMonthRangeList = monthRange;
 
     watch(this.selectedModel, () => {
@@ -158,6 +162,8 @@ export class SOMLayer extends AbstractLayerGenerator {
       //   this.selectedMonthRangeList.includes(d.month)
       // );
       if (this.selectedSubsetType.value == subsetType.month) {
+        console.log("DEBUG Filtering ", this.selectedMonthRangeList.value);
+        console.log("DEBUG curBMUData ", curBMUData);
         curBMUData = curBMUData.filter((d) =>
           this.selectedMonthRangeList.value.includes(d.month)
         );
@@ -272,8 +278,8 @@ export class SOMLayer extends AbstractLayerGenerator {
     // });
     // ret = [...ret, gridcell];
 
-    // const resolution = 50;
-    // let heightMultiplier = 350;
+    // const resolution = 100;
+    // let heightMultiplier = 1000;
 
     // if (this.mode == "single") {
     //   let kdeResult = kde2d(
@@ -288,9 +294,10 @@ export class SOMLayer extends AbstractLayerGenerator {
     //       yMax: this.extent[1][1] * 1.2,
     //     }
     //   );
-    //   console.log("Done KDE");
-    //   // const sum = kdeResult.z._buffer.reduce((acc, curr) => acc + curr, 0);
-    //   // console.log(kdeResult.z._buffer, sum);
+    //   // console.log("Done KDE", kdeResult);
+    //   const sum = kdeResult.z._buffer.reduce((acc, curr) => acc + curr, 0);
+    //   kdeResult.z._buffer = kdeResult.z._buffer.map((d) => d / sum);
+    //   console.log(kdeResult.z._buffer, sum);
     //   // Estimate the normal of the KDE surface
     //   const getAdjacentIndices = (i) => {
     //     let ret = [];
@@ -316,37 +323,6 @@ export class SOMLayer extends AbstractLayerGenerator {
     //       (d) => d / Math.sqrt(ret.reduce((acc, curr) => acc + curr ** 2, 0))
     //     );
     //   };
-    //   // let normal = Array.from(kdeResult.z._buffer).map((d, i) => {
-    //   //   let adj = getAdjacentIndices(i);
-    //   //   if (adj.length < 4) {
-    //   //     return [0, 0, 0];
-    //   //   } else {
-    //   //     let x = kdeResult.x[Math.floor(adj[0] / resolution)];
-    //   //     let y = kdeResult.y[adj[0] % resolution];
-    //   //     let z = kdeResult.z._buffer[adj[0]] * heightMultiplier;
-    //   //     let a = [x, y, z];
-    //   //     x = kdeResult.x[Math.floor(adj[1] / resolution)];
-    //   //     y = kdeResult.y[adj[1] % resolution];
-    //   //     z = kdeResult.z._buffer[adj[1]] * heightMultiplier;
-    //   //     let b = [x, y, z];
-    //   //     x = kdeResult.x[Math.floor(adj[2] / resolution)];
-    //   //     y = kdeResult.y[adj[2] % resolution];
-    //   //     z = kdeResult.z._buffer[adj[2]] * heightMultiplier;
-    //   //     let c = [x, y, z];
-    //   //     x = kdeResult.x[Math.floor(adj[3] / resolution)];
-    //   //     y = kdeResult.y[adj[3] % resolution];
-    //   //     z = kdeResult.z._buffer[adj[3]] * heightMultiplier;
-    //   //     let d = [x, y, z];
-    //   //     let v1 = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
-    //   //     let v2 = [d[0] - c[0], d[1] - c[1], d[2] - c[2]];
-    //   //     return crossProduct3DandNorm(v2, v1);
-    //   //   }
-    //   // });
-    //   // console.log(normal);
-
-    //   // Print the sum
-    //   // let maxValue = Math.max(...kdeResult.z._buffer);
-    //   // console.log(kdeResult);
 
     //   ret = [
     //     ...ret,
@@ -360,7 +336,9 @@ export class SOMLayer extends AbstractLayerGenerator {
     //             Math.round(
     //               u * resolution * (resolution - 1) + v * (resolution - 1)
     //             )
-    //           ] * heightMultiplier,
+    //           ] *
+    //             -heightMultiplier +
+    //             10,
     //         ];
     //       },
     //       // getNormal: (u, v) => {
@@ -370,13 +348,15 @@ export class SOMLayer extends AbstractLayerGenerator {
     //       // },
     //       // getColor: (x, z, y) => [40, interpolateGreens(z/15), 160, (z / 15) * 255],
     //       getColor: (x, y, z) => {
-    //         let t = interpolateGreens(
-    //           scaleLinear().domain([0, 25]).range([0, 1])(z)
+    //         // let t = interpolateGreens(
+    //         let t = interpolateRdBu(
+    //           scaleLinear().domain([0, 10]).range([0, 1])(z)
     //         )
     //           .replace(/[^\d,]/g, "")
     //           .split(",")
     //           .map((d) => Number(d));
-    //         t.push((z / 4) * 255);
+    //         t.push(128);
+    //         // t.push((z / 4) * 255);
     //         return t;
     //       },
     //       uCount: resolution,
@@ -499,7 +479,7 @@ export class SOMLayer extends AbstractLayerGenerator {
         return { ...d, coords: addJitter(d.coords, 0) };
       }),
       getColor: (d) => [...colorSim(d.name)],
-      getPosition: (d) => d.coords,
+      getPosition: (d) => [...d.coords, 0],
       aggregation: "SUM",
       // getRadius: 2,
       radiusPixels: 100,
@@ -532,7 +512,7 @@ export class SOMLayer extends AbstractLayerGenerator {
     //     //     console.log("Clicked:", info.object, event);
     //     // },
     // });
-    ret = [heatmap];
+    ret = [...ret, heatmap];
     // let ret = [monthlyCOMPath, blockedMonthlyCOMScatter];
     // let ret = [heatmap, monthlyCOMPath];
     // ret = [...ret, blockedMonthlyCOMScatter];

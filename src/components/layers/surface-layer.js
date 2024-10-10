@@ -12,6 +12,7 @@ const defaultProps = {
   data: [],
   getNormal: () => [0, 0, 0],
   getPosition: () => [0, 0, 0],
+  getShouldDiscard: () => 0,
   getColor: () => DEFAULT_COLOR,
   xScale: null,
   yScale: null,
@@ -48,6 +49,7 @@ export default class SurfaceLayer extends Layer {
       indices: {size: 1, isIndexed: true, update: this.calculateIndices, noAlloc},
       normals: {size: 3, update: this.calculateNormals, noAlloc},
       positions: {size: 4, accessor: 'getPosition', update: this.calculatePositions, noAlloc},
+      shouldDiscard: {size: 1, accessor: 'getShouldDiscard', update: this.calculatePositions, noAlloc},
       colors: {
         size: 4,
         accessor: ['getPosition', 'getColor'],
@@ -195,7 +197,7 @@ export default class SurfaceLayer extends Layer {
   /* eslint-disable max-statements */
   calculatePositions(attribute) {
     const {vertexCount} = this.state;
-    const {uCount, vCount, getPosition, xScale, yScale, zScale} = this.props;
+    const {uCount, vCount, getPosition, getShouldDiscard, xScale, yScale, zScale} = this.props;
 
     const value = new Float32Array(vertexCount * attribute.size);
 
@@ -211,11 +213,15 @@ export default class SurfaceLayer extends Layer {
         const isYFinite = isFinite(y);
         const isZFinite = isFinite(z);
 
+        const shouldDiscard = getShouldDiscard(u,v);
+
         // swap z and y: y is up in the default viewport
         value[i++] = isXFinite ? xScale(x) : xScale.range()[0];
         value[i++] = isYFinite ? yScale(y) : yScale.range()[0];
         value[i++] = isZFinite ? zScale(z) : zScale.range()[0];
-        value[i++] = isXFinite && isYFinite && isZFinite ? 0 : 1;
+        // value[i++] = 1
+        // value[i++] = isXFinite && isYFinite && isZFinite  ? 0 : 1;
+        value[i++] = isXFinite && isYFinite && isZFinite && !shouldDiscard ? 0 : 1;
       }
     }
     attribute.value = value;

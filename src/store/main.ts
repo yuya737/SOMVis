@@ -1,80 +1,138 @@
 import { defineStore } from "pinia";
-import { subsetType } from "@/components/utils/utils";
+import { subsetType, timeType, timeTypeMonths } from "@/components/utils/utils";
 import API from "@/api/api";
 import { dataset_name, months, sspAllLabels } from "@/components/utils/utils";
 import { get } from "@vueuse/core";
 import { reactive } from "vue";
 
+const timeTypes = [timeType.AprSep, timeType.OctMar];
+// const timeTypes = [timeType.OctMar];
+// const timeTypes = [timeType.All];
+
 async function getAllData() {
   console.log("DEBUG IN STORE MAIN");
-  let mappingData: SOMNode[] = await API.fetchData(
-    "mapping/CMIP6_pr_delta_historical_S5.00L0.02_30x30_umap",
-    // "mapping/CMIP6_pr_delta_historicalNW_S5.00L0.02_30x30_umap",
-    true,
-    null
-  );
-  mappingData = mappingData.map((d, i) => {
-    return { ...d, coords: d.coords.map((c) => c * 1) };
-  });
-  let xMin = Math.min(...mappingData.map((d) => d.coords[0]));
-  let xMax = Math.max(...mappingData.map((d) => d.coords[0]));
-  let yMin = Math.min(...mappingData.map((d) => d.coords[1]));
-  let yMax = Math.max(...mappingData.map((d) => d.coords[1]));
+  let mappingData: Record<timeType, SOMNode[]> = {};
+  let classifyData: Record<timeType, { value: number }> = {};
+  let pathData: Record<timeType, Record<string, BMUData[]>> = {};
+  let contourData: Record<timeType, any> = {};
+  let interpolatedSurfaceData: Record<timeType, any> = {};
+  let hotspotPolygonsData: Record<timeType, any> = {};
 
-  let classifyData = await API.fetchData("node_means", true, {
-    dataset_type: dataset_name,
-  });
-
-  let pathData = {} as Record<string, BMUData[]>;
-  const pathPromises = sspAllLabels.map(async (d, i) => {
-    let data: SOMPath = await API.fetchData("path", true, {
+  const gigaPromise = timeTypes.map(async (curTimeType) => {
+    let map = await API.fetchData("mapping", true, {
       dataset_type: dataset_name,
-      model_type: d.model_name,
-      data_type: d.ssp,
-      // umap: true,
+      time_type: curTimeType,
     });
-    pathData[`${d.model_name}:${d.ssp}:${d.variant}`] = data.map(
-      (id, index) => {
+    map = map.map((d) => {
+      return {
+        ...d,
+        coords: [d.coords[0], -d.coords[1]],
+      };
+    });
+    mappingData[curTimeType] = map;
+
+    let xMin = Math.min(...map.map((d) => d.coords[0]));
+    let xMax = Math.max(...map.map((d) => d.coords[0]));
+    let yMin = Math.min(...map.map((d) => d.coords[1]));
+    let yMax = Math.max(...map.map((d) => d.coords[1]));
+
+    let classify = await API.fetchData("node_means", true, {
+      dataset_type: dataset_name,
+      time_type: curTimeType,
+    });
+
+    classifyData[curTimeType] = classify;
+
+    let paths = {} as Record<string, BMUData[]>;
+
+    const pathPromises = sspAllLabels.map(async (d, i) => {
+      let data: SOMPath = await API.fetchData("path", true, {
+        dataset_type: dataset_name,
+        time_type: curTimeType,
+        model_type: d.model_name,
+        data_type: d.ssp,
+        // umap: true,
+      });
+      const resolveMonth = (index) => {
+        if (curTimeType == timeType.All) return (index % 12) + 1;
+        if (curTimeType == timeType.AprSep) return (index % 6) + 4;
+        if (curTimeType == timeType.OctMar) {
+          let temp = [1, 2, 3, 10, 11, 12];
+          return temp[index % 6];
+        }
+        throw "error in resolveMonth";
+      };
+      const resolveYear = (index) => {
+        if (curTimeType == timeType.All) return Math.floor(index / 12);
+        if (curTimeType == timeType.AprSep) return Math.floor(index / 6);
+        if (curTimeType == timeType.OctMar) return Math.floor(index / 6);
+        throw "error in resolveYear";
+      };
+      paths[`${d.model_name}:${d.ssp}:${d.variant}`] = data.map((id, index) => {
         return {
           // id: key,
           name: d.model_name,
-          year: Math.floor(index / 12),
-          month: (index % 12) + 1,
-          coords: [mappingData[id].coords[0], -mappingData[id].coords[1]],
+          // year: Math.floor(index / 12),
+          year: resolveYear(index),
+          // month: (index % 12) + 1,
+          month: resolveMonth(index),
+          coords: [map[id].coords[0], -map[id].coords[1]],
         };
+      });
+    });
+    pathData[curTimeType] = paths;
+
+    await Promise.all(pathPromises);
+
+    let data = map.map((d) => {
+      return { ...d, value: classify[d.id].value };
+    });
+
+    const contour = await API.fetchData("contours", true, { data: data });
+    contourData[curTimeType] = contour;
+
+    const { interpolatedSurface, resolution, x, y } = await API.fetchData(
+      "interpolatedSurface",
+      true,
+      {
+        data: data,
       }
     );
-  });
+    interpolatedSurfaceData[curTimeType] = {
+      interpolatedSurface,
+      resolution,
+      x,
+      y,
+    };
 
-  await Promise.all(pathPromises);
+    let hotspotPolygons = {};
 
-  let hotspotPolygons = {};
-  const hotspotPromises = months.map(async (m, i) => {
-    let data = await API.fetchData("get_smoothed_alpha", true, {
-      dataset_type: dataset_name,
-      members: sspAllLabels,
-      years: [-1],
-      months: [i + 1],
-      kde_bounds: [xMin, xMax, yMin, yMax],
+    const hotspotPromises = timeTypeMonths[curTimeType].map(async (month) => {
+      let data = await API.fetchData("get_smoothed_alpha", true, {
+        dataset_type: dataset_name,
+        time_type: curTimeType,
+        members: sspAllLabels,
+        years: [-1],
+        months: [month],
+        kde_bounds: [xMin, xMax, yMin, yMax],
+      });
+      hotspotPolygons[month] = data;
     });
-    hotspotPolygons[i + 1] = data;
-  });
-  await Promise.all(hotspotPromises);
-  // console.log("DEBUG: hotspotPolygons", hotspotPolygons);
+    hotspotPolygonsData[curTimeType] = hotspotPolygons;
 
-  let data = mappingData.map((d) => {
-    return { ...d, value: classifyData[d.id].value };
+    await Promise.all(hotspotPromises);
   });
+  await Promise.all(gigaPromise);
 
-  let contourData = await API.fetchData("contours", true, { data: data });
   console.log("DEBUG DONE STORE MAIN");
   console.log(mappingData);
   return {
     nodeMap: mappingData,
     classifyData: classifyData,
     pathData: pathData,
-    hotspotPolygons: hotspotPolygons,
+    hotspotPolygons: hotspotPolygonsData,
     contourData: contourData,
+    interpolatedSurfaceData: interpolatedSurfaceData,
   };
 }
 
@@ -95,15 +153,23 @@ export const useStore = defineStore("main", {
       pathData: null,
       hotspotPolygons: null,
       contourData: null,
+      interpolatedSurfaceData: null,
     });
     getAllData().then((data) => {
-      const { nodeMap, classifyData, pathData, hotspotPolygons, contourData } =
-        data;
+      const {
+        nodeMap,
+        classifyData,
+        pathData,
+        hotspotPolygons,
+        contourData,
+        interpolatedSurfaceData,
+      } = data;
       state.nodeMap = nodeMap;
       state.classifyData = classifyData;
       state.pathData = pathData;
       state.hotspotPolygons = hotspotPolygons;
       state.contourData = contourData;
+      state.interpolatedSurfaceData = interpolatedSurfaceData;
     });
     return state;
   },

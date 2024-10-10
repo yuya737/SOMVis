@@ -64,7 +64,7 @@ import { onMounted, ref, inject, reactive, watch, nextTick } from "vue";
 import Dropdown from "primevue/dropdown";
 import Button from "primevue/button";
 import TooltipView from "./TooltipView.vue";
-import { dataset_name } from "./utils/utils";
+import { dataset_name, timeType } from "./utils/utils";
 
 import ToggleButton from "primevue/togglebutton";
 
@@ -924,9 +924,7 @@ async function drawTimeline() {
       d3.select(this).attr("stroke-width", 1);
     })
     .on("click", function (event, d) {
-      tooltipData.value = `${members[d.index].split("_")[7]} ${
-        members[d.index].split("_")[6]
-      }`;
+      tooltipData.value = `${members[d.index].model_name}:${members[d.index].ssp}`;
       showTooltipText.value = true;
       console.log("DEBUG: Tooltip ", tooltipData.value);
       document
@@ -1027,6 +1025,8 @@ async function getData() {
     console.log("DEBUG MEMBERS: ", sspAllLabels);
     const { distances } = await API.fetchData("distance_matrix", true, {
       dataset_type: dataset_name,
+      // time_type: (month <= 3 || month >=10) timeType.All,
+      time_type: month <= 3 || month >= 10 ? timeType.OctMar : timeType.AprSep,
       members: sspAllLabels,
       subsetType: "month",
       months: [month],
@@ -1051,7 +1051,7 @@ async function getData() {
     // );
     const { clustering } = await API.fetchData("run_clustering", true, {
       distance_matrix: distances,
-      n_neighbors: 8, // For UMAP
+      n_neighbors: 6, // For UMAP
       min_cluster_size: 3, // For HDBSCAN
     });
     data.push(clustering);

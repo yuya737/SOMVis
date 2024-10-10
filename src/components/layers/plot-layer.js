@@ -14,6 +14,7 @@ const defaultProps = {
   getNormal: {type: 'accessor', value: (u, v) => [0, 0, 0]},
   getPosition: {type: 'accessor', value: (u, v) => [0, 0, 0]},
   getColor: {type: 'accessor', value: (x, y, z) => DEFAULT_COLOR},
+  getShouldDiscard: {type: 'accessor', value: () => 0},
   getXScale: DEFAULT_GET_SCALE,
   getYScale: DEFAULT_GET_SCALE,
   getZScale: DEFAULT_GET_SCALE,
@@ -115,6 +116,7 @@ export default class PlotLayer extends CompositeLayer {
     const {
       getPosition,
       getColor,
+      getShouldDiscard,
       getNormal,
       uCount,
       vCount,
@@ -140,6 +142,7 @@ export default class PlotLayer extends CompositeLayer {
         {
           getPosition,
           getColor,
+          getShouldDiscard,
           getNormal,
           uCount,
           vCount,

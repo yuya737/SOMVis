@@ -4,30 +4,34 @@ import { colorPercentile, pointsToCurve } from "./utils";
 import { AbstractLayerGenerator } from "./AbstractLayerGenerator";
 import * as d3 from "d3";
 import { PolygonLayer } from "deck.gl/typed";
+import PlotLayer from "@/components/layers/plot-layer";
 import { watch } from "vue";
 
 export class NodeClassifyLayer extends AbstractLayerGenerator {
   readonly mappingData;
   readonly classifyData;
   readonly contourData;
+  readonly interpolatedSurface;
 
   hotspotPolygons = null;
   monthHovered = null;
   layerList: any = null;
 
-  constructor(
+  constructor({
     mappingData,
     hotspotPolygons,
     classifyData,
     contourData,
-    monthHovered
-  ) {
+    monthHovered,
+    interpolatedSurface,
+  }) {
     super();
     this.mappingData = mappingData;
     this.classifyData = classifyData;
     this.contourData = contourData;
     this.hotspotPolygons = hotspotPolygons;
     this.monthHovered = monthHovered;
+    this.interpolatedSurface = interpolatedSurface;
 
     watch(monthHovered, (value) => {
       console.log("DEBUG: NodeClassifyLayer watch", value);
@@ -249,7 +253,101 @@ export class NodeClassifyLayer extends AbstractLayerGenerator {
     //   });
     // });
 
+    console.log("DEBUG: INTERPOLATED SURFACE", this.interpolatedSurface);
+    let surface = new PlotLayer({
+      id: "surface-layer",
+      getPosition: (u, v) => {
+        // console.log(
+        //   this.interpolatedSurface.interpolatedSurface[
+        //     Math.round(u * (this.interpolatedSurface.resolution - 1))
+        //   ][Math.round(v * (this.interpolatedSurface.resolution - 1))] * 1000
+        // );
+        return [
+          this.interpolatedSurface.x[
+            Math.round(u * (this.interpolatedSurface.resolution - 1))
+          ],
+          -this.interpolatedSurface.y[
+            Math.round(v * (this.interpolatedSurface.resolution - 1))
+          ],
+          // 10,
+          this.interpolatedSurface.interpolatedSurface[
+            Math.round(v * (this.interpolatedSurface.resolution - 1))
+          ][Math.round(u * (this.interpolatedSurface.resolution - 1))] *
+            20000 +
+            10,
+        ];
+      },
+      getShouldDiscard: (u, v) =>
+        this.interpolatedSurface.interpolatedSurface[
+          Math.round(v * (this.interpolatedSurface.resolution - 1))
+        ][Math.round(u * (this.interpolatedSurface.resolution - 1))] == 0,
+
+      // getNormal: (u, v) => {
+      //   return normal[
+      //     parseInt(u * resolution * (resolution - 1) + v * (resolution - 1))
+      //   ];
+      // },
+      // getColor: (x, z, y) => [40, interpolateGreens(z/15), 160, (z / 15) * 255],
+      getColor: (x, y, z) => {
+        // return [128, 0, 0, 255];
+        // let t = interpolateGreens(
+        // if (z == 10) {
+        //   return [128, 0, 0, 0];
+        // }
+        let t = d3
+          .interpolateRdBu(
+            d3.scaleLinear().domain([-5, 5]).range([0, 1])(z - 10)
+          )
+          .replace(/[^\d,]/g, "")
+          .split(",")
+          .map((d) => Number(d));
+        // t.push(128);
+        // t.push((z / 4) * 255);
+        return t;
+      },
+      uCount: this.interpolatedSurface.resolution,
+      vCount: this.interpolatedSurface.resolution,
+      drawAxes: false,
+      axesPadding: 0.25,
+      axesColor: [0, 0, 0, 128],
+      pickable: true,
+    });
+    let surface2 = new PlotLayer({
+      id: "surface-layer2",
+      getPosition: (u, v) => {
+        return [
+          this.interpolatedSurface.x[
+            Math.round(u * (this.interpolatedSurface.resolution - 1))
+          ],
+          -this.interpolatedSurface.y[
+            Math.round(v * (this.interpolatedSurface.resolution - 1))
+          ],
+          10,
+        ];
+      },
+      getShouldDiscard: (u, v) => 0,
+
+      // getNormal: (u, v) => {
+      //   return normal[
+      //     parseInt(u * resolution * (resolution - 1) + v * (resolution - 1))
+      //   ];
+      // },
+      // getColor: (x, z, y) => [40, interpolateGreens(z/15), 160, (z / 15) * 255],
+      getColor: (x, y, z) => {
+        return [128, 128, 128, 35];
+      },
+      uCount: this.interpolatedSurface.resolution,
+      vCount: this.interpolatedSurface.resolution,
+      drawAxes: false,
+      axesPadding: 0.25,
+      axesColor: [0, 0, 0, 128],
+      pickable: true,
+    });
+
+    ret = [...ret, surface, surface2];
+
     this.layerList = ret;
+    console.log("DEBUG: NodeClassify", ret);
     return ret;
   }
 }
