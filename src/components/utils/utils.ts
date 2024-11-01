@@ -22,12 +22,14 @@ export enum timeType {
   All = "All",
   OctMar = "OctMar",
   AprSep = "AprSep",
+  OctMay = "OctMay",
 }
 
 export const timeTypeMonths = {
   [timeType.All]: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
   [timeType.OctMar]: [1, 2, 3, 10, 11, 12],
   [timeType.AprSep]: [4, 5, 6, 7, 8, 9],
+  [timeType.OctMay]: [1, 2, 3, 4, 5, 10, 11, 12],
 };
 
 export function scalePointsToSquare(

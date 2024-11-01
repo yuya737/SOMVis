@@ -73,7 +73,7 @@ export class SOMLayer extends AbstractLayerGenerator {
     this.selectedMonthRangeList = monthRange;
 
     watch(this.selectedModel, () => {
-      console.log("SDFSDFDFDDF");
+      // console.log("SDFSDFDFDDF");
     });
 
     // If two sets of models are selected, then we are in compare mode
@@ -162,8 +162,8 @@ export class SOMLayer extends AbstractLayerGenerator {
       //   this.selectedMonthRangeList.includes(d.month)
       // );
       if (this.selectedSubsetType.value == subsetType.month) {
-        console.log("DEBUG Filtering ", this.selectedMonthRangeList.value);
-        console.log("DEBUG curBMUData ", curBMUData);
+        // console.log("DEBUG Filtering ", this.selectedMonthRangeList.value);
+        // console.log("DEBUG curBMUData ", curBMUData);
         curBMUData = curBMUData.filter((d) =>
           this.selectedMonthRangeList.value.includes(d.month)
         );
@@ -227,7 +227,7 @@ export class SOMLayer extends AbstractLayerGenerator {
     if (this.mode == "single") {
       freq = countFrequecy(curBMUData);
     } else {
-      console.log("Calculating freq for compare mode");
+      // console.log("Calculating freq for compare mode");
       let g1 = countFrequecy(curBMUData[0]).map((d) => {
         return { ...d, group: "group1" };
       });
@@ -244,12 +244,12 @@ export class SOMLayer extends AbstractLayerGenerator {
     if (this.layerList && !this.needsToRedraw) {
       return this.layerList;
     }
-    console.log("Staring to generate layers");
+    // console.log("Staring to generate layers");
     let ret = [];
     let curBMUData = this._subsetData();
-    console.log("Done subset data");
+    // console.log("Done subset data length: ", curBMUData.length, curBMUData);
     let freq = this._getFreq(curBMUData);
-    console.log("Done freq");
+    // console.log("Done freq");
 
     // if freq is an empty dict
     if (freq.length == 0) {

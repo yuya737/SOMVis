@@ -74,10 +74,17 @@
         /> -->
         <ToggleButton
           v-model="isHidingSurface"
-          @change="toggleShowHeatmap"
+          @change="handleButtons"
           onLabel="Show Distribution"
           offLabel="Hide Distribution"
         />
+        <ToggleButton
+          v-model="isHiding3D"
+          @change="handleButtons"
+          onLabel="Show 3D"
+          offLabel="Hide 3D"
+        />
+        <Button @click="recalculateMDE" label="Recalculate MDE" />
         <div class="flex flex-row items-center gap-4 text-center bg-white">
           <div class="font-bold flex flex-row">
             Showing {{ time_type }}
@@ -135,34 +142,22 @@ import { storeToRefs } from "pinia";
 
 import { Deck } from "@deck.gl/core";
 
-import API from "@/api/api";
-
-import { LayersList } from "@deck.gl/core";
+import { LayersList, AmbientLight } from "@deck.gl/core";
 import { AxisLayer } from "./utils/AxisLayer";
 import { useStore } from "@/store/main";
 import NodeInspector from "./ui/NodeInspector.vue";
-import InfoPanel from "./ui/TheInfoPanel.vue";
-import InfoPanelSettings from "@/store/InfoPanelSettingsProj.json";
 import { COORDINATE_SYSTEM } from "@deck.gl/core";
 
 import { AbstractLayerGenerator } from "./utils/AbstractLayerGenerator";
 
-import { SOMLayer } from "./utils/SOMLayer";
-import { NodeClassifyLayer } from "./utils/NodeClassifyLayer";
 import { NodeLayer } from "./utils/NodeLayer";
+import { NodeClassifyLayer } from "./utils/NodeClassifyLayer";
 import ToggleButton from "primevue/togglebutton";
 import Button from "primevue/button";
 
 import {
-  orbitView,
-  orthoView,
   mapView,
   DECKGL_SETTINGS,
-  historicalLabels,
-  historicalLabelsSfbay,
-  sspAllLabels,
-  approx,
-  getModelType,
   generateMonthRangeList,
   months,
   subsetType,
@@ -176,7 +171,6 @@ const props = defineProps({
   time_type: timeType,
 });
 
-let labels = sspAllLabels;
 let layerList: LayersList = [];
 let settings = {};
 
@@ -208,6 +202,7 @@ const timeMax = computed(() => {
 });
 const selectedModel = ref([[], []]);
 const isHidingSurface = ref(false);
+const isHiding3D = ref(false);
 const isWaterYearMean = ref(false);
 const monthHovered = ref(null);
 watch(monthHovered, (newVal) => {
@@ -221,8 +216,6 @@ onMounted(() => {
     ...DECKGL_SETTINGS,
     canvas: deckglCanvas,
     views: mapView,
-    // views: orbitView,
-    // views: orthoView,
     getTooltip: ({ object }) => {
       if (!object) return;
       console.log(object);
@@ -234,10 +227,6 @@ onMounted(() => {
           "z-index": 10,
         },
       };
-    },
-    onViewStateChange: ({ viewState }) => {
-      // console.log(viewState);
-      // deckInstance.setProps({viewState});
     },
   });
 
@@ -267,27 +256,30 @@ onMounted(() => {
       await nextTick();
       drawAllLayers();
     }
-    // (files) => {
-    //   if (!files) return;
-    //   console.log("files changed", files);
-    //   message.value = "Loading...";
-    //   nextTick(() => {
-    //     drawAllLayers();
-    //   });
-    // }
+  );
+  watch(
+    () => store.getNodeMap(props.time_type),
+    () => {
+      drawAllLayers();
+    },
+    { deep: true }
   );
 });
 
 async function initializeLayers() {
   // Set up layer generators
-  let nodeLayerGenerator = new NodeLayer(
-    dataset_name,
-    props.time_type,
-    store.nodeMap[props.time_type],
-    imgSrc,
-    3,
-    30
-  );
+  const { getNodeMap, isEditingMap, anchors } = storeToRefs(store);
+  let nodeLayerGenerator = new NodeLayer({
+    dataset_type: dataset_name,
+    time_type: props.time_type,
+    nodeMapGetter: getNodeMap,
+    imgSrc: imgSrc,
+    drawEveryN: 13,
+    dims: 30,
+    deck: deck,
+    isEditingMap: isEditingMap,
+    anchors: anchors,
+  });
   let nodeclassifyLayerGenerator = new NodeClassifyLayer({
     mappingData: store.nodeMap[props.time_type],
     hotspotPolygons: store.hotspotPolygons[props.time_type],
@@ -301,13 +293,6 @@ async function initializeLayers() {
   });
   let axisLayerGenerator = new AxisLayer(-100, 100, 5, true);
   // let axisLayerGenerator = new AxisLayer(-1000, 1000, 50, true);
-  const {
-    getYearsSelected,
-    getMonthsSelected,
-    getFiles,
-    getSubsetType,
-    getHoveredFile,
-  } = storeToRefs(store);
 
   let xMin = Math.min(
     ...store.nodeMap[props.time_type].map((d) => d.coords[0])
@@ -322,25 +307,34 @@ async function initializeLayers() {
     ...store.nodeMap[props.time_type].map((d) => d.coords[1])
   );
 
-  let somLayerGenerator = new SOMLayer({
-    data: store.pathData[props.time_type],
-    timeRange: getYearsSelected,
-    monthRange: getMonthsSelected,
-    model: getFiles,
-    subsetType: getSubsetType,
-    hoveredFile: getHoveredFile,
-    extent: [
-      [xMin, xMax],
-      [yMin, yMax],
-    ],
-    interpolatedSurface: store.interpolatedSurfaceData[props.time_type],
-  });
+  // let somLayerGenerator = new SOMLayer({
+  //   data: store.pathData[props.time_type],
+  //   timeRange: getYearsSelected,
+  //   monthRange: getMonthsSelected,
+  //   model: getFiles,
+  //   subsetType: getSubsetType,
+  //   hoveredFile: getHoveredFile,
+  //   extent: [
+  //     [xMin, xMax],
+  //     [yMin, yMax],
+  //   ],
+  //   interpolatedSurface: store.interpolatedSurfaceData[props.time_type],
+  // });
+
+  // let node3DLayerGenerator = new Node3DLayer({
+  //   interpolatedSurface: store.interpolatedSurfaceData[props.time_type],
+  //   mappingData: store.nodeMap[props.time_type],
+  //   meanPerNode: store.classifyData[props.time_type],
+  //   monthHovered: monthHovered,
+  //   hotspotPolygons: store.hotspotPolygons[props.time_type],
+  // });
 
   layerGenerators = [
     axisLayerGenerator,
     nodeLayerGenerator,
-    somLayerGenerator,
+    // somLayerGenerator,
     nodeclassifyLayerGenerator,
+    // node3DLayerGenerator,
   ];
 
   // Get the layers
@@ -368,11 +362,9 @@ function drawAllLayers() {
       .flat();
 
     if (layerList.length == 0) return;
+    handleButtons();
     setLayerProps();
     message.value = "DONE!";
-    // setTimeout(() => {
-    //   message.value = "";
-    // }, 2000);
   });
 }
 
@@ -412,31 +404,27 @@ function yearMonthChanged() {
   });
 }
 
-function formatTooltipTime(d) {
-  // return d + (props.isHistorical ? 1950 : 2015);
-  return "Year " + d.toString();
-}
-
 function setLayerProps() {
   deck.setProps({ layers: layerList });
 }
 
-function toggleShowSurface() {
-  layerList = layerList.map((l) => {
-    let ret = l.id.startsWith("surface-layer")
-      ? l.clone({ visible: !isHidingSurface.value })
-      : l.clone();
-    return ret;
-  });
-  setLayerProps();
+async function recalculateMDE() {
+  await store.updateMDE(store.anchors);
+  store.anchors = { ids: [], coords: [] };
+  console.log("MDE recalculated");
+  layerGenerators.forEach((layer) => (layer.needsToRedraw = true));
+  drawAllLayers();
 }
 
-function toggleShowHeatmap() {
+function handleButtons() {
   layerList = layerList.map((l) => {
-    let ret = l.id.startsWith("curve-heatmap")
-      ? l.clone({ visible: !isHidingSurface.value })
-      : l.clone();
-    return ret;
+    if (l.id.startsWith("curve-heatmap")) {
+      return l.clone({ visible: !isHidingSurface.value });
+    } else if (l.id.startsWith("node3d")) {
+      return l.clone({ visible: !isHiding3D.value });
+    } else {
+      return l.clone();
+    }
   });
   setLayerProps();
 }

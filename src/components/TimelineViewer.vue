@@ -39,6 +39,7 @@
       id="tooltip"
       v-if="showTooltip"
       :members="selectedTimelineCluster"
+      :month="selectedTimelineClusterMonth"
       @close-card="showTooltip = false"
       class="absolute bg-white border border-gray-300 shadow-lg rounded-lg text-black bottom-0 right-0"
     />
@@ -75,6 +76,7 @@ const store = useStore();
 const showTooltip = ref(false);
 const showTooltipText = ref(false);
 const selectedTimelineCluster = ref([]);
+const selectedTimelineClusterMonth = ref(-1);
 
 const isMDS = ref(true);
 const isShowingClusterMean = ref(true);
@@ -84,6 +86,11 @@ const splitterResized = inject("splitterResized");
 const selectedModel = ref();
 const selectedType = ref();
 const tooltipData = ref();
+
+// let monthList = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+let monthListOriginal = [1, 2, 3, 4, 5, 10, 11, 12];
+// let monthListOriginal = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+let monthList = [10, 11, 12, 1, 2, 3, 4, 5];
 
 function toggleIsShowingClusterMean() {
   d3.selectAll("rect")
@@ -232,11 +239,11 @@ const types = ref(
 );
 console.log("DEBUG: MODELS ", members, models);
 
-const data = reactive([]); // data[i] is the clustering for month i
-const dataT = reactive([]); // dataT[i] is the clustering for ensemble i
+const data = reactive({}); // data[i][j] is the clustering for month i, member j
+const dataT = reactive({}); // dataT[i][j] is the clustering for ensemble i, month j
 let monthlyMDS = reactive({}); // monthlyMDS[i] is the MDS for month i
 
-let perTimeStepClusterCounts;
+let perTimeStepClusterCounts = {};
 let maxClusterSize;
 // console.log(data[0]);
 const counts = (d) =>
@@ -307,84 +314,88 @@ function computeClusterPositionModifier({ yScale, clusterHeightScale }) {
   // // HH, HL, LH LL
   let modifierScales = {};
   for (let iteration = 0; iteration < 2; iteration += 1) {
-    for (let month = 1; month <= 12; month += 1) {
-      const numClusters = Object.keys(
-        perTimeStepClusterCounts[month - 1]
-      ).length;
+    // for (let month = 1; month <= 12; month += 1) {
+    for (let i = 0; i < monthList.length; i += 1) {
+      let month = monthList[i];
+      const numClusters = Object.keys(perTimeStepClusterCounts[month]).length;
       const scales = {};
+
+      let nextMonth = i < monthList.length - 1 ? monthList[i + 1] : null;
+      let prevMonth = i > 0 ? monthList[i - 1] : null;
+      console.log("DEBUG: MONTH ", month, nextMonth, prevMonth);
 
       for (let clusterNum = 0; clusterNum < numClusters; clusterNum += 1) {
         let allEnsembleIds;
-        if (month == 1) {
-          allEnsembleIds = data[month - 1]
+        if (i == 0) {
+          allEnsembleIds = data[month]
             .map((cluster, ensembleID) =>
               cluster === clusterNum ? ensembleID : -1
             )
             .filter((d) => d !== -1);
           allEnsembleIds.sort((ensembleIDA, ensembleIDB) => {
-            const nextClusterA = dataT[ensembleIDA][month];
-            const nextClusterB = dataT[ensembleIDB][month];
+            const nextClusterA = dataT[ensembleIDA][nextMonth];
+            const nextClusterB = dataT[ensembleIDB][nextMonth];
 
-            let nextClusterAValue = yScale(month + 1)(nextClusterA);
-            let nextClusterBValue = yScale(month + 1)(nextClusterB);
+            let nextClusterAValue = yScale(nextMonth)(nextClusterA);
+            let nextClusterBValue = yScale(nextMonth)(nextClusterB);
 
             if (iteration == 1) {
               nextClusterAValue +=
-                modifierScales[month + 1][nextClusterA](ensembleIDA);
+                modifierScales[nextMonth][nextClusterA](ensembleIDA);
               nextClusterBValue +=
-                modifierScales[month + 1][nextClusterB](ensembleIDB);
+                modifierScales[nextMonth][nextClusterB](ensembleIDB);
             }
 
             return nextClusterAValue - nextClusterBValue;
           });
-        } else if (month == 12) {
-          allEnsembleIds = data[month - 1]
+        } else if (i == monthList.length - 1) {
+          allEnsembleIds = data[month]
             .map((cluster, ensembleID) =>
               cluster === clusterNum ? ensembleID : -1
             )
             .filter((d) => d !== -1);
           allEnsembleIds.sort((ensembleIDA, ensembleIDB) => {
-            const prevClusterA = dataT[ensembleIDA][month - 2];
-            const prevClusterB = dataT[ensembleIDB][month - 2];
+            const prevClusterA = dataT[ensembleIDA][prevMonth];
+            const prevClusterB = dataT[ensembleIDB][prevMonth];
 
-            let prevClusterAValue = yScale(month - 1)(prevClusterA);
-            let prevClusterBValue = yScale(month - 1)(prevClusterB);
+            let prevClusterAValue = yScale(prevMonth)(prevClusterA);
+            let prevClusterBValue = yScale(prevMonth)(prevClusterB);
 
             if (iteration == 1) {
               prevClusterAValue +=
-                modifierScales[month - 1][prevClusterA](ensembleIDA);
+                modifierScales[prevMonth][prevClusterA](ensembleIDA);
               prevClusterBValue +=
-                modifierScales[month - 1][prevClusterB](ensembleIDB);
+                modifierScales[prevMonth][prevClusterB](ensembleIDB);
             }
 
             return prevClusterAValue - prevClusterBValue;
           });
         } else {
-          allEnsembleIds = data[month - 1]
+          allEnsembleIds = data[month]
             .map((cluster, ensembleID) =>
               cluster === clusterNum ? ensembleID : -1
             )
             .filter((d) => d !== -1);
           allEnsembleIds.sort((ensembleIDA, ensembleIDB) => {
-            const prevClusterA = dataT[ensembleIDA][month - 2];
-            const prevClusterB = dataT[ensembleIDB][month - 2];
-            const nextClusterA = dataT[ensembleIDA][month + 0];
-            const nextClusterB = dataT[ensembleIDB][month + 0];
+            const prevClusterA = dataT[ensembleIDA][prevMonth];
+            const prevClusterB = dataT[ensembleIDB][prevMonth];
+            const nextClusterA = dataT[ensembleIDA][nextMonth];
+            const nextClusterB = dataT[ensembleIDB][nextMonth];
 
-            let prevClusterAValue = yScale(month - 1)(prevClusterA);
-            let prevClusterBValue = yScale(month - 1)(prevClusterB);
-            let nextClusterAValue = yScale(month + 1)(nextClusterA);
-            let nextClusterBValue = yScale(month + 1)(nextClusterB);
+            let prevClusterAValue = yScale(prevMonth)(prevClusterA);
+            let prevClusterBValue = yScale(prevMonth)(prevClusterB);
+            let nextClusterAValue = yScale(nextMonth)(nextClusterA);
+            let nextClusterBValue = yScale(nextMonth)(nextClusterB);
 
             if (iteration == 1) {
               prevClusterAValue +=
-                modifierScales[month - 1][prevClusterA](ensembleIDA);
+                modifierScales[prevMonth][prevClusterA](ensembleIDA);
               prevClusterBValue +=
-                modifierScales[month - 1][prevClusterB](ensembleIDB);
+                modifierScales[prevMonth][prevClusterB](ensembleIDB);
               nextClusterAValue +=
-                modifierScales[month + 1][nextClusterA](ensembleIDA);
+                modifierScales[nextMonth][nextClusterA](ensembleIDA);
               nextClusterBValue +=
-                modifierScales[month + 1][nextClusterB](ensembleIDB);
+                modifierScales[nextMonth][nextClusterB](ensembleIDB);
             }
 
             if (
@@ -456,22 +467,18 @@ function adjustMDS({
   margin,
 }) {
   // iterate over the monthlyMDS object
-  for (let month = 1; month <= 12; month += 1) {
+  // for (let month = 1; month <= 12; month += 1) {
+  for (let i = 0; i < monthList.length; i += 1) {
+    let month = monthList[i];
     let mds = monthlyMDS[month];
     // iterate over the clusters in the month
     const sorted = Object.entries(mds).sort((a, b) => {
       let bottomA =
         yScale(month)(parseInt(a[0])) -
-        clusterHeightScale(
-          perTimeStepClusterCounts[month - 1][parseInt(a[0])]
-        ) /
-          2;
+        clusterHeightScale(perTimeStepClusterCounts[month][parseInt(a[0])]) / 2;
       let bottomB =
         yScale(month)(parseInt(b[0])) -
-        clusterHeightScale(
-          perTimeStepClusterCounts[month - 1][parseInt(b[0])]
-        ) /
-          2;
+        clusterHeightScale(perTimeStepClusterCounts[month][parseInt(b[0])]) / 2;
       return bottomA - bottomB;
       // return a[1] - b[1]
     });
@@ -483,14 +490,14 @@ function adjustMDS({
       const currentClusterBottom =
         yScale(month)(parseInt(currentCluster[0])) -
         clusterHeightScale(
-          perTimeStepClusterCounts[month - 1][parseInt(currentCluster[0])]
+          perTimeStepClusterCounts[month][parseInt(currentCluster[0])]
         ) /
           2;
 
       const prevClusterTop =
         yScale(month)(parseInt(prevCluster[0])) +
         clusterHeightScale(
-          perTimeStepClusterCounts[month - 1][parseInt(prevCluster[0])]
+          perTimeStepClusterCounts[month][parseInt(prevCluster[0])]
         ) /
           2;
 
@@ -505,7 +512,7 @@ function adjustMDS({
         monthlyMDS[month][parseInt(currentCluster[0])] = reverseScale(
           prevClusterTop +
             clusterHeightScale(
-              perTimeStepClusterCounts[month - 1][parseInt(currentCluster[0])]
+              perTimeStepClusterCounts[month][parseInt(currentCluster[0])]
             ) /
               2 +
             minDistBetweenMDS
@@ -521,7 +528,12 @@ function adjustMDS({
 
 function checkFlipMDS({ yScale, HEIGHT, MARGIN }) {
   // Do a greedy optimization where we flip the MDS if it reduces the total distance with respect to the previous month
-  for (let month = 2; month <= 12; month += 1) {
+  // for (let month = 2; month <= 12; month += 1) {
+  //         allEnsembleIds = data[month - 1]
+  //           .map((cluster, ensembleID) =>
+  for (let i = 1; i < monthList.length; i += 1) {
+    let month = monthList[i];
+    let prevMonth = monthList[i - 1];
     const flippedYScale = (month) => {
       return (clusterId) =>
         d3
@@ -538,15 +550,19 @@ function checkFlipMDS({ yScale, HEIGHT, MARGIN }) {
     let totalDistance = 0;
     let totalDistanceFlipped = 0;
 
-    for (let ensembleID = 0; ensembleID < dataT.length; ensembleID += 1) {
+    for (
+      let ensembleID = 0;
+      ensembleID < sspAllLabels.length;
+      ensembleID += 1
+    ) {
       // Current
-      let prevCluster = dataT[ensembleID][month - 2];
-      let currentCluster = dataT[ensembleID][month - 1];
+      let prevCluster = dataT[ensembleID][prevMonth];
+      let currentCluster = dataT[ensembleID][month];
 
-      let prevClusterValueCurrent = yScale(month - 1)(prevCluster);
+      let prevClusterValueCurrent = yScale(prevMonth)(prevCluster);
       let currentClusterValueCurrent = yScale(month)(currentCluster);
 
-      let prevClusterValueFlipped = yScale(month - 1)(prevCluster);
+      let prevClusterValueFlipped = yScale(prevMonth)(prevCluster);
       let currentClusterValueFlipped = flippedYScale(month)(currentCluster);
 
       totalDistance += Math.abs(
@@ -595,7 +611,6 @@ async function drawTimeline() {
       stroke-opacity: 0.2;
     }
     .selected {
-      stroke: crimson !important;
       stroke-opacity: 1 !important;
       stroke-width: 4 !important;
     }
@@ -618,7 +633,8 @@ async function drawTimeline() {
   // add a x-axis legend for months
   const xScale = d3
     .scaleBand()
-    .domain(d3.range(1, 13))
+    .domain(monthList)
+    // .domain(d3.range(1, 13))
     // .range([MARGIN, WIDTH - MARGIN]);
     .range([MARGIN, WIDTH - MARGIN]);
   svg
@@ -664,9 +680,7 @@ async function drawTimeline() {
     } else {
       return d3
         .scaleBand()
-        .domain(
-          d3.range(Object.keys(perTimeStepClusterCounts[month - 1]).length)
-        )
+        .domain(d3.range(Object.keys(perTimeStepClusterCounts[month]).length))
         .range([MARGIN, HEIGHT - MARGIN])
         .padding(0.1);
     }
@@ -723,42 +737,55 @@ async function drawTimeline() {
   });
 
   // Store the order in the timeline to the store
-  store.clusterOrders = Object.entries(modifierScales).map(
-    ([month, scales]) => {
-      let clusterOrder = [];
-      let scalesSorted = Object.entries(scales).sort((a, b) => {
-        const clusterA = parseInt(a[0]);
-        const clusterB = parseInt(b[0]);
-        return (
-          monthlyMDS[parseInt(month)][clusterB] -
-          monthlyMDS[parseInt(month)][clusterA]
-        );
-      });
-      console.log("DEBUG: SCALES ", scalesSorted);
-      scalesSorted.map(([key, value]) => {
-        clusterOrder = [...value.domain(), -parseInt(key + 1), ...clusterOrder];
-      });
-      return clusterOrder;
-    }
-  );
+  Object.entries(modifierScales).forEach(([month, scales]) => {
+    let clusterOrder = [];
+    let scalesSorted = Object.entries(scales).sort((a, b) => {
+      const clusterA = parseInt(a[0]);
+      const clusterB = parseInt(b[0]);
+      return (
+        monthlyMDS[parseInt(month)][clusterB] -
+        monthlyMDS[parseInt(month)][clusterA]
+      );
+    });
+    console.log("DEBUG: SCALES ", scalesSorted);
+    scalesSorted.map(([key, value]) => {
+      clusterOrder = [...value.domain(), -parseInt(key + 1), ...clusterOrder];
+    });
+    // return clusterOrder;
+    store.clusterOrders[month] = clusterOrder;
+  });
   console.log("DEBUG: MODIFIERSCALES ", modifierScales);
 
   let pathData = [];
-  for (let ensembleID = 0; ensembleID < dataT.length; ensembleID++) {
+  for (
+    let ensembleID = 0;
+    ensembleID < Object.values(dataT).length;
+    ensembleID++
+  ) {
     const clusterHistory = dataT[ensembleID];
-    const controlPoints = clusterHistory.map((currentCluster, month) => {
-      // const bandwidth =
-      //   (yScale(month + 1)(currentCluster)(1) -
-      //     yScale(month + 1)(currentCluster)(0)) /
-      //   2;
+    const controlPoints = monthList.map((month) => {
+      let index = monthListOriginal.indexOf(month);
+      let cluster = clusterHistory[month];
+      // console.log("DEBUG: CONTROLPOINTS ", month, index, cluster);
       return {
-        x: xScale(month + 1),
+        x: xScale(month),
         y:
-          yScale(month + 1)(currentCluster) +
-          modifierScales[month + 1][currentCluster](ensembleID) +
-          modifierScales[month + 1][currentCluster].bandwidth() / 2,
+          yScale(month)(cluster) +
+          modifierScales[month][cluster](ensembleID) +
+          modifierScales[month][cluster].bandwidth() / 2,
       };
     });
+    // const controlPoints = Object.entries(clusterHistory).map(([m, cluster]) => {
+    //   let month = parseInt(m);
+    //   console.log("DEBUG: CONTROLPOINTS ", month, cluster);
+    //   return {
+    //     x: xScale(month),
+    //     y:
+    //       yScale(month)(cluster) +
+    //       modifierScales[month][cluster](ensembleID) +
+    //       modifierScales[month][cluster].bandwidth() / 2,
+    //   };
+    // });
     // console.log("DEBUG: CONTROLPOINTS ", controlPoints);
     const pathString = getPath({
       controlPoints: controlPoints,
@@ -770,33 +797,41 @@ async function drawTimeline() {
       cluster: clusterHistory,
     });
   }
-  console.log("DEBUG: PATHDATA ", pathData);
+  // console.log("DEBUG: PATHDATA ", pathData);
 
-  let clusterBoxData = await Promise.all(
-    arrToI(12, 1).map((month) => {
+  let clusterBoxData = {};
+  let clusterBoxDataPromise = await Promise.all(
+    // arrToI(12, 1).map((month) => {
+    monthList.map((month) => {
       return calculateClusterBoxes({
         month: month,
-        monthlyClustering: data[month - 1],
+        monthlyClustering: data[month],
         clusterHeightScale: clusterHeightScale,
         xScale: xScale,
         yScale: yScale,
       });
     })
   );
+  monthList.forEach((month, index) => {
+    clusterBoxData[month] = clusterBoxDataPromise[index];
+  });
+
   let clusterMeanMax = Math.max(
-    ...clusterBoxData.flat().map((i) => i.clusterMean)
+    ...clusterBoxDataPromise.flat().map((i) => i.clusterMean)
   );
   let clusterMeanMin = Math.min(
-    ...clusterBoxData.flat().map((i) => i.clusterMean)
+    ...clusterBoxDataPromise.flat().map((i) => i.clusterMean)
   );
   const meanDivergingScale = d3
     .scaleDiverging()
     .domain([clusterMeanMin, 0, clusterMeanMax])
     .interpolator(d3.interpolateRdBu);
 
-  for (let i = 1; i <= 12; i++) {
-    let clusterBoxes = clusterBoxData[i - 1];
-    console.log("DEBUG: CLUSTERBOXES ", clusterBoxes);
+  // for (let i = 1; i <= 12; i++) {
+  for (let i = 0; i < monthList.length; i += 1) {
+    let month = monthList[i];
+    let clusterBoxes = clusterBoxData[month];
+    // console.log("DEBUG: CLUSTERBOXES ", clusterBoxes);
     svg
       .selectAll(`rect${i}`)
       .data(clusterBoxes)
@@ -826,7 +861,7 @@ async function drawTimeline() {
           .filter(function () {
             return (
               d3.select(this).datum() &&
-              d3.select(this).datum()["cluster"][d.month - 1] === d.cluster
+              d3.select(this).datum()["cluster"][d.month] === d.cluster
             );
           })
           // .attr("stroke-opacity", 1)
@@ -857,24 +892,10 @@ async function drawTimeline() {
           };
         });
         selectedTimelineCluster.value = selected;
-        // selectedTimelineCluster.value = d.members.map((member) => {
-        //   return {
-        //     model_name: members[member].model_name,
-        //     ssp: members[member].ssp,
-        //     variant: members[member].variant,
-        //   };
-        // });
-        // tooltipData.value = `Cluster: ${d.cluster}, Num Elements: ${d.numElements}`;
-
+        selectedTimelineClusterMonth.value = d.month;
         showTooltip.value = true;
         store.monthsSelected = [d.month];
         store.setFiles({ group1: selected, group2: [] });
-        console.log(
-          "DEBUG: CLUSTER CLICK ",
-          d.cluster,
-          " NUM ELEMENTS ",
-          d.numElements
-        );
       });
   }
   svg
@@ -889,30 +910,20 @@ async function drawTimeline() {
         return "steelblue";
       }
       if (members[d.index].ssp == "ssp245") {
-        return "darkkhaki";
+        return "forestgreen";
       }
       if (members[d.index].ssp == "ssp370") {
-        return "crimson";
+        return "darkkhaki";
       }
       if (members[d.index].ssp == "ssp585") {
-        return "forestgreen";
+        return "crimson";
       }
     })
     .attr("stroke-dasharray", (d) =>
-      // members[d.index].includes("historical_r") ? "10,10" : "0"
       members[d.index].ssp == "historical" ? "10,10" : "0"
     )
     .attr("stroke-width", (d) => {
       return 1;
-      // if (members[d.index].includes("historical_r")) {
-      //   return 1;
-      // }
-      // if (members[d.index].includes("ssp370_r")) {
-      //   return 1;
-      // }
-      // if (members[d.index].includes("ssp585_r")) {
-      //   return 1;
-      // }
     })
     .attr("stroke-opacity", 1)
     .attr("transform", `translate(${xScale.bandwidth() / 2}, ${0})`)
@@ -937,9 +948,9 @@ async function drawTimeline() {
 
   const pathLegend = [
     { name: "Historical", color: "steelblue", dash: "10,10" },
-    { name: "SSP245", color: "darkkhaki", dash: "0" },
-    { name: "SSP370", color: "crimson", dash: "0" },
-    { name: "SSP585", color: "forestgreen", dash: "0" },
+    { name: "SSP245", color: "forestgreen", dash: "0" },
+    { name: "SSP370", color: "darkkhahi", dash: "0" },
+    { name: "SSP585", color: "crimson", dash: "0" },
   ];
 
   const pathLegendGroup = svg
@@ -1020,7 +1031,9 @@ async function drawTimeline() {
   // .attr("alignment-baseline", "before-edge");
 }
 async function getData() {
-  for (let month = 1; month <= 12; month += 1) {
+  // for (let month = 1; month <= 12; month += 1) {
+  for (let i = 0; i < monthList.length; i += 1) {
+    let month = monthList[i];
     // for (let month = 1; month < 2; month += 1) {
     console.log("DEBUG MEMBERS: ", sspAllLabels);
     const { distances } = await API.fetchData("distance_matrix", true, {
@@ -1051,10 +1064,13 @@ async function getData() {
     // );
     const { clustering } = await API.fetchData("run_clustering", true, {
       distance_matrix: distances,
-      n_neighbors: 6, // For UMAP
+      // n_neighbors: 6, // For UMAP
+      // n_neighbors: 5, // For UMAP
+      n_neighbors: 4, // For UMAP
+      // n_neighbors: 3, // For UMAP
       min_cluster_size: 3, // For HDBSCAN
     });
-    data.push(clustering);
+    data[month] = clustering;
     console.log("DEBUG: CLUSTERING ", month, clustering);
 
     const { MDSClusterEmbedding } = await API.fetchData("run_MDS", true, {
@@ -1066,17 +1082,28 @@ async function getData() {
     console.log("DEBUG: MDS ", month, MDSClusterEmbedding);
   }
   sspAllLabels.forEach((model, i) => {
-    dataT.push(data.map((d) => d[i]));
+    dataT[i] = {};
+    monthList.forEach((month, j) => {
+      dataT[i][month] = data[month][i];
+    });
+    // dataT.push(data.map((d) => d[i]));
   });
-  perTimeStepClusterCounts = data.map((d) => {
-    return d.reduce((acc, value) => {
+  monthList.forEach((month, i) => {
+    perTimeStepClusterCounts[month] = data[month].reduce((acc, value) => {
       acc[value] = (acc[value] || 0) + 1;
       return acc;
     }, {});
   });
+  // perTimeStepClusterCounts = data
+  // .map((d) => {
+  //   return d.reduce((acc, value) => {
+  //     acc[value] = (acc[value] || 0) + 1;
+  //     return acc;
+  //   }, {});
+  // });
   console.log("DEBUG: PER TIMESTEP CLUSTER COUNTS ", perTimeStepClusterCounts);
   maxClusterSize = Math.max(
-    ...data.map((d) => {
+    ...Object.values(data).map((d) => {
       return Math.max(...Object.values(counts(d)));
     })
   );

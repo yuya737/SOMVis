@@ -25,9 +25,7 @@
 </template>
 
 <script setup lang="ts">
-import { agnes } from "ml-hclust";
-
-import { onMounted, watch, ref, nextTick } from "vue";
+import { onMounted, watch, ref } from "vue";
 import { useStore } from "@/store/main";
 import API from "@/api/api";
 import * as d3 from "d3";
@@ -116,9 +114,15 @@ function clusterSelectionChanged() {
 }
 
 async function draw(month) {
+  if (!timeTypeMonths[timeType.OctMay].includes(month)) {
+    console.log("Invalid month");
+    return;
+  }
   const resolveTimeType = (month) => {
-    if (timeTypeMonths[timeType.AprSep].includes(month)) return timeType.AprSep;
-    if (timeTypeMonths[timeType.OctMar].includes(month)) return timeType.OctMar;
+    // if (timeTypeMonths[timeType.AprSep].includes(month)) return timeType.AprSep;
+    // if (timeTypeMonths[timeType.OctMar].includes(month)) return timeType.OctMar;
+    // if (timeTypeMonths[timeType.OctMar].includes(month)) return timeType.OctMar;
+    return timeType.OctMay;
   };
   const { distances, dendrogram } = await API.fetchData(
     "distance_matrix",
@@ -219,7 +223,7 @@ function makeHeatmap({ distances, month }) {
     ])
     .attr("id", "heatmap");
 
-  const labelsReordered = store.clusterOrders[month - 1].map((i) =>
+  const labelsReordered = store.clusterOrders[month].map((i) =>
     i < 0 ? { model_name: "DUMMY", ssp: "DUMMY" } : sspAllLabels[i]
   );
 
@@ -234,10 +238,10 @@ function makeHeatmap({ distances, month }) {
   let data = distances.flat().map((item, index) => ({
     value: item,
     row: labelsReordered[
-      store.clusterOrders[month - 1].indexOf(index % sspAllLabels.length)
+      store.clusterOrders[month].indexOf(index % sspAllLabels.length)
     ],
     col: labelsReordered[
-      store.clusterOrders[month - 1].indexOf(
+      store.clusterOrders[month].indexOf(
         Math.floor(index / sspAllLabels.length)
       )
     ],
@@ -293,13 +297,17 @@ function makeHeatmap({ distances, month }) {
     .text((d) => (d.model_name == "DUMMY" ? "" : `${d.model_name}:${d.ssp}`))
     .attr("id", (d) => "label_y" + `${d.model_name}:${d.ssp}`)
     .style("font-size", "small")
+    .on("click", (event, d) => {
+      store.monthsSelected = [selectedMonth.value.value];
+      store.setFiles({ group1: [d], group2: [] });
+    })
     .on("mouseover", (event, d) => {
       // d.isClicked = false;
-      highlightOneOnHover(true, "class0", event, `${d.model_name}:${d.ssp}`);
+      // highlightOneOnHover(true, "class0", event, `${d.model_name}:${d.ssp}`);
     })
     .on("mouseleave", (event, d) => {
       // if (d.isClicked) return;
-      highlightOneOnHover(false, "class0", event, `${d.model_name}:${d.ssp}`);
+      // highlightOneOnHover(false, "class0", event, `${d.model_name}:${d.ssp}`);
     });
   yAxis.select(".domain").remove();
 

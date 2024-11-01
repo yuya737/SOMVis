@@ -5,23 +5,81 @@ import { dataset_name, months, sspAllLabels } from "@/components/utils/utils";
 import { get } from "@vueuse/core";
 import { reactive } from "vue";
 
-const timeTypes = [timeType.AprSep, timeType.OctMar];
+// const timeTypes = [timeType.AprSep, timeType.OctMar];
+const timeTypes = [timeType.OctMay];
 // const timeTypes = [timeType.OctMar];
 // const timeTypes = [timeType.All];
 
-async function getAllData() {
+async function getPaths() {
+  let pathData: Record<timeType, Record<string, BMUData[]>> = {};
+
+  let paths = {} as Record<string, BMUData[]>;
+  const gigaPromise = timeTypes.map(async (curTimeType) => {
+    const pathPromises = sspAllLabels.map(async (d, i) => {
+      let data: SOMPath = await API.fetchData("path", true, {
+        dataset_type: dataset_name,
+        time_type: curTimeType,
+        model_type: d.model_name,
+        data_type: d.ssp,
+        // umap: true,
+      });
+      const resolveMonth = (index) => {
+        if (curTimeType == timeType.All) return (index % 12) + 1;
+        if (curTimeType == timeType.AprSep) return (index % 6) + 4;
+        if (curTimeType == timeType.OctMar) {
+          let temp = [1, 2, 3, 10, 11, 12];
+          return temp[index % 6];
+        }
+        if (curTimeType == timeType.OctMay) {
+          let temp = [1, 2, 3, 4, 5, 10, 11, 12];
+          return temp[index % 8];
+        }
+        throw "error in resolveMonth";
+      };
+      const resolveYear = (index) => {
+        if (curTimeType == timeType.All) return Math.floor(index / 12);
+        if (curTimeType == timeType.AprSep) return Math.floor(index / 6);
+        if (curTimeType == timeType.OctMar) return Math.floor(index / 6);
+        if (curTimeType == timeType.OctMay) return Math.floor(index / 8);
+        throw "error in resolveYear";
+      };
+      paths[`${d.model_name}:${d.ssp}:${d.variant}`] = data.map((id, index) => {
+        return {
+          // id: key,
+          name: d.model_name,
+          // year: Math.floor(index / 12),
+          year: resolveYear(index),
+          // month: (index % 12) + 1,
+          month: resolveMonth(index),
+          id: id,
+          // coords: [map[id].coords[0], -map[id].coords[1]],
+        };
+      });
+    });
+    pathData[curTimeType] = paths;
+    await Promise.all(pathPromises);
+  });
+  return pathData;
+}
+
+async function getNodeData(anchors = null) {
   console.log("DEBUG IN STORE MAIN");
+  let pathData: Record<timeType, Record<string, BMUData[]>> = {};
   let mappingData: Record<timeType, SOMNode[]> = {};
   let classifyData: Record<timeType, { value: number }> = {};
-  let pathData: Record<timeType, Record<string, BMUData[]>> = {};
   let contourData: Record<timeType, any> = {};
   let interpolatedSurfaceData: Record<timeType, any> = {};
   let hotspotPolygonsData: Record<timeType, any> = {};
+
+  if (anchors) {
+    anchors.coords = anchors.coords.map((d) => [d[0] / 3, -d[1] / 3]);
+  }
 
   const gigaPromise = timeTypes.map(async (curTimeType) => {
     let map = await API.fetchData("mapping", true, {
       dataset_type: dataset_name,
       time_type: curTimeType,
+      anchors: anchors,
     });
     map = map.map((d) => {
       return {
@@ -43,47 +101,6 @@ async function getAllData() {
 
     classifyData[curTimeType] = classify;
 
-    let paths = {} as Record<string, BMUData[]>;
-
-    const pathPromises = sspAllLabels.map(async (d, i) => {
-      let data: SOMPath = await API.fetchData("path", true, {
-        dataset_type: dataset_name,
-        time_type: curTimeType,
-        model_type: d.model_name,
-        data_type: d.ssp,
-        // umap: true,
-      });
-      const resolveMonth = (index) => {
-        if (curTimeType == timeType.All) return (index % 12) + 1;
-        if (curTimeType == timeType.AprSep) return (index % 6) + 4;
-        if (curTimeType == timeType.OctMar) {
-          let temp = [1, 2, 3, 10, 11, 12];
-          return temp[index % 6];
-        }
-        throw "error in resolveMonth";
-      };
-      const resolveYear = (index) => {
-        if (curTimeType == timeType.All) return Math.floor(index / 12);
-        if (curTimeType == timeType.AprSep) return Math.floor(index / 6);
-        if (curTimeType == timeType.OctMar) return Math.floor(index / 6);
-        throw "error in resolveYear";
-      };
-      paths[`${d.model_name}:${d.ssp}:${d.variant}`] = data.map((id, index) => {
-        return {
-          // id: key,
-          name: d.model_name,
-          // year: Math.floor(index / 12),
-          year: resolveYear(index),
-          // month: (index % 12) + 1,
-          month: resolveMonth(index),
-          coords: [map[id].coords[0], -map[id].coords[1]],
-        };
-      });
-    });
-    pathData[curTimeType] = paths;
-
-    await Promise.all(pathPromises);
-
     let data = map.map((d) => {
       return { ...d, value: classify[d.id].value };
     });
@@ -91,6 +108,10 @@ async function getAllData() {
     const contour = await API.fetchData("contours", true, { data: data });
     contourData[curTimeType] = contour;
 
+    // await API.fetchData("interpolatedSurfaceIDW", true, {
+    //   data: data,
+    // });
+    // console.log("DEBUG DONE INTERPOLATED SURFACE IDW");
     const { interpolatedSurface, resolution, x, y } = await API.fetchData(
       "interpolatedSurface",
       true,
@@ -121,6 +142,7 @@ async function getAllData() {
     hotspotPolygonsData[curTimeType] = hotspotPolygons;
 
     await Promise.all(hotspotPromises);
+    console.log("DEBUG DONE HOTSPOT PROMISES");
   });
   await Promise.all(gigaPromise);
 
@@ -146,16 +168,19 @@ export const useStore = defineStore("main", {
       // subsetType: "month",
       yearsSelected: [-1], // -1 means all years
       hoveredFile: null,
-      clusterOrders: [],
+      clusterOrders: {},
 
-      nodeMap: null,
+      isEditingMap: false,
+      anchors: { ids: [], coords: [] },
+
+      nodeMap: null as Record<timeType, SOMNode[]>,
       classifyData: null,
       pathData: null,
       hotspotPolygons: null,
       contourData: null,
       interpolatedSurfaceData: null,
     });
-    getAllData().then((data) => {
+    getNodeData().then((data) => {
       const {
         nodeMap,
         classifyData,
@@ -166,16 +191,18 @@ export const useStore = defineStore("main", {
       } = data;
       state.nodeMap = nodeMap;
       state.classifyData = classifyData;
-      state.pathData = pathData;
       state.hotspotPolygons = hotspotPolygons;
       state.contourData = contourData;
       state.interpolatedSurfaceData = interpolatedSurfaceData;
+    });
+    getPaths().then((pathData) => {
+      state.pathData = pathData;
     });
     return state;
   },
   getters: {
     isDataReady() {
-      return this.contourData;
+      return this.contourData != null && this.pathData != null;
     },
     getFiles(): [EnsembleMember[], EnsembleMember[]] {
       return this.files;
@@ -192,6 +219,9 @@ export const useStore = defineStore("main", {
     getHoveredFile() {
       return this.hoveredFile;
     },
+    getNodeMap: (state) => {
+      return (timeType: timeType) => state.nodeMap[timeType];
+    },
   },
   actions: {
     setFiles({ group1, group2 }: { group1: any[]; group2?: any[] }) {
@@ -205,6 +235,27 @@ export const useStore = defineStore("main", {
     },
     setHoveredFile(file) {
       this.hoveredFile = file;
+    },
+    updateMapping(time_type, id, coords) {
+      this.nodeMap[time_type][id].coords = coords;
+    },
+    async updateMDE(anchors) {
+      console.log("DEBUG IN UPDATE MDE", anchors);
+      const data = await getNodeData(anchors);
+      const {
+        nodeMap,
+        classifyData,
+        pathData,
+        hotspotPolygons,
+        contourData,
+        interpolatedSurfaceData,
+      } = data;
+      this.nodeMap = nodeMap;
+      this.classifyData = classifyData;
+      this.pathData = pathData;
+      this.hotspotPolygons = hotspotPolygons;
+      this.contourData = contourData;
+      this.interpolatedSurfaceData = interpolatedSurfaceData;
     },
   },
 });

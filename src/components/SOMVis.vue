@@ -1,23 +1,30 @@
 <template>
   <Splitter style="height: 100%" layout="vertical" @resizeend="splitterResized">
-    <SplitterPanel style="height: 100%" :size="40">
+    <SplitterPanel style="height: 100%" :size="60">
       <!-- <ProjectionViewer class="h-full" v-if="store.isDataReady" /> -->
-      <Splitter
+      <ProjectionViewer
+        v-if="store.isDataReady"
+        class="h-full"
+        :time_type="timeType.OctMay"
+      />
+      <!-- <Splitter
         class="h-full w-full"
         layout="horizontal"
         v-if="store.isDataReady"
         @resizeend="splitterResized"
-      >
-        <SplitterPanel class="h-full">
+      > -->
+      <!-- <ProjectionViewer class="h-full" :time_type="timeType.OctMay" /> -->
+      <!-- <SplitterPanel class="h-full">
           <ProjectionViewer class="h-full" :time_type="timeType.AprSep" />
         </SplitterPanel>
         <SplitterPanel style="height: 100%" :size="50">
           <ProjectionViewer class="h-full" :time_type="timeType.OctMar" />
-        </SplitterPanel>
-      </Splitter>
+        <!-- </SplitterPanel> -->
+      -->
+      <!-- </Splitter> -->
     </SplitterPanel>
 
-    <SplitterPanel class="h-full w-full" :size="60">
+    <SplitterPanel class="h-full w-full" :size="40">
       <Splitter
         class="h-full w-full"
         layout="horizontal"
@@ -25,12 +32,12 @@
       >
         <SplitterPanel class="h-full">
           <!-- <MapViewer class="h-full" /> -->
-          <TimelineViewer class="h-full" v-if="store.isDataReady" />
+          <!-- <TimelineViewer class="h-full" v-if="store.isDataReady" /> -->
           <!-- <TimelineViewerTemporal class="h-full" /> -->
           <!-- <ForceGraph class="h-full" /> -->
         </SplitterPanel>
         <SplitterPanel style="height: 100%" :size="40">
-          <HeatmapViewer class="h-full" />
+          <!-- <HeatmapViewer class="h-full" v-if="store.isDataReady" /> -->
         </SplitterPanel>
       </Splitter>
     </SplitterPanel>

@@ -10,7 +10,8 @@ declare type BMUData = {
   name: string; // Name of the BMU
   month: number; // Month associated with the BMU
   year: number; // Year associated with the BMU
-  coords: number[]; // Coordinates of the BMU in the SOM grid
+  id: number; // ID of the BMU
+  // coords: number[]; // Coordinates of the BMU in the SOM grid
 };
 
 // Represents an ensemble member in a climate model ensemble.

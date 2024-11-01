@@ -1,6 +1,6 @@
 <template>
   <div class="bg-white">
-    <img class="flip-y" :src="imgSrc" />
+    <img class="" :src="imgSrc" />
     <Button
       @click="$emit('closeNodeInspector')"
       class="absolute z-[1] m-2 p-2 top-0 right-0 bg-slate-200 aspect-square"
