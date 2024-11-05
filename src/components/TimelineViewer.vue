@@ -47,6 +47,9 @@
       id="timelineSVG"
       class="w-full h-full text-black flex justify-around"
     ></div>
+    <div v-if="isRecalculatingTimeline" class="overlay">
+      <div class="overlay-text">Recalculating Timeline...</div>
+    </div>
   </div>
   <div
     id="tooltipText"
@@ -81,6 +84,7 @@ const selectedTimelineClusterMonth = ref(-1);
 
 const isMDS = ref(true);
 const isShowingClusterMean = ref(true);
+const isRecalculatingTimeline = ref(false);
 
 const splitterResized = inject("splitterResized");
 
@@ -182,7 +186,6 @@ onMounted(() => {
     getMapEditFlag,
     () => {
       draw();
-      console.log("DEBUG: MAP EDIT FLAG ", getMapEditFlag.value);
     },
     { immediate: true }
   );
@@ -197,6 +200,7 @@ onMounted(() => {
 });
 
 function draw() {
+  isRecalculatingTimeline.value = true;
   getData().then(() => {
     nextTick(() => {
       const element = document.getElementById("timelineSVG");
@@ -204,6 +208,7 @@ function draw() {
         drawTimeline();
       }
     });
+    isRecalculatingTimeline.value = false;
   });
 }
 
