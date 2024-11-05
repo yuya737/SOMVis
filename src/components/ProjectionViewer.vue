@@ -134,6 +134,9 @@
       v-if="imgSrc != ''"
     />
   </div>
+  <div v-if="isRecalculatingMDE" class="overlay">
+    <div class="overlay-text">Recalculating MDE...</div>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -152,6 +155,8 @@ import { AbstractLayerGenerator } from "./utils/AbstractLayerGenerator";
 
 import { NodeLayer } from "./utils/NodeLayer";
 import { NodeClassifyLayer } from "./utils/NodeClassifyLayer";
+import { Node3DLayer } from "./utils/Node3DLayer";
+import { SOMLayer } from "./utils/SOMLayer";
 import ToggleButton from "primevue/togglebutton";
 import Button from "primevue/button";
 
@@ -204,6 +209,7 @@ const selectedModel = ref([[], []]);
 const isHidingSurface = ref(false);
 const isHiding3D = ref(false);
 const isWaterYearMean = ref(false);
+const isRecalculatingMDE = ref(false);
 const monthHovered = ref(null);
 watch(monthHovered, (newVal) => {
   console.log("monthHovered changed", newVal);
@@ -260,6 +266,7 @@ onMounted(() => {
   watch(
     () => store.getNodeMap(props.time_type),
     () => {
+      console.log("Node map changed");
       drawAllLayers();
     },
     { deep: true }
@@ -268,7 +275,20 @@ onMounted(() => {
 
 async function initializeLayers() {
   // Set up layer generators
-  const { getNodeMap, isEditingMap, anchors } = storeToRefs(store);
+  const {
+    getNodeMap,
+    getHotspotPolygons,
+    getClassifyData,
+    getContourData,
+    getInterpolatedSurfaceData,
+    getPathData,
+    getYearsSelected,
+    getMonthsSelected,
+    getFiles,
+    getSubsetType,
+    getHoveredFile,
+    anchors,
+  } = storeToRefs(store);
   let nodeLayerGenerator = new NodeLayer({
     dataset_type: dataset_name,
     time_type: props.time_type,
@@ -277,21 +297,28 @@ async function initializeLayers() {
     drawEveryN: 13,
     dims: 30,
     deck: deck,
-    isEditingMap: isEditingMap,
     anchors: anchors,
   });
   let nodeclassifyLayerGenerator = new NodeClassifyLayer({
-    mappingData: store.nodeMap[props.time_type],
-    hotspotPolygons: store.hotspotPolygons[props.time_type],
-    classifyData: store.classifyData[props.time_type],
-    contourData: store.contourData[props.time_type],
+    mappingDataGetter: getNodeMap,
+    hotspotPolygonsGetter: getHotspotPolygons,
+    classifyDataGetter: getClassifyData,
+    contourDataGetter: getContourData,
+    monthHovered: monthHovered,
+    interpolatedSurfaceGetter: getInterpolatedSurfaceData,
+    time_type: props.time_type,
+
+    // mappingData: store.nodeMap[props.time_type],
+    // hotspotPolygons: store.hotspotPolygons[props.time_type],
+    // classifyData: store.classifyData[props.time_type],
+    // contourData: store.contourData[props.time_type],
     // hotspotPolygons,
     // classifyData,
     // contourData,
-    monthHovered: monthHovered,
-    interpolatedSurface: store.interpolatedSurfaceData[props.time_type],
+    // monthHovered: monthHovered,
+    // interpolatedSurface: store.interpolatedSurfaceData[props.time_type],
   });
-  let axisLayerGenerator = new AxisLayer(-100, 100, 5, true);
+  let axisLayerGenerator = new AxisLayer(-100, 100, 10, true);
   // let axisLayerGenerator = new AxisLayer(-1000, 1000, 50, true);
 
   let xMin = Math.min(
@@ -307,36 +334,38 @@ async function initializeLayers() {
     ...store.nodeMap[props.time_type].map((d) => d.coords[1])
   );
 
-  // let somLayerGenerator = new SOMLayer({
-  //   data: store.pathData[props.time_type],
-  //   timeRange: getYearsSelected,
-  //   monthRange: getMonthsSelected,
-  //   model: getFiles,
-  //   subsetType: getSubsetType,
-  //   hoveredFile: getHoveredFile,
-  //   extent: [
-  //     [xMin, xMax],
-  //     [yMin, yMax],
-  //   ],
-  //   interpolatedSurface: store.interpolatedSurfaceData[props.time_type],
-  // });
+  let somLayerGenerator = new SOMLayer({
+    nodeMapGetter: getNodeMap,
+    pathDataGetter: getPathData,
+    timeRange: getYearsSelected,
+    monthRange: getMonthsSelected,
+    model: getFiles,
+    subsetType: getSubsetType,
+    hoveredFile: getHoveredFile,
+    extent: [
+      [xMin, xMax],
+      [yMin, yMax],
+    ],
+    interpolatedSurface: store.interpolatedSurfaceData[props.time_type],
+    time_type: props.time_type,
+  });
 
-  // let node3DLayerGenerator = new Node3DLayer({
-  //   interpolatedSurface: store.interpolatedSurfaceData[props.time_type],
-  //   mappingData: store.nodeMap[props.time_type],
-  //   meanPerNode: store.classifyData[props.time_type],
-  //   monthHovered: monthHovered,
-  //   hotspotPolygons: store.hotspotPolygons[props.time_type],
-  // });
+  let node3DLayerGenerator = new Node3DLayer({
+    interpolatedSurfaceGetter: getInterpolatedSurfaceData,
+    mappingDataGetter: getNodeMap,
+    meanPerNodeGetter: getClassifyData,
+    monthHovered: monthHovered,
+    hotspotPolygonsGetter: getHotspotPolygons,
+    time_type: props.time_type,
+  });
 
   layerGenerators = [
     axisLayerGenerator,
     nodeLayerGenerator,
-    // somLayerGenerator,
+    somLayerGenerator,
     nodeclassifyLayerGenerator,
-    // node3DLayerGenerator,
+    node3DLayerGenerator,
   ];
-
   // Get the layers
   // layerList = layerGenerators.map((g) => g.getLayers()).flat();
   layerList = layerGenerators
@@ -364,7 +393,7 @@ function drawAllLayers() {
     if (layerList.length == 0) return;
     handleButtons();
     setLayerProps();
-    message.value = "DONE!";
+    // message.value = "DONE!";
   });
 }
 
@@ -409,11 +438,13 @@ function setLayerProps() {
 }
 
 async function recalculateMDE() {
+  isRecalculatingMDE.value = true;
   await store.updateMDE(store.anchors);
   store.anchors = { ids: [], coords: [] };
   console.log("MDE recalculated");
   layerGenerators.forEach((layer) => (layer.needsToRedraw = true));
   drawAllLayers();
+  isRecalculatingMDE.value = false;
 }
 
 function handleButtons() {
@@ -438,5 +469,22 @@ function handleMonthHoveredChanged(month, hovered) {
 <style scoped>
 .slider {
   --slider-tooltip-font-size: 1.5rem;
+}
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.overlay-text {
+  color: white;
+  font-size: 2rem;
 }
 </style>

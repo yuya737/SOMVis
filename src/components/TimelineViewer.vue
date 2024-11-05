@@ -71,6 +71,7 @@ import ToggleButton from "primevue/togglebutton";
 
 import { sspAllLabels, months } from "./utils/utils";
 import { useStore } from "@/store/main";
+import { storeToRefs } from "pinia";
 
 const store = useStore();
 const showTooltip = ref(false);
@@ -176,14 +177,15 @@ watch(selectedType, (value) => {
 });
 
 onMounted(() => {
-  getData().then(() => {
-    nextTick(() => {
-      const element = document.getElementById("timelineSVG");
-      if (element) {
-        drawTimeline();
-      }
-    });
-  });
+  const { getMapEditFlag } = storeToRefs(store);
+  watch(
+    getMapEditFlag,
+    () => {
+      draw();
+      console.log("DEBUG: MAP EDIT FLAG ", getMapEditFlag.value);
+    },
+    { immediate: true }
+  );
   watch(splitterResized, () => {
     // remove the svg
     const element = document.getElementById("timelineSVG");
@@ -193,6 +195,17 @@ onMounted(() => {
     }
   });
 });
+
+function draw() {
+  getData().then(() => {
+    nextTick(() => {
+      const element = document.getElementById("timelineSVG");
+      if (element) {
+        drawTimeline();
+      }
+    });
+  });
+}
 
 const colors = [
   // "#4e79a7",
@@ -322,7 +335,6 @@ function computeClusterPositionModifier({ yScale, clusterHeightScale }) {
 
       let nextMonth = i < monthList.length - 1 ? monthList[i + 1] : null;
       let prevMonth = i > 0 ? monthList[i - 1] : null;
-      console.log("DEBUG: MONTH ", month, nextMonth, prevMonth);
 
       for (let clusterNum = 0; clusterNum < numClusters; clusterNum += 1) {
         let allEnsembleIds;
@@ -573,12 +585,6 @@ function checkFlipMDS({ yScale, HEIGHT, MARGIN }) {
       );
     }
 
-    console.log(
-      "DEBUG: DISTANCES ",
-      totalDistance,
-      totalDistanceFlipped,
-      month
-    );
     if (totalDistance > totalDistanceFlipped) {
       // Flip the MDS
       console.log("DEBUG: FLIPPING MDS ", month);
@@ -949,7 +955,7 @@ async function drawTimeline() {
   const pathLegend = [
     { name: "Historical", color: "steelblue", dash: "10,10" },
     { name: "SSP245", color: "forestgreen", dash: "0" },
-    { name: "SSP370", color: "darkkhahi", dash: "0" },
+    { name: "SSP370", color: "darkkhaki", dash: "0" },
     { name: "SSP585", color: "crimson", dash: "0" },
   ];
 
@@ -1031,11 +1037,8 @@ async function drawTimeline() {
   // .attr("alignment-baseline", "before-edge");
 }
 async function getData() {
-  // for (let month = 1; month <= 12; month += 1) {
   for (let i = 0; i < monthList.length; i += 1) {
     let month = monthList[i];
-    // for (let month = 1; month < 2; month += 1) {
-    console.log("DEBUG MEMBERS: ", sspAllLabels);
     const { distances } = await API.fetchData("distance_matrix", true, {
       dataset_type: dataset_name,
       // time_type: (month <= 3 || month >=10) timeType.All,
@@ -1046,22 +1049,6 @@ async function getData() {
       years: [-1],
     });
     console.log("DEBUG: DISTANCES ", month, distances);
-    // const { distances_temporal, members } = await API.fetchData(
-    //   "distance_matrix_temporal",
-    //   true,
-    //   {
-    //     dataset_type: dataset_name,
-    //     members: sspAllLabels,
-    //     subsetType: "month",
-    //     months: [month],
-    //   }
-    // );
-    // console.log(
-    //   "DEBUG: DISTANCES TEMPORAL",
-    //   month,
-    //   distances_temporal,
-    //   members
-    // );
     const { clustering } = await API.fetchData("run_clustering", true, {
       distance_matrix: distances,
       // n_neighbors: 6, // For UMAP
@@ -1071,7 +1058,7 @@ async function getData() {
       min_cluster_size: 3, // For HDBSCAN
     });
     data[month] = clustering;
-    console.log("DEBUG: CLUSTERING ", month, clustering);
+    // console.log("DEBUG: CLUSTERING ", month, clustering);
 
     const { MDSClusterEmbedding } = await API.fetchData("run_MDS", true, {
       distance_matrix: distances,
@@ -1079,7 +1066,7 @@ async function getData() {
     });
     // Force the midpoint to be 0
     monthlyMDS[month] = MDSClusterEmbedding == 0 ? [0] : MDSClusterEmbedding;
-    console.log("DEBUG: MDS ", month, MDSClusterEmbedding);
+    // console.log("DEBUG: MDS ", month, MDSClusterEmbedding);
   }
   sspAllLabels.forEach((model, i) => {
     dataT[i] = {};
@@ -1101,15 +1088,15 @@ async function getData() {
   //     return acc;
   //   }, {});
   // });
-  console.log("DEBUG: PER TIMESTEP CLUSTER COUNTS ", perTimeStepClusterCounts);
+  // console.log("DEBUG: PER TIMESTEP CLUSTER COUNTS ", perTimeStepClusterCounts);
   maxClusterSize = Math.max(
     ...Object.values(data).map((d) => {
       return Math.max(...Object.values(counts(d)));
     })
   );
-  console.log("DEBUG: DATA ", data);
-  console.log("DEBUG: DATA T ", dataT);
-  console.log("DEBUG MDS: ", monthlyMDS);
+  // console.log("DEBUG: DATA ", data);
+  // console.log("DEBUG: DATA T ", dataT);
+  // console.log("DEBUG MDS: ", monthlyMDS);
 }
 // const arrToI = (i, start=) => Array.from({ length: i }, (_, index) => index);
 function arrToI(i, start = 0) {

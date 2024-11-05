@@ -10,15 +10,14 @@ import bearing from "@turf/bearing";
 import { booleanEqual } from "@turf/turf";
 
 export class NodeLayer extends AbstractLayerGenerator {
-  readonly dataset_type;
-  readonly time_type;
   readonly nodeMapGetter: ComputedRef<(timeType: timeType) => any>;
-  readonly nodeMapUpdater: ComputedRef<(timeType: timeType) => any>;
+
+  readonly dataset_type;
+  readonly time_type: timeType;
   readonly imgSrc;
   readonly drawEveryN: number;
   readonly dims: number;
   readonly deck: any;
-  isEditingMap;
 
   indexClicked: number = -1;
   layerList: any = null;
@@ -36,7 +35,6 @@ export class NodeLayer extends AbstractLayerGenerator {
     drawEveryN,
     dims = 30,
     deck,
-    isEditingMap,
     anchors,
   }) {
     super();
@@ -47,7 +45,6 @@ export class NodeLayer extends AbstractLayerGenerator {
     this.drawEveryN = drawEveryN;
     this.dims = dims;
     this.deck = deck;
-    this.isEditingMap = isEditingMap;
     this.anchors = anchors;
 
     this.store = useStore();
@@ -55,6 +52,11 @@ export class NodeLayer extends AbstractLayerGenerator {
     watch(imgSrc, () => {
       this.needsToRedraw = true;
     });
+    // watch(
+    //   () => this.nodeMapGetter.value(this.time_type),
+    //   () => (this.needsToRedraw = true),
+    //   { deep: true }
+    // );
     watch(
       () => this.nodeMapGetter.value(this.time_type),
       () => (this.needsToRedraw = true),
@@ -78,15 +80,15 @@ export class NodeLayer extends AbstractLayerGenerator {
           image: `http://localhost:5002/node_images/${this.dataset_type}/${this.time_type}/${i}.png`,
           pickable: true,
           bounds: [
-            this.map[i].coords[0] - 1.5,
-            -this.map[i].coords[1] + 1.5,
-            this.map[i].coords[0] + 1.5,
-            -this.map[i].coords[1] - 1.5,
+            this.map[i].coords[0] - 2,
+            -this.map[i].coords[1] + 2,
+            this.map[i].coords[0] + 2,
+            -this.map[i].coords[1] - 2,
 
-            // this.mappingData[i].coords[0] - 1.5,
-            // -this.mappingData[i].coords[1] + 1.5,
-            // this.mappingData[i].coords[0] + 1.5,
-            // -this.mappingData[i].coords[1] - 1.5,
+            // this.mappingData[i].coords[0] - 2,
+            // -this.mappingData[i].coords[1] + 2,
+            // this.mappingData[i].coords[0] + 2,
+            // -this.mappingData[i].coords[1] - 2,
           ],
           index: i,
           loadOptions: {
@@ -103,7 +105,6 @@ export class NodeLayer extends AbstractLayerGenerator {
           },
           onDragStart: (info, event) => {
             this.deck.setProps({ controller: { dragPan: false } });
-            this.isEditingMap.value = true;
           },
           onDrag: (info, event) => {
             let lngLat = info.coordinate;
@@ -113,9 +114,7 @@ export class NodeLayer extends AbstractLayerGenerator {
             const a = bearing([0, 0], lngLat);
             const x = d * Math.sin((a * Math.PI) / 180);
             const y = -d * Math.cos((a * Math.PI) / 180);
-            console.log(this.map[info.layer.props.index].coords[0]);
             this.map[info.layer.props.index].coords = [x, y];
-            this.deck.setProps({ controller: { dragPan: true } });
           },
           onDragEnd: (info, event) => {
             let lngLat = info.coordinate;
@@ -133,7 +132,6 @@ export class NodeLayer extends AbstractLayerGenerator {
             this.anchors.value["coords"].push([x, y]);
             console.log("DEBUG DRAG END", lngLat, d, x, y);
             this.deck.setProps({ controller: { dragPan: true } });
-            this.isEditingMap.value = false;
           },
           // updateTriggers: {
           //   bounds: this.map,
@@ -141,6 +139,30 @@ export class NodeLayer extends AbstractLayerGenerator {
           // transitions: {
           //   bounds: 1000,
           // },
+        }),
+      ];
+    }
+
+    const numAnchors = this.anchors.value["ids"].length;
+    for (let i = 0; i < numAnchors; i++) {
+      const id = this.anchors.value["ids"][i];
+      ret = [
+        ...ret,
+        new PathLayer({
+          id: "selected-node-border-layer",
+          positionFormat: "XY",
+          getPath: (d) => d,
+          getWidth: 0.1,
+          getColor: [255, 0, 0],
+          data: [
+            [
+              [this.map[id].coords[0] - 2, -this.map[id].coords[1] - 2],
+              [this.map[id].coords[0] - 2, -this.map[id].coords[1] + 2],
+              [this.map[id].coords[0] + 2, -this.map[id].coords[1] + 2],
+              [this.map[id].coords[0] + 2, -this.map[id].coords[1] - 2],
+              [this.map[id].coords[0] - 2, -this.map[id].coords[1] - 2],
+            ],
+          ],
         }),
       ];
     }
@@ -157,11 +179,11 @@ export class NodeLayer extends AbstractLayerGenerator {
           getWidth: 0.1,
           data: [
             [
-              [this.map[i].coords[0] - 1.5, -this.map[i].coords[1] - 1.5],
-              [this.map[i].coords[0] - 1.5, -this.map[i].coords[1] + 1.5],
-              [this.map[i].coords[0] + 1.5, -this.map[i].coords[1] + 1.5],
-              [this.map[i].coords[0] + 1.5, -this.map[i].coords[1] - 1.5],
-              [this.map[i].coords[0] - 1.5, -this.map[i].coords[1] - 1.5],
+              [this.map[i].coords[0] - 2, -this.map[i].coords[1] - 2],
+              [this.map[i].coords[0] - 2, -this.map[i].coords[1] + 2],
+              [this.map[i].coords[0] + 2, -this.map[i].coords[1] + 2],
+              [this.map[i].coords[0] + 2, -this.map[i].coords[1] - 2],
+              [this.map[i].coords[0] - 2, -this.map[i].coords[1] - 2],
             ],
           ],
         }),

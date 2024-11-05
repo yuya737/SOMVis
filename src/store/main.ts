@@ -64,7 +64,6 @@ async function getPaths() {
 
 async function getNodeData(anchors = null) {
   console.log("DEBUG IN STORE MAIN");
-  let pathData: Record<timeType, Record<string, BMUData[]>> = {};
   let mappingData: Record<timeType, SOMNode[]> = {};
   let classifyData: Record<timeType, { value: number }> = {};
   let contourData: Record<timeType, any> = {};
@@ -128,21 +127,21 @@ async function getNodeData(anchors = null) {
 
     let hotspotPolygons = {};
 
-    const hotspotPromises = timeTypeMonths[curTimeType].map(async (month) => {
-      let data = await API.fetchData("get_smoothed_alpha", true, {
-        dataset_type: dataset_name,
-        time_type: curTimeType,
-        members: sspAllLabels,
-        years: [-1],
-        months: [month],
-        kde_bounds: [xMin, xMax, yMin, yMax],
-      });
-      hotspotPolygons[month] = data;
-    });
-    hotspotPolygonsData[curTimeType] = hotspotPolygons;
+    // const hotspotPromises = timeTypeMonths[curTimeType].map(async (month) => {
+    //   let data = await API.fetchData("get_smoothed_alpha", true, {
+    //     dataset_type: dataset_name,
+    //     time_type: curTimeType,
+    //     members: sspAllLabels,
+    //     years: [-1],
+    //     months: [month],
+    //     kde_bounds: [xMin, xMax, yMin, yMax],
+    //   });
+    //   hotspotPolygons[month] = data;
+    // });
+    // hotspotPolygonsData[curTimeType] = hotspotPolygons;
 
-    await Promise.all(hotspotPromises);
-    console.log("DEBUG DONE HOTSPOT PROMISES");
+    // await Promise.all(hotspotPromises);
+    // console.log("DEBUG DONE HOTSPOT PROMISES");
   });
   await Promise.all(gigaPromise);
 
@@ -151,7 +150,6 @@ async function getNodeData(anchors = null) {
   return {
     nodeMap: mappingData,
     classifyData: classifyData,
-    pathData: pathData,
     hotspotPolygons: hotspotPolygonsData,
     contourData: contourData,
     interpolatedSurfaceData: interpolatedSurfaceData,
@@ -170,7 +168,7 @@ export const useStore = defineStore("main", {
       hoveredFile: null,
       clusterOrders: {},
 
-      isEditingMap: false,
+      mapEditFlag: false, // Will flip when new MDE is calculated
       anchors: { ids: [], coords: [] },
 
       nodeMap: null as Record<timeType, SOMNode[]>,
@@ -222,6 +220,24 @@ export const useStore = defineStore("main", {
     getNodeMap: (state) => {
       return (timeType: timeType) => state.nodeMap[timeType];
     },
+    getPathData: (state) => {
+      return (timeType: timeType) => state.pathData[timeType];
+    },
+    getHotspotPolygons: (state) => {
+      return (timeType: timeType) => state.hotspotPolygons[timeType];
+    },
+    getClassifyData: (state) => {
+      return (timeType: timeType) => state.classifyData[timeType];
+    },
+    getContourData: (state) => {
+      return (timeType: timeType) => state.contourData[timeType];
+    },
+    getInterpolatedSurfaceData: (state) => {
+      return (timeType: timeType) => state.interpolatedSurfaceData[timeType];
+    },
+    getMapEditFlag() {
+      return this.mapEditFlag;
+    },
   },
   actions: {
     setFiles({ group1, group2 }: { group1: any[]; group2?: any[] }) {
@@ -240,22 +256,20 @@ export const useStore = defineStore("main", {
       this.nodeMap[time_type][id].coords = coords;
     },
     async updateMDE(anchors) {
-      console.log("DEBUG IN UPDATE MDE", anchors);
       const data = await getNodeData(anchors);
       const {
         nodeMap,
         classifyData,
-        pathData,
         hotspotPolygons,
         contourData,
         interpolatedSurfaceData,
       } = data;
       this.nodeMap = nodeMap;
       this.classifyData = classifyData;
-      this.pathData = pathData;
       this.hotspotPolygons = hotspotPolygons;
       this.contourData = contourData;
       this.interpolatedSurfaceData = interpolatedSurfaceData;
+      this.mapEditFlag = !this.mapEditFlag;
     },
   },
 });

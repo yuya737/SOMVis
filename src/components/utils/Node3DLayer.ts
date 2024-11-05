@@ -1,6 +1,7 @@
 import { AbstractLayerGenerator } from "./AbstractLayerGenerator";
 import { watch } from "vue";
 import PlotLayer from "@/components/layers/plot-layer";
+import { timeType } from "./utils";
 import {
   ScatterplotLayer,
   PointCloudLayer,
@@ -11,74 +12,77 @@ import {
 import * as d3 from "d3";
 
 export class Node3DLayer extends AbstractLayerGenerator {
-  readonly interpolatedSurface: any;
-  readonly mappingData: any;
-  readonly meanPerNode: any;
+  readonly interpolatedSurfaceGetter: ComputedRef<(timeType: timeType) => any>;
+  readonly mappingDataGetter: ComputedRef<(timeType: timeType) => any>;
+  readonly meanPerNodeGetter: ComputedRef<(timeType: timeType) => any>;
   readonly monthHovered: any;
-  readonly hotspotPolygons: any;
+  readonly hotspotPolygonsGetter: ComputedRef<(timeType: timeType) => any>;
   readonly multiplier: number;
+  readonly time_type: timeType;
 
   constructor({
-    interpolatedSurface,
-    mappingData,
-    meanPerNode,
+    interpolatedSurfaceGetter,
+    mappingDataGetter,
+    meanPerNodeGetter,
     monthHovered,
-    hotspotPolygons,
+    hotspotPolygonsGetter,
+    time_type,
   }) {
     super();
-    this.interpolatedSurface = interpolatedSurface;
-    this.mappingData = mappingData;
-    this.meanPerNode = meanPerNode;
+    this.interpolatedSurfaceGetter = interpolatedSurfaceGetter;
+    this.mappingDataGetter = mappingDataGetter;
+    this.meanPerNodeGetter = meanPerNodeGetter;
     this.monthHovered = monthHovered;
-    this.hotspotPolygons = hotspotPolygons;
+    this.hotspotPolygonsGetter = hotspotPolygonsGetter;
 
     this.multiplier = 10;
+    this.time_type = time_type;
 
     watch(monthHovered, (value) => {
       this.needsToRedraw = true;
     });
+
+    watch(
+      () => this.interpolatedSurfaceGetter.value(this.time_type),
+      () => (this.needsToRedraw = true),
+      { deep: true }
+    );
   }
 
   getLayers() {
     if (this.layerList && !this.needsToRedraw) {
       return this.layerList;
     }
-    console.log("DEBUG: INTERPOLATED SURFACE", this.interpolatedSurface);
+    const interpolatedSurface = this.interpolatedSurfaceGetter.value(
+      this.time_type
+    );
+    const mappingData = this.mappingDataGetter.value(this.time_type);
+    const meanPerNode = this.meanPerNodeGetter.value(this.time_type);
+    console.log("DEBUG: INTERPOLATED SURFACE", interpolatedSurface);
     let surface = new PlotLayer({
       id: "node3d-surface-layer",
       getPosition: (u, v) => {
         return [
-          this.interpolatedSurface.x[
-            Math.round(u * (this.interpolatedSurface.resolution - 1))
+          interpolatedSurface.x[
+            Math.round(u * (interpolatedSurface.resolution - 1))
           ],
-          -this.interpolatedSurface.y[
-            Math.round(v * (this.interpolatedSurface.resolution - 1))
+          -interpolatedSurface.y[
+            Math.round(v * (interpolatedSurface.resolution - 1))
           ],
           // 10,
-          this.interpolatedSurface.interpolatedSurface[
-            Math.round(v * (this.interpolatedSurface.resolution - 1))
-          ][Math.round(u * (this.interpolatedSurface.resolution - 1))] *
+          interpolatedSurface.interpolatedSurface[
+            Math.round(v * (interpolatedSurface.resolution - 1))
+          ][Math.round(u * (interpolatedSurface.resolution - 1))] *
             this.multiplier +
             10,
         ];
       },
       getShouldDiscard: (u, v) =>
-        this.interpolatedSurface.interpolatedSurface[
-          Math.round(v * (this.interpolatedSurface.resolution - 1))
-        ][Math.round(u * (this.interpolatedSurface.resolution - 1))] == 0,
+        interpolatedSurface.interpolatedSurface[
+          Math.round(v * (interpolatedSurface.resolution - 1))
+        ][Math.round(u * (interpolatedSurface.resolution - 1))] == 0,
 
-      // getNormal: (u, v) => {
-      //   return normal[
-      //     parseInt(u * resolution * (resolution - 1) + v * (resolution - 1))
-      //   ];
-      // },
-      // getColor: (x, z, y) => [40, interpolateGreens(z/15), 160, (z / 15) * 255],
       getColor: (x, y, z) => {
-        // return [128, 0, 0, 255];
-        // let t = interpolateGreens(
-        // if (z == 10) {
-        //   return [128, 0, 0, 0];
-        // }
         let t = d3
           .interpolateRdBu(
             d3.scaleLinear().domain([-10, 10]).range([0, 1])(z - 10)
@@ -90,8 +94,8 @@ export class Node3DLayer extends AbstractLayerGenerator {
         // t.push((z / 4) * 255);
         return t;
       },
-      uCount: this.interpolatedSurface.resolution,
-      vCount: this.interpolatedSurface.resolution,
+      uCount: interpolatedSurface.resolution,
+      vCount: interpolatedSurface.resolution,
       drawAxes: false,
       axesPadding: 0.25,
       axesColor: [0, 0, 0, 128],
@@ -100,16 +104,19 @@ export class Node3DLayer extends AbstractLayerGenerator {
         ambient: 0.8,
         specularColor: [0.3, 0.1, 0.2],
       },
+      updateTriggers: {
+        getPosition: interpolatedSurface,
+      },
     });
-    let surface2 = new PlotLayer({
+    let zeroSurface = new PlotLayer({
       id: "node3d-surface-layer2",
       getPosition: (u, v) => {
         return [
-          this.interpolatedSurface.x[
-            Math.round(u * (this.interpolatedSurface.resolution - 1))
+          interpolatedSurface.x[
+            Math.round(u * (interpolatedSurface.resolution - 1))
           ],
-          -this.interpolatedSurface.y[
-            Math.round(v * (this.interpolatedSurface.resolution - 1))
+          -interpolatedSurface.y[
+            Math.round(v * (interpolatedSurface.resolution - 1))
           ],
           10,
         ];
@@ -125,8 +132,8 @@ export class Node3DLayer extends AbstractLayerGenerator {
       getColor: (x, y, z) => {
         return [128, 128, 128, 35];
       },
-      uCount: this.interpolatedSurface.resolution,
-      vCount: this.interpolatedSurface.resolution,
+      uCount: interpolatedSurface.resolution,
+      vCount: interpolatedSurface.resolution,
       drawAxes: false,
       axesPadding: 0.25,
       axesColor: [0, 0, 0, 128],
@@ -136,8 +143,8 @@ export class Node3DLayer extends AbstractLayerGenerator {
     // let scatter = new ScatterplotLayer({
     let scatter = new PointCloudLayer({
       id: "node3d-pointcloud-layer",
-      data: this.mappingData.map((d, i) => {
-        return { ...d, val: this.meanPerNode[i].value };
+      data: mappingData.map((d, i) => {
+        return { ...d, val: meanPerNode[i].value };
       }),
       getPosition: (d, i) => [
         d.coords[0],
@@ -156,7 +163,7 @@ export class Node3DLayer extends AbstractLayerGenerator {
 
     let dims = 30;
 
-    let ret = [surface, surface2, scatter];
+    let ret = [surface, zeroSurface, scatter];
     for (let i = 0; i < dims * dims; i += 17) {
       // for (let i = 0; i < 100; i += 2) {
       ret = [
@@ -165,8 +172,8 @@ export class Node3DLayer extends AbstractLayerGenerator {
           id: `node3d-layer-icon-${i}`,
           data: [
             {
-              ...this.mappingData[i],
-              val: this.meanPerNode[i].value,
+              ...mappingData[i],
+              val: meanPerNode[i].value,
               index: i,
             },
           ],
@@ -190,132 +197,8 @@ export class Node3DLayer extends AbstractLayerGenerator {
           // visible: false,
         }),
       ];
-      // new BitmapLayer({
-      //   id: `image-layer-${i}`,
-      //   coordinateSystn: [0, 0, 0],
-      //   image: `http://localhost:5002/node_images/${this.dataset_type}/${this.time_type}/${i}.png`,
-      //   // image: image_data.body,
-      //   // image: "https://raw.githubusercontent.com/visgl/deck.gl-data/master/website/sf-districts.png",
-      //   pickable: true,
-      //   bounds: [
-      //     // 0, 0,
-      //     this.mappingData[i].coords[0] - 0.4,
-      //     -this.mappingData[i].coords[1] + 0.5,
-      //     this.mappingData[i].coords[0] + 0.4,
-      //     -this.mappingData[i].coords[1] - 0.5,
-      //     // ]
-      //     // [
-      //     //   this.mappingData[i].coords[0] - 0.4,
-      //     //   -this.mappingData[i].coords[1] - 0.5,
-      //     //   random,
-      //     // ],
-      //     // [
-      //     //   this.mappingData[i].coords[0] + 0.4,
-      //     //   -this.mappingData[i].coords[1] + 0.5,
-      //     //   random,
-      //     // ],
-      //     // [
-      //     //   this.mappingData[i].coords[0] - 0.4,
-      //     //   this.mappingData[i].coords[1] + 0.5,
-      //     //   random,
-      //     // ],
-      //     // [
-      //     //   this.mappingData[i].coords[0] + 0.4,
-      //     //   -this.mappingData[i].coords[1] - 0.5,
-      //     //   random,
-      //     // ],
-      //     // this.mappingData[i].coords[0] - 0.4,
-      //     // -this.mappingData[i].coords[1] - 0.2,
-      //     // this.mappingData[i].coords[0] + 0.4,
-      //     // -this.mappingData[i].coords[1] + 0.2,
-      //   ],
-      //   index: i,
-      //   loadOptions: {
-      //     imagebitmap: {
-      //       // Flip the image vertically
-      //       // imageOrientation: "flipY",
-      //     },
-      //   },
-      //   // pickable: true,
-      //   onClick: (info, event) => {
-      //     this.imgSrc.value = `http://localhost:5002/node_images/${this.dataset_type}/${this.time_type}/${info.layer.props.index}.png`;
-      //     this.indexClicked = info.layer.props.index;
-      //     console.log("Clicked:", info);
-      //   },
-      // }),
-      // ];
     }
 
-    // if (this.monthHovered.value) {
-    //   let month = this.monthHovered.value;
-
-    //   let hotspotPolygons3D = [];
-
-    //   this.hotspotPolygons[month][0].forEach((polygon, index) => {
-    //     // console.log("DEBUG HOTSPOT POLYGONS", polygon, index);
-    //     let xDiff = this.interpolatedSurface.x.map((d) =>
-    //       Math.abs(d - polygon[0])
-    //     );
-    //     let yDiff = this.interpolatedSurface.y.map((d) =>
-    //       Math.abs(d - polygon[1])
-    //     );
-    //     let xIndex = xDiff.indexOf(Math.min(...xDiff));
-    //     let yIndex = yDiff.indexOf(Math.min(...yDiff));
-    //     // let xIndex = this.interpolatedSurface.x.indexOf(
-    //     //   Math.min(
-    //     //     ...this.interpolatedSurface.x.map((d) => Math.abs(d - polygon[0]))
-    //     //   )
-    //     // );
-    //     // let yIndex = this.interpolatedSurface.y.indexOf(
-    //     //   Math.min(
-    //     //     this.interpolatedSurface.y.map((d) => Math.abs(d - polygon[1]))
-    //     //   )
-    //     // );
-    //     // debugger;
-    //     hotspotPolygons3D.push([
-    //       this.interpolatedSurface.x[xIndex],
-    //       this.interpolatedSurface.y[yIndex],
-    //       this.interpolatedSurface.interpolatedSurface[yIndex][xIndex] * 20000 +
-    //         10 +
-    //         0.3,
-    //     ]);
-    //   });
-    //   console.log("DEBUG HOTSPOT POLYGONS 3D", hotspotPolygons3D);
-
-    //   this.hotspotPolygons[month].forEach((polygon, index) => {
-    //     ret.push(
-    //       new PolygonLayer({
-    //         id: `hotspot-polygon-${month}-${index}`d.month,
-    //         data: [hotspotPolygons3D],
-    //         // data: [this.hotspotPolygons[month]],
-    //         getPolygon: (vertices) => {
-    //           let ret = vertices.map((p) => [p[0], -p[1], p[2]]);
-    //           console.log("DEBUG HOTSPOT POLYGONS", ret, vertices);
-    //           return ret;
-    //         },
-    //         filled: true,
-    //         // stroked: true,
-    //         opacity: 0.2,
-    //         getLineWidth: 0.1,
-    //         pickable: true,
-    //         // getFillColor: d3.interpolateRainbow(month - 1 / 11),
-    //         getFillColor: d3
-    //           .interpolateRgbBasis(["purple", "green", "orange"])(
-    //             (month - 1) / 11
-    //           )
-    //           .replace(/[^\d,]/g, "")
-    //           .split(",")
-    //           .map((d) => Number(d)),
-
-    //         visible: false,
-    //         onClick: (info, event) => {
-    //           console.log("Clicked:", month);
-    //         },
-    //       })
-    //     );
-    //   });
-    // }
-    // console.log("DEBUG: Node3DLayerlist", ret);
     this.needsToRedraw = false;
     this.layerList = ret;
     return ret;

@@ -203,7 +203,13 @@ export const addJitter = (d: number[], jitter = 0.01) => [
 ];
 
 export const colorPercentile = (d: number) =>
-  hexToRgb(interpolateViridis(d / 100));
+  // // hexToRgb(interpolateRdBu(d / 100));
+  // hexToRgb(interpolateViridis(d / 100));
+  interpolateRdBu(d / 100)
+    // interpolateSpectral((d / 12 + 0.5) % 1)
+    .replace(/[^\d,]/g, "")
+    .split(",")
+    .map((d) => Number(d));
 
 export const colorMonth = (d: number) =>
   interpolateRainbow((0.7 - d / 12) % 1)

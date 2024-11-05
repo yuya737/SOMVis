@@ -23,6 +23,7 @@ import {
   hexToRgb,
   stripSOMprefix,
   subsetType,
+  timeType,
 } from "./utils";
 
 import { AbstractLayerGenerator } from "./AbstractLayerGenerator";
@@ -31,7 +32,9 @@ import { useStore } from "@/store/main";
 
 export class SOMLayer extends AbstractLayerGenerator {
   // readonly coords: any;
-  readonly data: any;
+  readonly nodeMapGetter: ComputedRef<(timeType: timeType) => any>;
+  readonly pathDataGetter: ComputedRef<(timeType: timeType) => any>;
+
   // readonly name: string;
   readonly selectedTimeRange: any;
   readonly selectedMonthRange: any;
@@ -40,7 +43,6 @@ export class SOMLayer extends AbstractLayerGenerator {
   readonly hoveredFile: any;
 
   readonly blockedCenterofMassData: any;
-  readonly BMUData: BMUMata[];
 
   readonly interpolatedSurface: any;
 
@@ -50,10 +52,13 @@ export class SOMLayer extends AbstractLayerGenerator {
   layerList: any = null;
   extent: any = [[], []];
   mode: string = "single"; // either single or compare
+  time_type: timeType;
+  BMUData: BMUData[];
 
   // constructor(coords, name: string, timeRange: any, monthRange: any) {
   constructor({
-    data,
+    nodeMapGetter,
+    pathDataGetter,
     timeRange,
     monthRange,
     model,
@@ -61,20 +66,21 @@ export class SOMLayer extends AbstractLayerGenerator {
     hoveredFile,
     extent,
     interpolatedSurface,
+    time_type,
   }) {
     super();
-    this.data = data;
+    this.nodeMapGetter = nodeMapGetter;
+    this.pathDataGetter = pathDataGetter;
+
     this.selectedTimeRange = timeRange;
     this.selectedMonthRange = monthRange;
     this.selectedModel = model;
     this.hoveredFile = hoveredFile;
     this.extent = extent;
     this.interpolatedSurface = interpolatedSurface;
-    this.selectedMonthRangeList = monthRange;
+    this.time_type = time_type;
 
-    watch(this.selectedModel, () => {
-      // console.log("SDFSDFDFDDF");
-    });
+    this.selectedMonthRangeList = monthRange;
 
     // If two sets of models are selected, then we are in compare mode
     this.selectedModel.value[1].length > 1
@@ -82,18 +88,36 @@ export class SOMLayer extends AbstractLayerGenerator {
       : (this.mode = "single");
     this.selectedSubsetType = subsetType;
 
-    this.BMUData = Object.entries(this.data)
-      .map(([model, BMUs]) =>
-        BMUs.map((d) => {
-          return {
-            name: model,
-            coords: d.coords,
-            month: d.month,
-            year: d.year,
-          };
-        })
-      )
-      .flat(2);
+    // this.BMUData = Object.entries(this.data)
+    //   .map(([model, BMUs]) =>
+    //     BMUs.map((d) => {
+    //       return {
+    //         name: model,
+    //         coords: d.coords,
+    //         month: d.month,
+    //         year: d.year,
+    //       };
+    //     })
+    //   )
+    //   .flat(2);
+    watch(
+      () => this.nodeMapGetter.value(this.time_type),
+      (nodeMap) => {
+        this.BMUData = Object.entries(this.pathDataGetter.value(this.time_type))
+          .map(([model, BMUs]) =>
+            BMUs.map((d) => {
+              return {
+                name: model,
+                coords: nodeMap[d.id]["coords"],
+                month: d.month,
+                year: d.year,
+              };
+            })
+          )
+          .flat(2);
+      },
+      { immediate: true }
+    );
     watch(
       [
         this.selectedTimeRange,
