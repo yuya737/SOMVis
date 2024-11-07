@@ -758,7 +758,6 @@ async function drawTimeline() {
         monthlyMDS[parseInt(month)][clusterA]
       );
     });
-    console.log("DEBUG: SCALES ", scalesSorted);
     scalesSorted.map(([key, value]) => {
       clusterOrder = [...value.domain(), -parseInt(key + 1), ...clusterOrder];
     });
@@ -1060,7 +1059,7 @@ async function getData() {
       // n_neighbors: 5, // For UMAP
       n_neighbors: 4, // For UMAP
       // n_neighbors: 3, // For UMAP
-      min_cluster_size: 3, // For HDBSCAN
+      min_cluster_size: 4, // For HDBSCAN
     });
     data[month] = clustering;
     // console.log("DEBUG: CLUSTERING ", month, clustering);
@@ -1071,7 +1070,7 @@ async function getData() {
     });
     // Force the midpoint to be 0
     monthlyMDS[month] = MDSClusterEmbedding == 0 ? [0] : MDSClusterEmbedding;
-    // console.log("DEBUG: MDS ", month, MDSClusterEmbedding);
+    console.log("DEBUG: MDS ", month, MDSClusterEmbedding);
   }
   sspAllLabels.forEach((model, i) => {
     dataT[i] = {};

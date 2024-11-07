@@ -65,6 +65,7 @@ async function getPaths() {
 async function getNodeData(anchors = null) {
   console.log("DEBUG IN STORE MAIN");
   let mappingData: Record<timeType, SOMNode[]> = {};
+  let vectorFieldData: Record<timeType, any> = {};
   let classifyData: Record<timeType, { value: number }> = {};
   let contourData: Record<timeType, any> = {};
   let interpolatedSurfaceData: Record<timeType, any> = {};
@@ -92,6 +93,15 @@ async function getNodeData(anchors = null) {
     let xMax = Math.max(...map.map((d) => d.coords[0]));
     let yMin = Math.min(...map.map((d) => d.coords[1]));
     let yMax = Math.max(...map.map((d) => d.coords[1]));
+
+    let temp = await API.fetchData("get_forcing", true, {
+      dataset_type: dataset_name,
+      time_type: curTimeType,
+      // model_type: "ACCESS-CM2",
+      model_type: "EC-Earth3",
+      data_type_cmp: ["historical", "ssp585"],
+    });
+    vectorFieldData[curTimeType] = temp;
 
     let classify = await API.fetchData("node_means", true, {
       dataset_type: dataset_name,
@@ -125,7 +135,7 @@ async function getNodeData(anchors = null) {
       y,
     };
 
-    let hotspotPolygons = {};
+    // let hotspotPolygons = {};
 
     // const hotspotPromises = timeTypeMonths[curTimeType].map(async (month) => {
     //   let data = await API.fetchData("get_smoothed_alpha", true, {
@@ -141,14 +151,14 @@ async function getNodeData(anchors = null) {
     // hotspotPolygonsData[curTimeType] = hotspotPolygons;
 
     // await Promise.all(hotspotPromises);
-    // console.log("DEBUG DONE HOTSPOT PROMISES");
+    console.log("DEBUG DONE HOTSPOT PROMISES");
   });
   await Promise.all(gigaPromise);
 
   console.log("DEBUG DONE STORE MAIN");
-  console.log(mappingData);
   return {
     nodeMap: mappingData,
+    vectorFieldData: vectorFieldData,
     classifyData: classifyData,
     hotspotPolygons: hotspotPolygonsData,
     contourData: contourData,
@@ -177,6 +187,7 @@ export const useStore = defineStore("main", {
       hotspotPolygons: null,
       contourData: null,
       interpolatedSurfaceData: null,
+      vectorFieldData: null,
     });
     getNodeData().then((data) => {
       const {
@@ -186,9 +197,11 @@ export const useStore = defineStore("main", {
         hotspotPolygons,
         contourData,
         interpolatedSurfaceData,
+        vectorFieldData,
       } = data;
       state.nodeMap = nodeMap;
       state.classifyData = classifyData;
+      state.vectorFieldData = vectorFieldData;
       state.hotspotPolygons = hotspotPolygons;
       state.contourData = contourData;
       state.interpolatedSurfaceData = interpolatedSurfaceData;
@@ -235,6 +248,9 @@ export const useStore = defineStore("main", {
     getInterpolatedSurfaceData: (state) => {
       return (timeType: timeType) => state.interpolatedSurfaceData[timeType];
     },
+    getVectorFieldData: (state) => {
+      return (timeType: timeType) => state.vectorFieldData[timeType];
+    },
     getMapEditFlag() {
       return this.mapEditFlag;
     },
@@ -263,12 +279,14 @@ export const useStore = defineStore("main", {
         hotspotPolygons,
         contourData,
         interpolatedSurfaceData,
+        vectorFieldData,
       } = data;
       this.nodeMap = nodeMap;
       this.classifyData = classifyData;
       this.hotspotPolygons = hotspotPolygons;
       this.contourData = contourData;
       this.interpolatedSurfaceData = interpolatedSurfaceData;
+      this.vectorFieldData = vectorFieldData;
       this.mapEditFlag = !this.mapEditFlag;
     },
   },

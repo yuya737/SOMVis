@@ -170,9 +170,10 @@ export class SOMLayer extends AbstractLayerGenerator {
     return ret;
   }
 
-  _subsetData(): BMUMata[] {
+  _subsetData(): BMUData[] {
     const selectData = (files: EnsembleMember[]) => {
       let curBMUData = this.BMUData;
+      console.log("DEBUG BMUData", curBMUData[0]);
       // if (!files.includes("All")) {
       // curBlockedCenterofMass = this.blockedCenterofMassData.filter((d) =>
       //   this.selectedModel.value.includes(d.name)
@@ -231,7 +232,7 @@ export class SOMLayer extends AbstractLayerGenerator {
     return curBMUData;
   }
 
-  _getFreq(curBMUData: BMUMata[]) {
+  _getFreq(curBMUData: BMUData[]) {
     const countFrequecy = (arr) => {
       let freq = {};
       arr.forEach((d) => {
@@ -500,14 +501,15 @@ export class SOMLayer extends AbstractLayerGenerator {
     let heatmap = new HeatmapLayer({
       id: `curve-heatmap`,
       data: curBMUData.map((d) => {
-        return { ...d, coords: addJitter(d.coords, 0) };
+        return { ...d, coords: addJitter(d.coords, 0.1) };
       }),
       getColor: (d) => [...colorSim(d.name)],
+      colorDomain: [10, 100],
       getPosition: (d) => [...d.coords, 0],
       aggregation: "SUM",
       // getRadius: 2,
       radiusPixels: 100,
-      threshold: 0.1,
+      // threshold: 0.1,
       debounceTimeout: 750,
       opacity: 0.7,
       weightsTextureSize: 256,

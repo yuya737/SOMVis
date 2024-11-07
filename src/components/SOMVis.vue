@@ -37,7 +37,7 @@
           <!-- <ForceGraph class="h-full" /> -->
         </SplitterPanel>
         <SplitterPanel style="height: 100%" :size="40">
-          <!-- <HeatmapViewer class="h-full" v-if="store.isDataReady" /> -->
+          <HeatmapViewer class="h-full" v-if="store.isDataReady" />
         </SplitterPanel>
       </Splitter>
     </SplitterPanel>

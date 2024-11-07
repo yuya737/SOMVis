@@ -156,6 +156,7 @@ import { AbstractLayerGenerator } from "./utils/AbstractLayerGenerator";
 import { NodeLayer } from "./utils/NodeLayer";
 import { NodeClassifyLayer } from "./utils/NodeClassifyLayer";
 import { Node3DLayer } from "./utils/Node3DLayer";
+import { ParticleAdvectionLayer } from "./utils/ParticleAdvectionLayer";
 import { SOMLayer } from "./utils/SOMLayer";
 import ToggleButton from "primevue/togglebutton";
 import Button from "primevue/button";
@@ -287,6 +288,7 @@ async function initializeLayers() {
     getFiles,
     getSubsetType,
     getHoveredFile,
+    getVectorFieldData,
     anchors,
   } = storeToRefs(store);
   let nodeLayerGenerator = new NodeLayer({
@@ -359,12 +361,18 @@ async function initializeLayers() {
     time_type: props.time_type,
   });
 
+  let particleAdvectionLayerGenerator = new ParticleAdvectionLayer({
+    vectorFieldGetter: getVectorFieldData,
+    time_type: props.time_type,
+  });
+
   layerGenerators = [
     axisLayerGenerator,
     nodeLayerGenerator,
-    somLayerGenerator,
-    nodeclassifyLayerGenerator,
-    node3DLayerGenerator,
+    // somLayerGenerator,
+    // nodeclassifyLayerGenerator,
+    // node3DLayerGenerator,
+    particleAdvectionLayerGenerator,
   ];
   // Get the layers
   // layerList = layerGenerators.map((g) => g.getLayers()).flat();
