@@ -97,6 +97,10 @@ let monthListOriginal = [1, 2, 3, 4, 5, 10, 11, 12];
 // let monthListOriginal = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 let monthList = [10, 11, 12, 1, 2, 3, 4, 5];
 
+const props = defineProps({
+  time_type: timeType,
+});
+
 function toggleIsShowingClusterMean() {
   d3.selectAll("rect")
     .filter(function () {
@@ -1046,7 +1050,8 @@ async function getData() {
     const { distances } = await API.fetchData("distance_matrix", true, {
       dataset_type: dataset_name,
       // time_type: (month <= 3 || month >=10) timeType.All,
-      time_type: month <= 3 || month >= 10 ? timeType.OctMar : timeType.AprSep,
+      // time_type: month <= 5 || month >= 10 ? timeType.OctMay : timeType.AprSep,
+      time_type: props.time_type,
       members: sspAllLabels,
       subsetType: "month",
       months: [month],
@@ -1067,6 +1072,7 @@ async function getData() {
     const { MDSClusterEmbedding } = await API.fetchData("run_MDS", true, {
       distance_matrix: distances,
       clustering: clustering,
+      month: month,
     });
     // Force the midpoint to be 0
     monthlyMDS[month] = MDSClusterEmbedding == 0 ? [0] : MDSClusterEmbedding;

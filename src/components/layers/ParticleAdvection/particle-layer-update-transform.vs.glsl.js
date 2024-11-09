@@ -206,6 +206,7 @@ void main() {
     vec2 position = pointToPosition(point);
     targetPosition.xy = position;
     targetPosition.x = wrapLongitude(targetPosition.x);
+    // targetPosition.z = 10.;
     return;
   }
 
@@ -255,6 +256,7 @@ void main() {
   vec2 offset = vec2(speed.x / distortion, speed.y);
   // offset = vec2(15.,15.);
   targetPosition.xy = sourcePosition.xy + offset;
+  // targetPosition.z = 10.;
   // targetPosition.x = wrapLongitude(targetPosition.x);
   // targetPosition.xy *= 10000.;
   // targetPosition.xy = vec2(15.,15.);

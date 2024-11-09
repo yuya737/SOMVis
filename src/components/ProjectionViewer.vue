@@ -113,6 +113,55 @@
             @mouseout="handleMonthHoveredChanged(month, false)"
             outlined
           />
+          <div class="font-bold flex flex-row">
+            Streamlines Settings
+            <!-- Hover on the months to see the patterns! -->
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-6 w-6"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M9 5l7 7-7 7"
+              />
+            </svg>
+          </div>
+          <Dropdown
+            v-model="selectedStreamLinesModel"
+            :options="models"
+            optionLabel="name"
+            class="m-2"
+            placeholder="Select a Model"
+            @change="handleVectorFieldChanged"
+          />
+          <Dropdown
+            v-model="selectedStreamLinesCmp1"
+            :options="types"
+            optionLabel="name"
+            class="m-2"
+            placeholder="Select CMP1"
+            @change="handleVectorFieldChanged"
+          />
+          <Dropdown
+            v-model="selectedStreamLinesCmp2"
+            :options="types"
+            optionLabel="name"
+            class="m-2"
+            placeholder="Select CMP2"
+            @change="handleVectorFieldChanged"
+          />
+          <Dropdown
+            v-model="selectedStreamLineMonth"
+            :options="timeTypeMonths[time_type]"
+            class="m-2"
+            placeholder="Select Month"
+            @change="handleVectorFieldChanged"
+          />
         </div>
         <!-- <Divider layout="vertical" /> -->
         <!-- <Button label="Apply" @click="yearMonthChanged" class="px-5" /> -->
@@ -159,6 +208,7 @@ import { Node3DLayer } from "./utils/Node3DLayer";
 import { ParticleAdvectionLayer } from "./utils/ParticleAdvectionLayer";
 import { SOMLayer } from "./utils/SOMLayer";
 import ToggleButton from "primevue/togglebutton";
+import Dropdown from "primevue/dropdown";
 import Button from "primevue/button";
 
 import {
@@ -166,11 +216,26 @@ import {
   DECKGL_SETTINGS,
   generateMonthRangeList,
   months,
+  sspAllLabels,
   subsetType,
   dataset_name,
   timeType,
   timeTypeMonths,
 } from "./utils/utils";
+
+const members = sspAllLabels;
+const models = ref(
+  Array.from(new Set(members.map((member) => member.model_name))).map(
+    (model) => {
+      return { name: model };
+    }
+  )
+);
+const types = ref(
+  Array.from(new Set(members.map((member) => member.ssp))).map((type) => {
+    return { name: type };
+  })
+);
 import { Layer } from "deck.gl/typed";
 const props = defineProps({
   isHistorical: Boolean,
@@ -215,6 +280,11 @@ const monthHovered = ref(null);
 watch(monthHovered, (newVal) => {
   console.log("monthHovered changed", newVal);
 });
+
+const selectedStreamLinesModel = ref();
+const selectedStreamLineMonth = ref();
+const selectedStreamLinesCmp1 = ref();
+const selectedStreamLinesCmp2 = ref();
 
 // const text = ref(props.isHistorical ? "Historical" : "SSP370");
 
@@ -367,11 +437,11 @@ async function initializeLayers() {
   });
 
   layerGenerators = [
-    axisLayerGenerator,
+    // axisLayerGenerator,
     nodeLayerGenerator,
-    // somLayerGenerator,
-    // nodeclassifyLayerGenerator,
-    // node3DLayerGenerator,
+    somLayerGenerator,
+    nodeclassifyLayerGenerator,
+    node3DLayerGenerator,
     particleAdvectionLayerGenerator,
   ];
   // Get the layers
@@ -470,6 +540,25 @@ function handleButtons() {
 
 function handleMonthHoveredChanged(month, hovered) {
   monthHovered.value = hovered ? months.indexOf(month) + 1 : null;
+  drawAllLayers();
+}
+
+async function handleVectorFieldChanged() {
+  if (
+    !selectedStreamLinesModel?.value ||
+    !selectedStreamLinesCmp1?.value ||
+    !selectedStreamLinesCmp2?.value ||
+    !selectedStreamLineMonth?.value
+  )
+    return;
+  await store.updateVectorFieldSetting([
+    dataset_name,
+    selectedStreamLinesModel.value.name,
+    props.time_type,
+    [selectedStreamLinesCmp1.value.name, selectedStreamLinesCmp2.value.name],
+    selectedStreamLineMonth.value,
+  ]);
+  layerGenerators.forEach((layer) => (layer.needsToRedraw = true));
   drawAllLayers();
 }
 </script>

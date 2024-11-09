@@ -4,7 +4,7 @@ import GL from "@luma.gl/constants";
 import ParticleLayer from "../layers/ParticleAdvection/particle-layer";
 
 import * as d3 from "d3";
-import { ComputedRef } from "vue";
+import { ComputedRef, watch } from "vue";
 import { timeType } from "./utils";
 import { LayersList } from "deck.gl/typed";
 
@@ -18,20 +18,24 @@ export class ParticleAdvectionLayer extends AbstractLayerGenerator {
     super();
     this.vectorFieldGetter = vectorFieldGetter;
     this.time_type = time_type;
-  }
 
-  metersToLngLat(offset: number[]): [number, number] {
-    const pi = Math.PI;
-    const r_earth = 6371000;
-    const dx = offset[0];
-    const dy = offset[1];
-    let new_latitude = (dy / r_earth) * (180 / pi);
-    let new_longitude = (dx / r_earth) * (180 / pi);
-    return [new_latitude, new_longitude];
+    watch(
+      () => this.vectorFieldGetter.value(this.time_type),
+      () => (this.needsToRedraw = true),
+      { deep: true }
+    );
   }
 
   getLayers(): LayersList {
+    if (this.layerList && !this.needsToRedraw) {
+      return this.layerList;
+    }
     this.vectorField = this.vectorFieldGetter.value(this.time_type);
+    if (!this.vectorField) {
+      this.layerList = [];
+      this.needsToRedraw = false;
+      return this.layerList;
+    }
     console.log("DEBUG IN PARTICLE ADVECTION LAYER", this.vectorField);
     // if (windData.weather_variables.length == 0) {
     //   return undefined;
@@ -79,14 +83,6 @@ export class ParticleAdvectionLayer extends AbstractLayerGenerator {
     }
 
     textureData.data = new Uint8Array([...textureData.data]);
-    const [newXmin, newYMin] = this.metersToLngLat([
-      this.vectorField.x[0],
-      this.vectorField.y[0],
-    ]);
-    const [newXmax, newYMax] = this.metersToLngLat([
-      this.vectorField.x[this.vectorField.x.length - 1],
-      this.vectorField.y[this.vectorField.y.length - 1],
-    ]);
     // const bounds = [newXmin, newYMin, newXmax, newYMax];
     const bounds = [
       this.vectorField.x[0] * 3,
@@ -108,15 +104,19 @@ export class ParticleAdvectionLayer extends AbstractLayerGenerator {
       imageUnscale: minMax,
       //bounds: [-180, -90, 180, 90],
       bounds: bounds,
-      numParticles: 1000,
-      maxAge: 40,
+      numParticles: 500,
+      maxAge: 90,
       speedFactor: 5000000,
       color: [0, 0, 0],
-      width: 1,
+      width: 2,
       opacity: 0.1,
+      updateTriggers: {
+        image: this.vectorFieldGetter.value(this.time_type),
+      },
     });
-    this.checkNeedsToRedraw = false;
+    particleLayer.setNeedsRedraw();
+    this.needsToRedraw = false;
     this.layerList = [particleLayer];
-    return [particleLayer];
+    return this.layerList;
   }
 }

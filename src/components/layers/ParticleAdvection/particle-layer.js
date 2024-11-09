@@ -34,6 +34,7 @@ const defaultProps = {
   // 0: No color (i.e. default), 1: Temperature, 2: Humidity
   colorSetting: { type: 'number', min: 0, max: 2, value: 0 },
   width: { type: 'number', value: 1 },
+  age: { type: 'array', value: null },
   animate: true,
 
   bounds: { type: 'array', value: [-180, -90, 180, 90], compare: true },
@@ -61,6 +62,9 @@ export default class ParticleLayer extends LineLayer {
           uniform float coolwarmReds[33];
           uniform float coolwarmGreens[33];
           uniform float coolwarmBlues[33];
+
+          // uniform float age;
+          // in float age;
 
           // src: https://webglfundamentals.org/webgl/lessons/webgl-qna-how-to-simulate-a-3d-texture-in-webgl.html
           vec4 sampleAs3DTexture(sampler2D tex, vec3 texCoord, float size) {
@@ -99,14 +103,13 @@ export default class ParticleLayer extends LineLayer {
         `,
         'vs:#main-start': `
 
-
           drop = float(instanceSourcePositions.xy == DROP_POSITION || instanceTargetPositions.xy == DROP_POSITION);
         `,
         'vs:#main-end': `
           vec2 uv = getUV(instanceTargetPositions.xy);
           vec4 tempHumidity = sampleAs3DTexture(tempHumidityImage, vec3(uv, animationProgress), 4.0);
 
-          vColor = vec4(0.3, 0.3, 0.3, 0.5);
+          // vColor = vec4(0.3, 0.3, 0.3, age);
           // vec3 hsl = vec3(0.0, 1.0, -tempHumidity.r/2.0+1.0);
           // vColor = vec4(hsl2rgb(hsl), instanceColors.a * opacity);
           // if (colorSetting == 1.0) {
@@ -181,8 +184,8 @@ export default class ParticleLayer extends LineLayer {
       return
     }
 
-    const { animate, tempHumidityImage, bounds, animationProgress, coolwarmReds, coolwarmGreens, coolwarmBlues, colorSetting } = this.props
-    const { sourcePositions, targetPositions, sourcePositions64Low, targetPositions64Low, colors, widths, model } = this.state
+    const { animate, bounds, animationProgress, colorSetting } = this.props
+    const { sourcePositions, targetPositions, sourcePositions64Low, targetPositions64Low, colors, widths, age, model } = this.state
 
     model.setAttributes({
       instanceSourcePositions: sourcePositions,
@@ -191,13 +194,14 @@ export default class ParticleLayer extends LineLayer {
       instanceTargetPositions64Low: targetPositions64Low,
       instanceColors: colors,
       instanceWidths: widths,
+      // age: age,
     })
 
     uniforms = {
       ...uniforms,
       bounds,
       animationProgress,
-      colorSetting
+      colorSetting,
     }
 
     // Hijack the model's draw function to add the airtemp/humidity texture
@@ -234,7 +238,18 @@ export default class ParticleLayer extends LineLayer {
       const age = Math.floor(i / numParticles)
       return [color[0], color[1], color[2], (color[3] ?? 255) * (1 - age / maxAge)].map(d => d / 255)
     }).flat()))
+    // const age = new Buffer(gl, 
+    //   new Float32Array(new Array(numInstances).fill(undefined).map((_, i) => {
+    //   const curAge = Math.floor(i / numParticles)
+    //   return curAge / maxAge
+    // }).flat()))
+    // const age = new Float32Array(new Array(numInstances).fill(undefined).map((_, i) => {
+    //   const curAge = Math.floor(i / numParticles)
+    //   return curAge / maxAge
+    // }).flat())
+
     const widths = new Float32Array([width]) // constant attribute
+    // const age = new Float32Array([0.1])
 
     const animationProgress = new Buffer(gl, 4)
 
@@ -260,6 +275,7 @@ export default class ParticleLayer extends LineLayer {
       targetPositions,
       sourcePositions64Low,
       targetPositions64Low,
+      // age,
       colors,
       widths,
       transform,
@@ -394,6 +410,7 @@ export default class ParticleLayer extends LineLayer {
       colors: undefined,
       widths: undefined,
       transform: undefined,
+      age: undefined,
     })
   }
 

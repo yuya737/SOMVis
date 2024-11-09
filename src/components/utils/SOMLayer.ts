@@ -504,8 +504,8 @@ export class SOMLayer extends AbstractLayerGenerator {
         return { ...d, coords: addJitter(d.coords, 0.1) };
       }),
       getColor: (d) => [...colorSim(d.name)],
-      colorDomain: [10, 100],
-      getPosition: (d) => [...d.coords, 0],
+      // colorDomain: [10, 100],
+      getPosition: (d) => [d.coords[0], -d.coords[1], 0],
       aggregation: "SUM",
       // getRadius: 2,
       radiusPixels: 100,

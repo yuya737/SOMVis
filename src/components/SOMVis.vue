@@ -32,7 +32,7 @@
       >
         <SplitterPanel class="h-full">
           <!-- <MapViewer class="h-full" /> -->
-          <TimelineViewer class="h-full" v-if="store.isDataReady" />
+          <!-- <TimelineViewer class="h-full" v-if="store.isDataReady"  :time_type="timeType.OctMay"/> -->
           <!-- <TimelineViewerTemporal class="h-full" /> -->
           <!-- <ForceGraph class="h-full" /> -->
         </SplitterPanel>

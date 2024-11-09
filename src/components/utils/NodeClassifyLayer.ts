@@ -125,7 +125,7 @@ export class NodeClassifyLayer extends AbstractLayerGenerator {
             data: [polygon],
             // data: [this.hotspotPolygons[month]],
             getPolygon: (vertices) => {
-              let ret = vertices.map((p) => [p[0], -p[1]]);
+              let ret = vertices.map((p) => [p[0], p[1]]);
               // console.log("DEBUG HOTSPOT POLYGONS", ret, vertices);
               return ret;
             },
