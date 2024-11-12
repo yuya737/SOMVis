@@ -82,6 +82,9 @@ export class ParticleAdvectionLayer extends AbstractLayerGenerator {
       }
     }
 
+    const arraySum = textureData.data.reduce((a, b) => a + b, 0);
+    console.log("SUM", arraySum);
+    // console.log("textureData", textureData.data);
     textureData.data = new Uint8Array([...textureData.data]);
     // const bounds = [newXmin, newYMin, newXmax, newYMax];
     const bounds = [
@@ -90,19 +93,11 @@ export class ParticleAdvectionLayer extends AbstractLayerGenerator {
       this.vectorField.x[this.vectorField.x.length - 1] * 3,
       this.vectorField.y[this.vectorField.y.length - 1] * 3,
     ];
-    console.log("bounds", bounds);
-    console.log("textureData", textureData);
 
     let particleLayer = new ParticleLayer({
-      id: "wind_particle",
-      //image: wind_image,
+      id: `wind_particle-${Math.random()}`,
       image: textureData,
-      //image: wind_image2,
-
-      //imageUnscale: [-128, 127],
-      //   imageUnscale: [-20, 20],
       imageUnscale: minMax,
-      //bounds: [-180, -90, 180, 90],
       bounds: bounds,
       numParticles: 500,
       maxAge: 90,
@@ -110,11 +105,7 @@ export class ParticleAdvectionLayer extends AbstractLayerGenerator {
       color: [0, 0, 0],
       width: 2,
       opacity: 0.1,
-      updateTriggers: {
-        image: this.vectorFieldGetter.value(this.time_type),
-      },
     });
-    particleLayer.setNeedsRedraw();
     this.needsToRedraw = false;
     this.layerList = [particleLayer];
     return this.layerList;

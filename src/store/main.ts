@@ -13,15 +13,19 @@ const timeTypes = [timeType.OctMay];
 async function getVectorFieldData(setting) {
   // [dataset_Type, model_type, time_type, data_type_cmp, month]
   let vectorFieldData: Record<timeType, any> = {};
-  let temp = await API.fetchData("get_forcing", true, {
-    dataset_type: setting[0],
-    model_type: setting[1],
-    time_type: setting[2],
-    // model_type: "EC-Earth3",
-    data_type_cmp: setting[3],
-    month: setting[4],
-  });
-  vectorFieldData[setting[2]] = temp;
+  try {
+    let temp = await API.fetchData("get_forcing", true, {
+      dataset_type: setting[0],
+      model_type: setting[1],
+      time_type: setting[2],
+      // model_type: "EC-Earth3",
+      data_type_cmp: setting[3],
+      month: setting[4],
+    });
+    vectorFieldData[setting[2]] = temp;
+  } catch (error) {
+    vectorFieldData[setting[2]] = null;
+  }
   return vectorFieldData;
 }
 

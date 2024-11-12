@@ -19,6 +19,7 @@ const DEFAULT_COLOR = [255, 255, 255, 255]
 
 const defaultProps = {
   ...LineLayer.defaultProps,
+  data: [],
 
   image: { type: 'image', value: null, async: true },
   tempHumidityImage: { type: 'image', value: null, async: true },

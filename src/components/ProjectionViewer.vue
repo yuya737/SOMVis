@@ -520,9 +520,9 @@ async function recalculateMDE() {
   await store.updateMDE(store.anchors);
   store.anchors = { ids: [], coords: [] };
   console.log("MDE recalculated");
-  layerGenerators.forEach((layer) => (layer.needsToRedraw = true));
   drawAllLayers();
   isRecalculatingMDE.value = false;
+  handleVectorFieldChanged();
 }
 
 function handleButtons() {
@@ -543,14 +543,17 @@ function handleMonthHoveredChanged(month, hovered) {
   drawAllLayers();
 }
 
+function checkValidStreamLines() {
+  return (
+    selectedStreamLinesModel?.value &&
+    selectedStreamLinesCmp1?.value &&
+    selectedStreamLinesCmp2?.value &&
+    selectedStreamLineMonth?.value
+  );
+}
+
 async function handleVectorFieldChanged() {
-  if (
-    !selectedStreamLinesModel?.value ||
-    !selectedStreamLinesCmp1?.value ||
-    !selectedStreamLinesCmp2?.value ||
-    !selectedStreamLineMonth?.value
-  )
-    return;
+  if (!checkValidStreamLines()) return;
   await store.updateVectorFieldSetting([
     dataset_name,
     selectedStreamLinesModel.value.name,
@@ -558,7 +561,6 @@ async function handleVectorFieldChanged() {
     [selectedStreamLinesCmp1.value.name, selectedStreamLinesCmp2.value.name],
     selectedStreamLineMonth.value,
   ]);
-  layerGenerators.forEach((layer) => (layer.needsToRedraw = true));
   drawAllLayers();
 }
 </script>
