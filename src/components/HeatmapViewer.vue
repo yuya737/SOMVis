@@ -37,6 +37,10 @@ import {
   timeTypeMonths,
 } from "./utils/utils";
 
+const props = defineProps({
+  time_type: timeType,
+});
+
 // const DEFAULT_ALL_CLUSTER = { label: "All", value: "All" };
 const store = useStore();
 // const labels = ssp370Labels.map((i: string) => getModelType(i));
@@ -118,25 +122,15 @@ async function draw(month) {
     console.log("Invalid month");
     return;
   }
-  const resolveTimeType = (month) => {
-    // if (timeTypeMonths[timeType.AprSep].includes(month)) return timeType.AprSep;
-    // if (timeTypeMonths[timeType.OctMar].includes(month)) return timeType.OctMar;
-    // if (timeTypeMonths[timeType.OctMar].includes(month)) return timeType.OctMar;
-    return timeType.OctMay;
-  };
-  const { distances, dendrogram } = await API.fetchData(
-    "distance_matrix",
-    true,
-    {
-      members: sspAllLabels,
-      dataset_type: dataset_name,
-      time_type: resolveTimeType(month),
-      subsetType: store.getSubsetType,
-      // months: store.getMonthsSelected,
-      months: [month],
-      years: store.getYearsSelected,
-    }
-  );
+  const { distances } = await API.fetchData("distance_matrix", true, {
+    members: sspAllLabels,
+    dataset_type: dataset_name,
+    time_type: props.time_type,
+    subsetType: store.getSubsetType,
+    // months: store.getMonthsSelected,
+    months: [month],
+    years: store.getYearsSelected,
+  });
   console.log("DEBUG distances", distances);
   let svgHeatmap = makeHeatmap({ distances: distances, month: month });
   console.log("Files, years, or months changed. Redrawing heatmap.");
@@ -367,7 +361,6 @@ function makeHeatmap({ distances, month }) {
     .data(bracketData)
     .join("path")
     .attr("d", function (d) {
-      console.log(makeCurlyBrace(d.x1, d.y1, d.x2, d.y2, 10, 1.6));
       return makeCurlyBrace(d.x1, d.y1, d.x2, d.y2, 25, 0.6);
     })
     .attr("stroke", "black")

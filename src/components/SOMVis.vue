@@ -12,34 +12,53 @@
         layout="horizontal"
         v-if="store.isDataReady"
         @resizeend="splitterResized"
-      > -->
-      <!-- <ProjectionViewer class="h-full" :time_type="timeType.OctMay" /> -->
-      <!-- <SplitterPanel class="h-full">
-          <ProjectionViewer class="h-full" :time_type="timeType.AprSep" />
+      >
+        <SplitterPanel class="h-full">
+          <ProjectionViewer
+            v-if="store.isDataReady"
+            class="h-full"
+            :time_type="timeType.OctMay"
+          />
         </SplitterPanel>
         <SplitterPanel style="height: 100%" :size="50">
-          <ProjectionViewer class="h-full" :time_type="timeType.OctMar" />
-        <!-- </SplitterPanel> -->
-      -->
-      <!-- </Splitter> -->
+          <ProjectionViewer
+            v-if="store.isDataReady"
+            class="h-full"
+            :time_type="timeType.OctMay"
+          />
+        </SplitterPanel>
+      </Splitter> -->
     </SplitterPanel>
 
     <SplitterPanel class="h-full w-full" :size="40">
-      <Splitter
+      <TimelineViewer
+        v-if="store.isDataReady"
+        class="h-full"
+        :time_type="timeType.OctMay"
+      />
+      <!-- <Splitter
         class="h-full w-full"
         layout="horizontal"
         @resizeend="splitterResized"
       >
         <SplitterPanel class="h-full">
-          <!-- <MapViewer class="h-full" /> -->
-          <!-- <TimelineViewer class="h-full" v-if="store.isDataReady"  :time_type="timeType.OctMay"/> -->
-          <!-- <TimelineViewerTemporal class="h-full" /> -->
-          <!-- <ForceGraph class="h-full" /> -->
+          <MapViewer class="h-full" />
+          <TimelineViewer
+            v-if="store.isDataReady"
+            class="h-full"
+            :time_type="timeType.OctMay"
+          />
+          <TimelineViewerTemporal class="h-full" />
+          <ForceGraph class="h-full" />
         </SplitterPanel>
         <SplitterPanel style="height: 100%" :size="40">
-          <HeatmapViewer class="h-full" v-if="store.isDataReady" />
+          <HeatmapViewer
+            v-if="store.isDataReady"
+            class="h-full"
+            :time_type="timeType.OctMay"
+          />
         </SplitterPanel>
-      </Splitter>
+      </Splitter> -->
     </SplitterPanel>
   </Splitter>
 </template>

@@ -63,7 +63,7 @@ const props = defineProps<{
 }>();
 
 function computeBoxColor(mean) {
-  console.log("DEBUG: ", monthlyMeanMax, monthlyMeanMin, mean);
+  // console.log("DEBUG: ", monthlyMeanMax, monthlyMeanMin, mean);
   let color = d3
     .scaleDiverging(d3.interpolateRdBu)
     .domain([monthlyMeanMin, 0, monthlyMeanMax])(mean);
@@ -71,13 +71,12 @@ function computeBoxColor(mean) {
   // .split(",")
   // .map((d) => Number(d));
   let ret = `fill: ${color}`;
-  console.log("DEBUG: ", ret);
+  // console.log("DEBUG: ", ret);
   return ret;
 }
 
 // Method to format numbers in scientific notation
 const formatScientificNotation = (rowData) => {
-  console.log("DEBUG: ", rowData);
   const mean = rowData.mean;
   if (mean !== null && mean !== undefined) {
     return mean.toExponential(4); // Adjust the number of decimal places as needed

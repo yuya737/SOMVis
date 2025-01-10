@@ -4,6 +4,7 @@ import {
   TextLayer,
   CompositeLayer,
   GridCellLayer,
+  PolygonLayer,
 } from "@deck.gl/layers";
 import { DataFilterExtension } from "@deck.gl/extensions";
 import { HeatmapLayer } from "@deck.gl/aggregation-layers";
@@ -13,6 +14,7 @@ import { interpolateRdBu } from "d3-scale-chromatic";
 import { scaleLinear } from "d3-scale";
 import PlotLayer from "@/components/layers/plot-layer";
 import kde2d from "@stdlib/stats-kde2d";
+import { scaleLinear } from "d3-scale";
 
 import {
   colorSim,
@@ -28,6 +30,7 @@ import {
 
 import { AbstractLayerGenerator } from "./AbstractLayerGenerator";
 import { ComputedRef, watch } from "vue";
+import API from "@/api/api";
 import { useStore } from "@/store/main";
 
 export class SOMLayer extends AbstractLayerGenerator {
@@ -172,32 +175,20 @@ export class SOMLayer extends AbstractLayerGenerator {
 
   _subsetData(): BMUData[] {
     const selectData = (files: EnsembleMember[]) => {
-      let curBMUData = this.BMUData;
-      console.log("DEBUG BMUData", curBMUData[0]);
-      // if (!files.includes("All")) {
-      // curBlockedCenterofMass = this.blockedCenterofMassData.filter((d) =>
-      //   this.selectedModel.value.includes(d.name)
-      // );
+      // Filter by name
       let fileStrings = files.map(
         (d) => `${d.model_name}:${d.ssp}:${d.variant}`
       );
-      curBMUData = this.BMUData.filter((d) => fileStrings.includes(d.name));
-      // }
-      // curBlockedCenterofMass = curBlockedCenterofMass.filter((d) =>
-      //   this.selectedMonthRangeList.includes(d.month)
-      // );
+      let curBMUData = this.BMUData.filter((d) => fileStrings.includes(d.name));
+
+      // Filter my month and year
       if (this.selectedSubsetType.value == subsetType.month) {
-        // console.log("DEBUG Filtering ", this.selectedMonthRangeList.value);
-        // console.log("DEBUG curBMUData ", curBMUData);
         curBMUData = curBMUData.filter((d) =>
           this.selectedMonthRangeList.value.includes(d.month)
         );
         if (this.selectedTimeRange.value[0] != -1) {
-          curBMUData = curBMUData.filter(
-            (d) => this.selectedTimeRange.value.includes(d.year)
-
-            // d.year >= this.selectedTimeRange.value[0] &&
-            // d.year <= this.selectedTimeRange.value[1]
+          curBMUData = curBMUData.filter((d) =>
+            this.selectedTimeRange.value.includes(d.year)
           );
         }
       } else {
@@ -272,16 +263,35 @@ export class SOMLayer extends AbstractLayerGenerator {
     // console.log("Staring to generate layers");
     let ret = [];
     let curBMUData = this._subsetData();
-    // console.log("Done subset data length: ", curBMUData.length, curBMUData);
-    let freq = this._getFreq(curBMUData);
-    // console.log("Done freq");
+    console.log("BMU Data length", curBMUData.length);
 
-    // if freq is an empty dict
+    let freq = this._getFreq(curBMUData);
+
     if (freq.length == 0) {
       this.layerList = [];
       return ret;
     }
 
+    const thresholds = [0.00015, 0.00025];
+
+    thresholds.forEach((threshold, i) => {
+      const BMUPolygon = API.fetchData("/get_bounding_shape", true, {
+        points: curBMUData.map((d) => d.coords),
+        threshold: threshold,
+      });
+      const layer = new PolygonLayer({
+        id: `polygon-layer-${i}`,
+        data: BMUPolygon,
+        getPolygon: (d) => d,
+        stroked: false,
+        opacity: scaleLinear().domain([0.0001, 0.0003]).range([0.1, 0.2])(
+          threshold
+        ),
+      });
+      ret = [...ret, layer];
+    });
+
+    // ret = [...ret, heatmap];
     // let gridcell = new GridCellLayer({
     //   id: "grid-cell-layer",
     //   data: freq,
@@ -501,19 +511,29 @@ export class SOMLayer extends AbstractLayerGenerator {
     let heatmap = new HeatmapLayer({
       id: `curve-heatmap`,
       data: curBMUData.map((d) => {
-        return { ...d, coords: addJitter(d.coords, 0.1) };
+        return { ...d, coords: addJitter(d.coords, 0.01) };
       }),
       getColor: (d) => [...colorSim(d.name)],
       // colorDomain: [10, 100],
-      getPosition: (d) => [d.coords[0], -d.coords[1], 0],
+      getPosition: (d) => [d.coords[0], d.coords[1], 0],
       aggregation: "SUM",
       // getRadius: 2,
-      radiusPixels: 100,
-      // threshold: 0.1,
+      radiusPixels: 150,
+      threshold: 0.1,
+      // colorRange: [
+      //   [252, 253, 191],
+      //   [254, 159, 109],
+      //   [222, 73, 104],
+      //   [140, 41, 129],
+      //   [59, 15, 112],
+      //   [0, 0, 4],
+      // ],
+      visible: true,
       debounceTimeout: 750,
       opacity: 0.7,
       weightsTextureSize: 256,
     });
+    ret = [...ret, heatmap];
     // let te = new TextLayer({
     //     id: `curve-text-${this.name}`,
     //     data: this.month_divided_data.map((d) => {
@@ -538,7 +558,7 @@ export class SOMLayer extends AbstractLayerGenerator {
     //     //     console.log("Clicked:", info.object, event);
     //     // },
     // });
-    ret = [...ret, heatmap];
+
     // let ret = [monthlyCOMPath, blockedMonthlyCOMScatter];
     // let ret = [heatmap, monthlyCOMPath];
     // ret = [...ret, blockedMonthlyCOMScatter];

@@ -1,3 +1,4 @@
+declare type Coords = [number, number];
 declare type SOMPath = number[];
 declare type SOMNode = {
   coords: number[];
@@ -29,3 +30,9 @@ declare type EnsembleMemberTemporal = EnsembleMember & {
 declare type EnsembleMemberTemporalClustered = EnsembleMemberTemporal & {
   clustering: number; // clustering
 };
+
+declare type PartialRecord<K extends keyof any, T> = {
+  [P in K]?: T;
+};
+
+declare type MapMode = "Expore" | "Annotate";

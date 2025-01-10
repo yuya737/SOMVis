@@ -3,6 +3,7 @@ import {
   interpolateRainbow,
   interpolateBlues,
   interpolateRdBu,
+  interpolateBrBG,
   interpolateViridis,
 } from "d3-scale-chromatic";
 import { line, curveNatural } from "d3";
@@ -205,7 +206,7 @@ export const addJitter = (d: number[], jitter = 0.01) => [
 export const colorPercentile = (d: number) =>
   // // hexToRgb(interpolateRdBu(d / 100));
   // hexToRgb(interpolateViridis(d / 100));
-  interpolateRdBu(d / 100)
+  interpolateBrBG(d / 100)
     // interpolateSpectral((d / 12 + 0.5) % 1)
     .replace(/[^\d,]/g, "")
     .split(",")

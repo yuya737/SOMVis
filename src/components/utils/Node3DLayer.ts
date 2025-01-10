@@ -66,7 +66,7 @@ export class Node3DLayer extends AbstractLayerGenerator {
           interpolatedSurface.x[
             Math.round(u * (interpolatedSurface.resolution - 1))
           ],
-          -interpolatedSurface.y[
+          interpolatedSurface.y[
             Math.round(v * (interpolatedSurface.resolution - 1))
           ],
           // 10,
@@ -115,7 +115,7 @@ export class Node3DLayer extends AbstractLayerGenerator {
           interpolatedSurface.x[
             Math.round(u * (interpolatedSurface.resolution - 1))
           ],
-          -interpolatedSurface.y[
+          interpolatedSurface.y[
             Math.round(v * (interpolatedSurface.resolution - 1))
           ],
           10,
@@ -148,7 +148,7 @@ export class Node3DLayer extends AbstractLayerGenerator {
       }),
       getPosition: (d, i) => [
         d.coords[0],
-        -d.coords[1],
+        d.coords[1],
         d.val * this.multiplier + 10 + 0.3,
         // this.meanPerNode[i].value * 20000 + 10,
       ],
@@ -191,7 +191,7 @@ export class Node3DLayer extends AbstractLayerGenerator {
           parameters: { depthTest: false },
           getPosition: (d) => [
             d.coords[0],
-            -d.coords[1],
+            d.coords[1],
             d.val * this.multiplier + 10 + 0.3,
           ],
           // visible: false,

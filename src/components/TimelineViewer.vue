@@ -6,7 +6,7 @@
       <Dropdown
         v-model="selectedModel"
         :options="models"
-        optionLabel="name"
+        option-label="name"
         class="m-2"
         placeholder="Select a Model"
       />
@@ -19,7 +19,7 @@
       <Dropdown
         v-model="selectedType"
         :options="types"
-        optionLabel="name"
+        option-label="name"
         class="m-2"
         placeholder="Select a Type"
       />
@@ -30,14 +30,19 @@
       />
       <ToggleButton
         v-model="isShowingClusterMean"
+        on-label="Color by cluster means"
+        off-label="Remove cluster means color"
         @change="toggleIsShowingClusterMean"
-        onLabel="Color by cluster means"
-        offLabel="Remove cluster means color"
+      />
+      <Button
+        @click="clearClusterSelection"
+        label="Clear Cluster Selection(s)"
+        class="m-2 p-2"
       />
     </div>
     <TooltipView
-      id="tooltip"
       v-if="showTooltip"
+      id="tooltip"
       :members="selectedTimelineCluster"
       :month="selectedTimelineClusterMonth"
       @close-card="showTooltip = false"
@@ -93,7 +98,7 @@ const selectedType = ref();
 const tooltipData = ref();
 
 // let monthList = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
-let monthListOriginal = [1, 2, 3, 4, 5, 10, 11, 12];
+let monthListOriginal = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 // let monthListOriginal = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 let monthList = [10, 11, 12, 1, 2, 3, 4, 5];
 
@@ -110,6 +115,18 @@ function toggleIsShowingClusterMean() {
       );
     })
     .classed("grey-rect", isShowingClusterMean.value);
+}
+
+function clearClusterSelection() {
+  d3.selectAll("rect")
+    .filter(function () {
+      return (
+        d3.select(this)?.attr("id") &&
+        d3.select(this).attr("id").startsWith("clusterRect")
+      );
+    })
+    .each((d) => (d.clicked = false))
+    .classed("selected-rect", false);
 }
 
 watch(selectedModel, (value) => {
@@ -486,6 +503,8 @@ function adjustMDS({
   clusterHeightScale,
   height,
   margin,
+  minMDS,
+  maxMDS,
 }) {
   // iterate over the monthlyMDS object
   // for (let month = 1; month <= 12; month += 1) {
@@ -527,7 +546,7 @@ function adjustMDS({
         const reverseScale = d3
           .scaleLinear()
           .domain([margin, height - margin])
-          .range([-150, 150]);
+          .range([minMDS, maxMDS]);
 
         // commit the changes
         monthlyMDS[month][parseInt(currentCluster[0])] = reverseScale(
@@ -545,9 +564,10 @@ function adjustMDS({
     const [min, max] = d3.extent(monthlyMDS[month]);
     monthlyMDS[month] = monthlyMDS[month].map((d) => d - (max + min) / 2);
   }
+  // return yScale;
 }
 
-function checkFlipMDS({ yScale, HEIGHT, MARGIN }) {
+function checkFlipMDS({ yScale, HEIGHT, MARGIN, minMDS, maxMDS }) {
   // Do a greedy optimization where we flip the MDS if it reduces the total distance with respect to the previous month
   // for (let month = 2; month <= 12; month += 1) {
   //         allEnsembleIds = data[month - 1]
@@ -559,7 +579,7 @@ function checkFlipMDS({ yScale, HEIGHT, MARGIN }) {
       return (clusterId) =>
         d3
           .scaleLinear()
-          .domain([150, -150])
+          .domain([minMDS, maxMDS])
           .range([
             // MARGIN + (HEIGHT - 2 * MARGIN) * 0.2,
             // HEIGHT - MARGIN - (HEIGHT - 2 * MARGIN) * 0.2,
@@ -600,13 +620,14 @@ function checkFlipMDS({ yScale, HEIGHT, MARGIN }) {
       monthlyMDS[month] = monthlyMDS[month].map((d) => -d);
     }
   }
+  // return yScale;
 }
 
 async function drawTimeline() {
   const WIDTH = document.getElementById("timelineSVG").clientWidth;
   const HEIGHT = document.getElementById("timelineSVG").clientHeight;
 
-  const clusterHeightMax = HEIGHT / 8;
+  const clusterHeightMax = HEIGHT / 10;
   const MARGIN = 40;
 
   const svg = d3
@@ -623,7 +644,8 @@ async function drawTimeline() {
     }
     .not-selected {
       stroke: black;
-      stroke-opacity: 0.2;
+      stroke-width: 1 !important;
+      stroke-opacity: 0.2 !important;
     }
     .selected {
       stroke-opacity: 1 !important;
@@ -633,6 +655,8 @@ async function drawTimeline() {
       stroke-width: 4 !important;
     }
     .path-not-highlighted {
+      stroke: black;
+      stroke-width: 0.5 !important;
       stroke-opacity: 0.5 !important;
     }
     .selected-rect {
@@ -664,86 +688,71 @@ async function drawTimeline() {
     .style("font-size", "large")
     .attr("text-anchor", "middle")
     .text("Months");
+  let minDistBetweenMDS = HEIGHT / 20;
 
-  // const minDistBetweenMDS =
-  //   d3
-  //     .scaleLinear()
-  //     .range([-150, 150])
-  //     .domain([MARGIN, HEIGHT - MARGIN])(clusterHeightMax / 2) -
-  //   d3
-  //     .scaleLinear()
-  //     .range([-150, 150])
-  //     .domain([MARGIN, HEIGHT - MARGIN])(0);
-  let minDistBetweenMDS = 10;
-
-  // add a y-axis legend for clusters:
-  /**
-   * @param {number} month is from 1 to 12
-   */
+  let minMDS = Math.min(
+    ...Object.values(monthlyMDS).map((d) => Math.min(...d))
+  );
+  let maxMDS = Math.max(
+    ...Object.values(monthlyMDS).map((d) => Math.max(...d))
+  );
   let yScale = (month) => {
-    if (isMDS.value) {
-      return (clusterId) =>
-        d3
-          .scaleLinear()
-          .domain([-150, 150])
-          .range([
-            // MARGIN + (HEIGHT - 2 * MARGIN) * 0.2,
-            // HEIGHT - MARGIN - (HEIGHT - 2 * MARGIN) * 0.2,
-            MARGIN,
-            HEIGHT - MARGIN,
-          ])(monthlyMDS[month][clusterId]);
-    } else {
-      return d3
-        .scaleBand()
-        .domain(d3.range(Object.keys(perTimeStepClusterCounts[month]).length))
-        .range([MARGIN, HEIGHT - MARGIN])
-        .padding(0.1);
-    }
+    return (clusterId) =>
+      d3
+        .scaleLinear()
+        // .domain([-150, 150])
+        .domain([minMDS, maxMDS])
+        .range([
+          // MARGIN + (HEIGHT - 2 * MARGIN) * 0.2,
+          // HEIGHT - MARGIN - (HEIGHT - 2 * MARGIN) * 0.2,
+          MARGIN * 4,
+          HEIGHT - MARGIN * 4,
+        ])(monthlyMDS[month][clusterId]);
   };
 
   const clusterHeightScale = d3
     .scaleLinear()
     .domain([0, maxClusterSize])
-    .range(
-      isMDS.value
-        ? [10, clusterHeightMax]
-        : [yScale(1).bandwidth() / 10, yScale(1).bandwidth()]
-    );
+    .range([10, clusterHeightMax]);
 
   adjustMDS({
     minDistBetweenMDS: minDistBetweenMDS,
     yScale: yScale,
     clusterHeightScale: clusterHeightScale,
     height: HEIGHT,
-    margin: MARGIN,
+    margin: MARGIN * 4,
+    minMDS: minMDS,
+    maxMDS: maxMDS,
   });
-  yScale = (month) => {
-    if (isMDS.value) {
-      return (clusterId) =>
-        d3
-          .scaleLinear()
-          .domain([-150, 150])
-          .range([
-            // MARGIN + (HEIGHT - 2 * MARGIN) * 0.2,
-            // HEIGHT - MARGIN - (HEIGHT - 2 * MARGIN) * 0.2,
-            MARGIN,
-            HEIGHT - MARGIN,
-          ])(monthlyMDS[month][clusterId]);
-    } else {
-      return d3
-        .scaleBand()
-        .domain(
-          d3.range(Object.keys(perTimeStepClusterCounts[month - 1]).length)
-        )
-        .range([MARGIN, HEIGHT - MARGIN])
-        .padding(0.1);
-    }
-  };
+  // yScale = (month) => {
+  //   if (true) {
+  //     return (clusterId) =>
+  //       d3
+  //         .scaleLinear()
+  //         .domain([minMDS, maxMDS])
+  //         .range([
+  //           // MARGIN + (HEIGHT - 2 * MARGIN) * 0.2,
+  //           // HEIGHT - MARGIN - (HEIGHT - 2 * MARGIN) * 0.2,
+  //           MARGIN * 4,
+  //           HEIGHT - MARGIN * 4,
+  //         ])(monthlyMDS[month][clusterId]);
+  //   } else {
+  //     return d3
+  //       .scaleBand()
+  //       .domain(
+  //         d3.range(Object.keys(perTimeStepClusterCounts[month - 1]).length)
+  //       )
+  //       .range([MARGIN, HEIGHT - MARGIN])
+  //       .padding(0.1);
+  //   }
+  // };
 
   checkFlipMDS({
     yScale: yScale,
     HEIGHT: HEIGHT,
     MARGIN: MARGIN,
+    minMDS: minMDS,
+    maxMDS: maxMDS,
   });
 
   let modifierScales = computeClusterPositionModifier({
@@ -778,9 +787,7 @@ async function drawTimeline() {
   ) {
     const clusterHistory = dataT[ensembleID];
     const controlPoints = monthList.map((month) => {
-      let index = monthListOriginal.indexOf(month);
       let cluster = clusterHistory[month];
-      // console.log("DEBUG: CONTROLPOINTS ", month, index, cluster);
       return {
         x: xScale(month),
         y:
@@ -789,18 +796,6 @@ async function drawTimeline() {
           modifierScales[month][cluster].bandwidth() / 2,
       };
     });
-    // const controlPoints = Object.entries(clusterHistory).map(([m, cluster]) => {
-    //   let month = parseInt(m);
-    //   console.log("DEBUG: CONTROLPOINTS ", month, cluster);
-    //   return {
-    //     x: xScale(month),
-    //     y:
-    //       yScale(month)(cluster) +
-    //       modifierScales[month][cluster](ensembleID) +
-    //       modifierScales[month][cluster].bandwidth() / 2,
-    //   };
-    // });
-    // console.log("DEBUG: CONTROLPOINTS ", controlPoints);
     const pathString = getPath({
       controlPoints: controlPoints,
       xScale: xScale,
@@ -839,9 +834,56 @@ async function drawTimeline() {
   const meanDivergingScale = d3
     .scaleDiverging()
     .domain([clusterMeanMin, 0, clusterMeanMax])
-    .interpolator(d3.interpolateRdBu);
+    .interpolator(d3.interpolateBrBG);
 
   // for (let i = 1; i <= 12; i++) {
+  svg
+    .selectAll("clusterPath")
+    .data(pathData)
+    .join("path")
+    .attr("d", (d) => d.path)
+    .attr("fill", "none")
+    .attr("id", (d) => `clusterPath${d.index}`)
+    .attr("stroke", (d) => {
+      if (members[d.index].ssp == "historical") {
+        return "steelblue";
+      }
+      if (members[d.index].ssp == "ssp245") {
+        return "forestgreen";
+      }
+      if (members[d.index].ssp == "ssp370") {
+        return "darkkhaki";
+      }
+      if (members[d.index].ssp == "ssp585") {
+        return "crimson";
+      }
+    })
+    // .attr("stroke-dasharray", (d) =>
+    //   members[d.index].ssp == "historical" ? "10,10" : "0"
+    // )
+    // .attr("stroke-width", (d) => {
+    //   return 1;
+    // })
+    .attr("stroke-opacity", 1)
+    .attr("transform", `translate(${xScale.bandwidth() / 2}, ${0})`)
+    .attr("clusterHistory", (d) => d.clusterHistory)
+    .on("mouseover", function (event, d) {
+      d3.select(this).attr("stroke-width", 5);
+    })
+    .on("mouseout", function (event, d) {
+      d3.select(this).attr("stroke-width", 1);
+    })
+    .on("click", function (event, d) {
+      tooltipData.value = `${members[d.index].model_name}:${members[d.index].ssp}`;
+      showTooltipText.value = true;
+      console.log("DEBUG: Tooltip ", tooltipData.value);
+      document
+        .getElementById("tooltipText")
+        ?.style.setProperty("top", `${event.clientY}px`);
+      document
+        .getElementById("tooltipText")
+        ?.style.setProperty("left", `${event.clientX}px`);
+    });
   for (let i = 0; i < monthList.length; i += 1) {
     let month = monthList[i];
     let clusterBoxes = clusterBoxData[month];
@@ -854,11 +896,12 @@ async function drawTimeline() {
       .attr("y", (d) => d.y)
       .attr("width", (d) => d.width)
       .attr("height", (d) => d.height)
-      .attr("id", (d) => `clusterRect${d.month}`)
+      .attr("id", (d, i) => `clusterRect${i}`)
       .attr("fill", (d) => meanDivergingScale(d.clusterMean))
-      .attr("fill-opacity", 0.5)
-      .attr("stroke", "black")
+      .attr("fill-opacity", 1)
+      .attr("stroke", "none")
       .attr("transform", `translate(${xScale.bandwidth() / 2}, ${0})`)
+      .each((d) => (d.clicked = false))
       .on("mouseover", function (event, d) {
         d3.select(this).classed("selected-rect", true);
         d3.selectAll("path")
@@ -884,7 +927,9 @@ async function drawTimeline() {
           .classed("path-highlighted", true);
       })
       .on("mouseout", function (event, d) {
-        d3.select(this).classed("selected-rect", false);
+        if (!d.clicked) {
+          d3.select(this).classed("selected-rect", false);
+        }
         d3.selectAll("path")
           .filter(function () {
             return (
@@ -896,8 +941,33 @@ async function drawTimeline() {
           .classed("path-highlighted", false);
         // d3.selectAll("path").attr("stroke-opacity", 1).attr("stroke-width", 1);
       })
-      .on("click", (event, d) => {
-        console.log("DEBUG: CLICK ", d);
+      .on("click", function (event, d) {
+        if (d.clicked) {
+          d.clicked = false;
+          d3.select(this).classed("selected-rect", false);
+          showTooltip.value = false;
+          store.setFiles({ group1: [], group2: [] });
+          return;
+        }
+
+        // Set all other clusterRect as not clicked
+        const clickedID = d3.select(this).attr("id");
+        console.log("DEBUG IN CLUSTER RECT CLICK ", clickedID);
+        d3.selectAll("rect")
+          .filter(function () {
+            return (
+              d3.select(this)?.attr("id") &&
+              d3.select(this).attr("id").startsWith("clusterRect") &&
+              d3.select(this).attr("id") !== clickedID
+            );
+          })
+          .each((d) => (d.clicked = false))
+          .classed("selected-rect", false);
+
+        // Set this clusterRect as clicked
+        d.clicked = true;
+        d3.select(this).classed("selected-rect", true);
+
         let selected = d.members.map((member) => {
           return {
             model_name: members[member].model_name,
@@ -912,56 +982,9 @@ async function drawTimeline() {
         store.setFiles({ group1: selected, group2: [] });
       });
   }
-  svg
-    .selectAll("clusterPath")
-    .data(pathData)
-    .join("path")
-    .attr("d", (d) => d.path)
-    .attr("fill", "none")
-    .attr("id", (d) => `clusterPath${d.index}`)
-    .attr("stroke", (d) => {
-      if (members[d.index].ssp == "historical") {
-        return "steelblue";
-      }
-      if (members[d.index].ssp == "ssp245") {
-        return "forestgreen";
-      }
-      if (members[d.index].ssp == "ssp370") {
-        return "darkkhaki";
-      }
-      if (members[d.index].ssp == "ssp585") {
-        return "crimson";
-      }
-    })
-    .attr("stroke-dasharray", (d) =>
-      members[d.index].ssp == "historical" ? "10,10" : "0"
-    )
-    .attr("stroke-width", (d) => {
-      return 1;
-    })
-    .attr("stroke-opacity", 1)
-    .attr("transform", `translate(${xScale.bandwidth() / 2}, ${0})`)
-    .attr("clusterHistory", (d) => d.clusterHistory)
-    .on("mouseover", function (event, d) {
-      d3.select(this).attr("stroke-width", 5);
-    })
-    .on("mouseout", function (event, d) {
-      d3.select(this).attr("stroke-width", 1);
-    })
-    .on("click", function (event, d) {
-      tooltipData.value = `${members[d.index].model_name}:${members[d.index].ssp}`;
-      showTooltipText.value = true;
-      console.log("DEBUG: Tooltip ", tooltipData.value);
-      document
-        .getElementById("tooltipText")
-        ?.style.setProperty("top", `${event.clientY}px`);
-      document
-        .getElementById("tooltipText")
-        ?.style.setProperty("left", `${event.clientX}px`);
-    });
 
   const pathLegend = [
-    { name: "Historical", color: "steelblue", dash: "10,10" },
+    { name: "Historical", color: "steelblue", dash: "0" },
     { name: "SSP245", color: "forestgreen", dash: "0" },
     { name: "SSP370", color: "darkkhaki", dash: "0" },
     { name: "SSP585", color: "crimson", dash: "0" },
@@ -1058,11 +1081,27 @@ async function getData() {
       years: [-1],
     });
     console.log("DEBUG: DISTANCES ", month, distances);
+
+    let models = Array.from(
+      new Set(sspAllLabels.map((member) => member.model_name))
+    );
+    const temp = await API.fetchData("distance_matrix_forcing", true, {
+      dataset_type: dataset_name,
+      // time_type: (month <= 3 || month >=10) timeType.All,
+      // time_type: month <= 5 || month >= 10 ? timeType.OctMay : timeType.AprSep,
+      time_type: props.time_type,
+      model_names: models,
+      subsetType: "month",
+      resolution: 100,
+      months: month,
+      years: [-1],
+    });
+    console.log("DEBUG: FORCING DISTANCES ", month, temp);
     const { clustering } = await API.fetchData("run_clustering", true, {
       distance_matrix: distances,
-      // n_neighbors: 6, // For UMAP
+      n_neighbors: 6, // For UMAP
       // n_neighbors: 5, // For UMAP
-      n_neighbors: 4, // For UMAP
+      // n_neighbors: 4, // For UMAP
       // n_neighbors: 3, // For UMAP
       min_cluster_size: 4, // For HDBSCAN
     });

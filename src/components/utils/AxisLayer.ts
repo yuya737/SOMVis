@@ -153,7 +153,7 @@ export class AxisLayer extends AbstractLayerGenerator {
   //     return ret
 
   // }
-  getLayers(): LayersList {
+  getLayers() {
     if (this.layerList && !this.needsToRedraw) {
       return this.layerList;
     }

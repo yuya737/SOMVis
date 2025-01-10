@@ -1,16 +1,14 @@
 import { BitmapLayer, PathLayer } from "@deck.gl/layers";
 import { watch, ComputedRef } from "vue";
 import { AbstractLayerGenerator } from "./AbstractLayerGenerator";
-import { useStore } from "@/store/main";
 
 import { timeType } from "./utils";
 
 import distance from "@turf/distance";
 import bearing from "@turf/bearing";
-import { booleanEqual } from "@turf/turf";
 
 export class NodeLayer extends AbstractLayerGenerator {
-  readonly nodeMapGetter: ComputedRef<(timeType: timeType) => any>;
+  readonly nodeMapGetter: ComputedRef<() => any>;
 
   readonly dataset_type;
   readonly time_type: timeType;
@@ -25,7 +23,6 @@ export class NodeLayer extends AbstractLayerGenerator {
   anchors: any;
 
   map: any;
-  store: any;
 
   constructor({
     dataset_type,
@@ -46,8 +43,6 @@ export class NodeLayer extends AbstractLayerGenerator {
     this.dims = dims;
     this.deck = deck;
     this.anchors = anchors;
-
-    this.store = useStore();
 
     watch(imgSrc, () => {
       this.needsToRedraw = true;
@@ -72,6 +67,8 @@ export class NodeLayer extends AbstractLayerGenerator {
 
     this.map = this.nodeMapGetter.value(this.time_type);
 
+    const size = 4;
+
     for (let i = 0; i < this.dims * this.dims; i += this.drawEveryN) {
       ret = [
         ...ret,
@@ -80,10 +77,10 @@ export class NodeLayer extends AbstractLayerGenerator {
           image: `http://localhost:5002/node_images/${this.dataset_type}/${this.time_type}/${i}.png`,
           pickable: true,
           bounds: [
-            this.map[i].coords[0] - 2,
-            -this.map[i].coords[1] + 2,
-            this.map[i].coords[0] + 2,
-            -this.map[i].coords[1] - 2,
+            this.map[i].coords[0] - size,
+            this.map[i].coords[1] + size,
+            this.map[i].coords[0] + size,
+            this.map[i].coords[1] - size,
 
             // this.mappingData[i].coords[0] - 2,
             // -this.mappingData[i].coords[1] + 2,
@@ -98,36 +95,33 @@ export class NodeLayer extends AbstractLayerGenerator {
             },
           },
           // pickable: true,
-          onClick: (info, event) => {
+          onClick: (info) => {
             this.imgSrc.value = `http://localhost:5002/node_images/${this.dataset_type}/${this.time_type}/${info.layer.props.index}.png`;
             this.indexClicked = info.layer.props.index;
             console.log("Clicked:", info);
           },
-          onDragStart: (info, event) => {
+          onDragStart: () => {
             this.deck.setProps({ controller: { dragPan: false } });
           },
-          onDrag: (info, event) => {
+          onDrag: (info) => {
             let lngLat = info.coordinate;
             const d = distance([0, 0], lngLat, {
               units: "meters",
             });
             const a = bearing([0, 0], lngLat);
             const x = d * Math.sin((a * Math.PI) / 180);
-            const y = -d * Math.cos((a * Math.PI) / 180);
+            const y = d * Math.cos((a * Math.PI) / 180);
             this.map[info.layer.props.index].coords = [x, y];
           },
-          onDragEnd: (info, event) => {
+          onDragEnd: (info) => {
             let lngLat = info.coordinate;
             const d = distance([0, 0], lngLat, {
               units: "meters",
             });
             const a = bearing([0, 0], lngLat);
             const x = d * Math.sin((a * Math.PI) / 180);
-            const y = -d * Math.cos((a * Math.PI) / 180);
-            this.store.updateMapping(this.time_type, info.layer.props.index, [
-              x,
-              y,
-            ]);
+            const y = d * Math.cos((a * Math.PI) / 180);
+            this.map[info.layer.props.index].coords = [x, y];
             this.anchors.value["ids"].push(info.layer.props.index);
             this.anchors.value["coords"].push([x, y]);
             console.log("DEBUG DRAG END", lngLat, d, x, y);
@@ -149,18 +143,18 @@ export class NodeLayer extends AbstractLayerGenerator {
       ret = [
         ...ret,
         new PathLayer({
-          id: "selected-node-border-layer",
+          id: `selected-anchor-border-layer-${id}`,
           positionFormat: "XY",
           getPath: (d) => d,
           getWidth: 0.1,
           getColor: [255, 0, 0],
           data: [
             [
-              [this.map[id].coords[0] - 2, -this.map[id].coords[1] - 2],
-              [this.map[id].coords[0] - 2, -this.map[id].coords[1] + 2],
-              [this.map[id].coords[0] + 2, -this.map[id].coords[1] + 2],
-              [this.map[id].coords[0] + 2, -this.map[id].coords[1] - 2],
-              [this.map[id].coords[0] - 2, -this.map[id].coords[1] - 2],
+              [this.map[id].coords[0] - size, this.map[id].coords[1] - size], // Bottom-left corner
+              [this.map[id].coords[0] + size, this.map[id].coords[1] - size], // Bottom-right corner
+              [this.map[id].coords[0] + size, this.map[id].coords[1] + size], // Top-right corner
+              [this.map[id].coords[0] - size, this.map[id].coords[1] + size], // Top-left corner
+              [this.map[id].coords[0] - size, this.map[id].coords[1] - size], // Closing the rectangle
             ],
           ],
         }),
@@ -169,7 +163,7 @@ export class NodeLayer extends AbstractLayerGenerator {
 
     if (this.imgSrc.value !== "") {
       console.log("DEBUG PATHLAYER", this.indexClicked);
-      let i = this.indexClicked;
+      let id = this.indexClicked;
       ret = [
         ...ret,
         new PathLayer({
@@ -179,11 +173,11 @@ export class NodeLayer extends AbstractLayerGenerator {
           getWidth: 0.1,
           data: [
             [
-              [this.map[i].coords[0] - 2, -this.map[i].coords[1] - 2],
-              [this.map[i].coords[0] - 2, -this.map[i].coords[1] + 2],
-              [this.map[i].coords[0] + 2, -this.map[i].coords[1] + 2],
-              [this.map[i].coords[0] + 2, -this.map[i].coords[1] - 2],
-              [this.map[i].coords[0] - 2, -this.map[i].coords[1] - 2],
+              [this.map[id].coords[0] - size, this.map[id].coords[1] - size], // Bottom-left corner
+              [this.map[id].coords[0] + size, this.map[id].coords[1] - size], // Bottom-right corner
+              [this.map[id].coords[0] + size, this.map[id].coords[1] + size], // Top-right corner
+              [this.map[id].coords[0] - size, this.map[id].coords[1] + size], // Top-left corner
+              [this.map[id].coords[0] - size, this.map[id].coords[1] - size], // Closing the rectangle
             ],
           ],
         }),

@@ -8,6 +8,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@loaders.gl/obj": "^4.3.2",
+    "@nebula.gl/layers": "^1.0.4",
     "@stdlib/stats-kde2d": "^0.2.1",
     "@studiometa/vue-mapbox-gl": "^2.3.4",
     "@turf/turf": "^7.1.0",
@@ -16,6 +18,7 @@
     "d3": "^7.8.5",
     "deck.gl": "8.9.35",
     "geodesy-fn": "^1.1.0",
+    "lodash": "^4.17.21",
     "ml-hclust": "^3.1.0",
     "pinia": "^2.1.7",
     "points-on-path": "^0.2.1",
@@ -38,5 +41,8 @@
     "prettier-plugin-tailwindcss": "^0.5.11",
     "tailwindcss": "latest",
     "vite": "^5.0.8"
+  },
+  "resolutions": {
+    "@deck.gl/core": "8.9.35"
   }
 }

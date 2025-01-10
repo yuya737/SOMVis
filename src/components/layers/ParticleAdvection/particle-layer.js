@@ -186,7 +186,7 @@ export default class ParticleLayer extends LineLayer {
     }
 
     const { animate, bounds, animationProgress, colorSetting } = this.props
-    const { sourcePositions, targetPositions, sourcePositions64Low, targetPositions64Low, colors, widths, age, model } = this.state
+    const { sourcePositions, targetPositions, sourcePositions64Low, targetPositions64Low, colors, widths, model } = this.state
 
     model.setAttributes({
       instanceSourcePositions: sourcePositions,
@@ -252,7 +252,6 @@ export default class ParticleLayer extends LineLayer {
     const widths = new Float32Array([width]) // constant attribute
     // const age = new Float32Array([0.1])
 
-    const animationProgress = new Buffer(gl, 4)
 
     const transform = new Transform(gl, {
       sourceBuffers: {
@@ -296,13 +295,13 @@ export default class ParticleLayer extends LineLayer {
     // console.log(image)
 
     const { viewport, timeline } = this.context
-    const { image, imageUnscale, bounds, numParticles, speedFactor, maxAge, animationProgress } = this.props
+    const { image, imageUnscale, bounds, numParticles, speedFactor, maxAge  } = this.props
     const { numAgedInstances, transform, previousViewportZoom, previousTime } = this.state
     const time = timeline.getTime()
     if (!image || time === previousTime) {
       return
     }
-    const arr = readPixelsToArray(image)
+    // const arr = readPixelsToArray(image)
 
     // viewport
     const viewportGlobe = isViewportGlobe(viewport)

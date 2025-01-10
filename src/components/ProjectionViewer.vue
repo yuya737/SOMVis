@@ -2,6 +2,15 @@
   <div class="relative h-full w-full">
     <div class="relative h-full w-full">
       <canvas :id="deckglCanvas" class="z-[2] h-full w-full" />
+      <MapAnnotationEditor
+        v-if="store.showMapAnnotationPopup"
+        class="absolute z-[4]"
+        :annotation-props="store.mapAnnotationPopup"
+        :style="{
+          top: `${store.mapAnnotationPopup.coords[1]}px`,
+          left: `${store.mapAnnotationPopup.coords[0]}px`,
+        }"
+      />
       <!-- <InfoPanel
         class="z-[4]"
         :settings="InfoPanelSettings"
@@ -20,121 +29,66 @@
       class="absolute z-[4] rounded bg-gray-800 p-2 text-white shadow"
       style="display: none"
     />
-    <div
-      class="absolute bottom-0 z-[4] flex w-fit flex-col items-center justify-around p-4"
+    <ElementSelector
+      class="absolute bottom-0 w-full z-[4] mb-4"
+      :time_type="props.time_type"
+    />
+    <CharacteristicViewer
+      :time_type="props.time_type"
+      class="absolute top-0 right-0 z-[4] m-4"
+    />
+    <ModelInfoViewer
+      :time_type="props.time_type"
+      class="absolute top-0 left-0 z-[4] m-4"
+    />
+    <aside
+      class="absolute bottom-0 right-0 h-fit z-[4] w-fit p-5 bg-gray-200 overflow-auto"
     >
-      <!-- <div
-        id="message"
-        class="flex items-center font-bold text-xl px-5 bg-gray-200 p-2 rounded-lg"
-      >
-        {{ message }}
-      </div> -->
-      <!-- <Slider
-        v-model="timeRange"
-        :format="formatTooltipTime"
-        :min="timeMin"
-        :max="timeMax"
-        class="slider z-[4] w-3/4"
-      /> -->
-
       <div
-        class="flex flex-row w-fit items-center justify-evenly p-2 rounded-lg text-center gap-4"
+        class="flex flex-col h-fit w-fit items-center justify-evenly p-2 rounded-lg text-center gap-4"
       >
-        <!-- <span class="flex items-center font-bold px-5"> Start: </span> -->
-        <!-- <Dropdown
-          v-model="monthTemp1"
-          :disabled="isWaterYearMean"
-          :options="months"
-          class="w-fit z-[4] md:w-14rem"
-          checkmark
-          :highlight-on-select="false"
-          placeholder="Starting Month"
-        />
-        <span class="flex items-center font-bold px-5"> End: </span>
-        <Dropdown
-          v-model="monthTemp2"
-          :disabled="isWaterYearMean"
-          :options="months"
-          class="w-fit z-[4]"
-          checkmark
-          :highlight-on-select="false"
-          placeholder="Ending Month"
-        />
-        <ToggleButton
-          v-model="isWaterYearMean"
-          onLabel="Disable Water Year Mean"
-          offLabel="Enable Water Year Mean"
-          class="px-5"
-        /> -->
-        <!-- <ToggleButton
-          v-model="isHidingSurface"
-          @change="toggleShowSurface"
-          onLabel="Show Surface"
-          offLabel="Hide Surface"
-        /> -->
+        <Button label="Recalculate MDE" @click="recalculateMDE" />
         <ToggleButton
           v-model="isHidingSurface"
+          on-label="Show Distribution"
+          off-label="Hide Distribution"
           @change="handleButtons"
-          onLabel="Show Distribution"
-          offLabel="Hide Distribution"
         />
         <ToggleButton
           v-model="isHiding3D"
+          on-label="Show 3D"
+          off-label="Hide 3D"
           @change="handleButtons"
-          onLabel="Show 3D"
-          offLabel="Hide 3D"
         />
-        <Button @click="recalculateMDE" label="Recalculate MDE" />
-        <div class="flex flex-row items-center gap-4 text-center bg-white">
-          <div class="font-bold flex flex-row">
-            Showing {{ time_type }}
-            <!-- Hover on the months to see the patterns! -->
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              class="h-6 w-6"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M9 5l7 7-7 7"
-              />
-            </svg>
-          </div>
-          <Button
+        <SelectButton
+          v-model:="store.mapMode"
+          :options="modeOptions"
+          @change="handleMapModeChanged"
+        />
+        <!-- <Button label="Get Characteristic" @click="getCharacteristic" /> -->
+        <div class="flex flex-col items-center gap-2 text-center">
+          <div class="font-bold flex flex-row">Showing {{ time_type }}</div>
+          <!-- <Button
             v-for="month in timeTypeMonths[time_type].map((d) => months[d - 1])"
             :key="month"
-            class="bg-slate-200 p-2 hover:ring-2 hover:bg-slate-300"
+            class="p-2 hover:ring-2 hover:bg-slate-300"
             :label="month"
+            outlined
             @mouseover="handleMonthHoveredChanged(month, true)"
             @mouseout="handleMonthHoveredChanged(month, false)"
-            outlined
-          />
-          <div class="font-bold flex flex-row">
+          /> -->
+          <!-- <div class="font-bold flex flex-row items-center justify-center">
             Streamlines Settings
-            <!-- Hover on the months to see the patterns! -->
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              class="h-6 w-6"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M9 5l7 7-7 7"
-              />
-            </svg>
+            <ProgressSpinner
+              v-if="isCalculatingVectorField"
+              strokeWidth="8"
+              class="h-8 w-8"
+            />
           </div>
           <Dropdown
             v-model="selectedStreamLinesModel"
             :options="models"
-            optionLabel="name"
+            option-label="name"
             class="m-2"
             placeholder="Select a Model"
             @change="handleVectorFieldChanged"
@@ -142,7 +96,7 @@
           <Dropdown
             v-model="selectedStreamLinesCmp1"
             :options="types"
-            optionLabel="name"
+            option-label="name"
             class="m-2"
             placeholder="Select CMP1"
             @change="handleVectorFieldChanged"
@@ -150,7 +104,7 @@
           <Dropdown
             v-model="selectedStreamLinesCmp2"
             :options="types"
-            optionLabel="name"
+            option-label="name"
             class="m-2"
             placeholder="Select CMP2"
             @change="handleVectorFieldChanged"
@@ -161,26 +115,15 @@
             class="m-2"
             placeholder="Select Month"
             @change="handleVectorFieldChanged"
-          />
+          /> -->
         </div>
-        <!-- <Divider layout="vertical" /> -->
-        <!-- <Button label="Apply" @click="yearMonthChanged" class="px-5" /> -->
       </div>
-      <!-- <Slider
-        v-model="monthRange"
-        :format="formatTooltipMonth"
-        :min="1"
-        :max="12"
-        :step="1"
-        class="slider z-[4] w-full"
-        @change="drawAllLayers"
-      /> -->
-    </div>
+    </aside>
     <NodeInspector
+      v-if="imgSrc != ''"
       class="absolute top-0 left-0 z-[2]"
       :img-src="imgSrc"
       @close-node-inspector="imgSrc = ''"
-      v-if="imgSrc != ''"
     />
     <div v-if="isRecalculatingMDE" class="overlay">
       <div class="overlay-text">Recalculating MDE...</div>
@@ -192,24 +135,41 @@
 import { onMounted, ref, watch, computed, nextTick } from "vue";
 import { storeToRefs } from "pinia";
 
-import { Deck } from "@deck.gl/core";
-
-import { LayersList, AmbientLight } from "@deck.gl/core";
-import { AxisLayer } from "./utils/AxisLayer";
-import { useStore } from "@/store/main";
-import NodeInspector from "./ui/NodeInspector.vue";
+// DECK IMPORTS
+import { Deck } from "@deck.gl/core/typed";
+import { LayersList } from "@deck.gl/core";
 import { COORDINATE_SYSTEM } from "@deck.gl/core";
 
+// STORE IMPORT
+import { useStore } from "@/store/main";
+
+// UI ELEMENTS IMPORT
+import NodeInspector from "./ui/NodeInspector.vue";
+import MapAnnotationEditor from "./ui/MapAnnotationEditor.vue";
+import ElementSelector from "./ui/ElementSelector.vue";
+import CharacteristicViewer from "./ui/CharacteristicViewer.vue";
+
+// LAYER GENERATORS IMPORT
 import { AbstractLayerGenerator } from "./utils/AbstractLayerGenerator";
 
 import { NodeLayer } from "./utils/NodeLayer";
 import { NodeClassifyLayer } from "./utils/NodeClassifyLayer";
 import { Node3DLayer } from "./utils/Node3DLayer";
 import { ParticleAdvectionLayer } from "./utils/ParticleAdvectionLayer";
+import { ExplainabilityLayer } from "./utils/ExplainabilityLayer";
+import { SpaceAnnotationLayer } from "./utils/SpaceAnnotationLayer";
 import { SOMLayer } from "./utils/SOMLayer";
+import { AxisLayer } from "./utils/AxisLayer";
+
+// PRIMEVUE IMPORTS
 import ToggleButton from "primevue/togglebutton";
 import Dropdown from "primevue/dropdown";
+import ProgressSpinner from "primevue/progressspinner";
+import SelectButton from "primevue/selectbutton";
 import Button from "primevue/button";
+
+// UTILS IMPORTS
+import API from "@/api/api";
 
 import {
   mapView,
@@ -231,12 +191,14 @@ const models = ref(
     }
   )
 );
+models.value.push({ name: "All" });
 const types = ref(
   Array.from(new Set(members.map((member) => member.ssp))).map((type) => {
     return { name: type };
   })
 );
 import { Layer } from "deck.gl/typed";
+import ModelInfoViewer from "./ui/ModelInfoViewer.vue";
 const props = defineProps({
   isHistorical: Boolean,
   time_type: timeType,
@@ -258,7 +220,7 @@ watch(imgSrc, (newVal) => {
   drawAllLayers();
 });
 const message = ref("");
-const timeRange = ref([0, props.isHistorical ? 64 : 85]);
+const timerange = ref([0, props.isHistorical ? 64 : 85]);
 const monthTemp1 = ref("October");
 const monthTemp2 = ref("October");
 watch([monthTemp1, monthTemp2], ([m1, m2]) => {
@@ -276,6 +238,7 @@ const isHidingSurface = ref(false);
 const isHiding3D = ref(false);
 const isWaterYearMean = ref(false);
 const isRecalculatingMDE = ref(false);
+const isCalculatingVectorField = ref(false);
 const monthHovered = ref(null);
 watch(monthHovered, (newVal) => {
   console.log("monthHovered changed", newVal);
@@ -286,6 +249,9 @@ const selectedStreamLineMonth = ref();
 const selectedStreamLinesCmp1 = ref();
 const selectedStreamLinesCmp2 = ref();
 
+const mode = ref("Explore");
+const modeOptions = ["Explore", "Annotate"];
+
 // const text = ref(props.isHistorical ? "Historical" : "SSP370");
 
 onMounted(() => {
@@ -293,26 +259,17 @@ onMounted(() => {
     ...DECKGL_SETTINGS,
     canvas: deckglCanvas,
     views: mapView,
-    getTooltip: ({ object }) => {
-      if (!object) return;
-      console.log(object);
-
-      return {
-        html: `<div>${object.message}</div>`,
-        style: {
-          fontSize: "0.8em",
-          "z-index": 10,
-        },
-      };
-    },
   });
+  deck.canvas.addEventListener("contextmenu", (evt) => evt.preventDefault());
 
   initializeLayers().then((layers) => {
     layerList = layers.map((d) =>
-      d.clone({
-        coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
-        coordinateOrigin: [0, 0, 0],
-      })
+      d.id == "nebula"
+        ? d
+        : d.clone({
+            coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
+            coordinateOrigin: [0, 0, 0],
+          })
     );
     setLayerProps();
   });
@@ -326,21 +283,25 @@ onMounted(() => {
     }
   );
   watch(
-    () => store.getFiles,
-    async (files) => {
+    () => [store.getFiles, store.monthsSelected],
+    async ([files, months]) => {
       if (!files) return;
-      message.value = "Loading...";
       await nextTick();
       drawAllLayers();
     }
   );
   watch(
-    () => store.getNodeMap(props.time_type),
+    () => [store.getNodeMap(props.time_type), store.getExlainablityPoints],
     () => {
-      console.log("Node map changed");
       drawAllLayers();
     },
     { deep: true }
+  );
+  watch(
+    () => store.getRedrawFlag,
+    () => {
+      drawAllLayers();
+    }
   );
 });
 
@@ -359,6 +320,7 @@ async function initializeLayers() {
     getSubsetType,
     getHoveredFile,
     getVectorFieldData,
+    getExlainablityPoints,
     anchors,
   } = storeToRefs(store);
   let nodeLayerGenerator = new NodeLayer({
@@ -366,7 +328,7 @@ async function initializeLayers() {
     time_type: props.time_type,
     nodeMapGetter: getNodeMap,
     imgSrc: imgSrc,
-    drawEveryN: 13,
+    drawEveryN: 7,
     dims: 30,
     deck: deck,
     anchors: anchors,
@@ -379,18 +341,8 @@ async function initializeLayers() {
     monthHovered: monthHovered,
     interpolatedSurfaceGetter: getInterpolatedSurfaceData,
     time_type: props.time_type,
-
-    // mappingData: store.nodeMap[props.time_type],
-    // hotspotPolygons: store.hotspotPolygons[props.time_type],
-    // classifyData: store.classifyData[props.time_type],
-    // contourData: store.contourData[props.time_type],
-    // hotspotPolygons,
-    // classifyData,
-    // contourData,
-    // monthHovered: monthHovered,
-    // interpolatedSurface: store.interpolatedSurfaceData[props.time_type],
   });
-  let axisLayerGenerator = new AxisLayer(-100, 100, 10, true);
+  let axisLayerGenerator = new AxisLayer(-100, 100, 100, true);
   // let axisLayerGenerator = new AxisLayer(-1000, 1000, 50, true);
 
   let xMin = Math.min(
@@ -436,6 +388,13 @@ async function initializeLayers() {
     time_type: props.time_type,
   });
 
+  let explainabilityLayerGenerator = new ExplainabilityLayer({
+    explainablityPointsGetter: getExlainablityPoints,
+    deck: deck,
+  });
+
+  let spaceAnnotationLayerGenerator = new SpaceAnnotationLayer();
+
   layerGenerators = [
     // axisLayerGenerator,
     nodeLayerGenerator,
@@ -443,14 +402,11 @@ async function initializeLayers() {
     nodeclassifyLayerGenerator,
     node3DLayerGenerator,
     particleAdvectionLayerGenerator,
+    explainabilityLayerGenerator,
+    spaceAnnotationLayerGenerator,
   ];
   // Get the layers
-  // layerList = layerGenerators.map((g) => g.getLayers()).flat();
-  layerList = layerGenerators
-    .map((g) => {
-      return g.getLayers();
-    })
-    .flat();
+  layerList = layerGenerators.map((g) => g.getLayers()).flat();
   return layerList;
 }
 
@@ -459,11 +415,18 @@ function drawAllLayers() {
   nextTick(() => {
     layerList = layerGenerators
       .map((g) => {
-        return g.getLayers().map((d: Layer) =>
-          d.clone({
-            coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
-            coordinateOrigin: [0, 0, 0],
-          })
+        return g.getLayers().map(
+          (d: Layer) =>
+            d.id == "nebula"
+              ? d
+              : d.clone({
+                  coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
+                  coordinateOrigin: [0, 0, 0],
+                })
+          // d.clone({
+          //   coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
+          //   coordinateOrigin: [0, 0, 0],
+          // })
         );
       })
       .flat();
@@ -472,42 +435,6 @@ function drawAllLayers() {
     handleButtons();
     setLayerProps();
     // message.value = "DONE!";
-  });
-}
-
-function settingsChanged(updatedSettings) {
-  settings = { ...settings, ...updatedSettings };
-  if (settings["variant"]) {
-    selectedModel.value[0] = settings["variant"];
-  }
-  drawAllLayers();
-  console.log("setting changed", selectedModel.value);
-}
-
-function yearMonthChanged() {
-  nextTick(() => {
-    let allMonths = monthRange.value[0] == 1 && monthRange.value[1] == 12;
-    let allYears =
-      timeMin == timeRange.value[0] && timeMax.value == timeRange.value[1];
-
-    store.updateElements({
-      files: store.getFiles,
-      monthsSelected: allMonths
-        ? [-1]
-        : generateMonthRangeList(monthRange.value[0], monthRange.value[1]),
-      // numbers from timeMin to timeMax.value inclusive
-      // yearsSelected: allYears
-      //   ? Array.from({ length: timeMax.value - timeMin + 1 }, (_, i) => i)
-      //   : [timeRange.value[0], timeRange.value[1]],
-      yearsSelected: Array.from(
-        { length: timeMax.value - timeMin + 1 },
-        (_, i) => i
-      ),
-      subsetType: isWaterYearMean.value
-        ? subsetType.waterYear
-        : subsetType.month,
-    });
-    drawAllLayers();
   });
 }
 
@@ -527,7 +454,7 @@ async function recalculateMDE() {
 
 function handleButtons() {
   layerList = layerList.map((l) => {
-    if (l.id.startsWith("curve-heatmap")) {
+    if (l.id.startsWith("polygon-layer")) {
       return l.clone({ visible: !isHidingSurface.value });
     } else if (l.id.startsWith("node3d")) {
       return l.clone({ visible: !isHiding3D.value });
@@ -554,13 +481,35 @@ function checkValidStreamLines() {
 
 async function handleVectorFieldChanged() {
   if (!checkValidStreamLines()) return;
+  let selectedModels = [selectedStreamLinesModel.value.name];
+  if (selectedStreamLinesModel.value.name == "All") {
+    selectedModels = sspAllLabels.map((d) => d.model_name);
+  }
+  isCalculatingVectorField.value = true;
   await store.updateVectorFieldSetting([
     dataset_name,
-    selectedStreamLinesModel.value.name,
+    selectedModels,
+    // [selectedStreamLinesModel.value.name],
     props.time_type,
     [selectedStreamLinesCmp1.value.name, selectedStreamLinesCmp2.value.name],
     selectedStreamLineMonth.value,
   ]);
+  isCalculatingVectorField.value = false;
+  drawAllLayers();
+}
+
+function handleMapModeChanged({ value }) {
+  if (value == "Annotate") {
+    let spaceAnnotationLayer = layerList.find((d) => d.id == "nebula");
+    console.log("DEBUG ANNOTATE", spaceAnnotationLayer);
+    deck.setProps({
+      getCursor: spaceAnnotationLayer.getCursor.bind(spaceAnnotationLayer),
+    });
+  } else {
+    deck.setProps({
+      getCursor: ({ isDragging }) => (isDragging ? "grabbing" : "grab"),
+    });
+  }
   drawAllLayers();
 }
 </script>
