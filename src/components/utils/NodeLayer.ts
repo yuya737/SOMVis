@@ -9,6 +9,7 @@ import bearing from "@turf/bearing";
 
 export class NodeLayer extends AbstractLayerGenerator {
   readonly nodeMapGetter: ComputedRef<() => any>;
+  readonly highlightedNodeGetter: ComputedRef<Array<number>>;
 
   readonly dataset_type;
   readonly time_type: timeType;
@@ -28,6 +29,7 @@ export class NodeLayer extends AbstractLayerGenerator {
     dataset_type,
     time_type,
     nodeMapGetter,
+    highlightedNodeGetter,
     imgSrc,
     drawEveryN,
     dims = 30,
@@ -38,6 +40,7 @@ export class NodeLayer extends AbstractLayerGenerator {
     this.dataset_type = dataset_type;
     this.time_type = time_type;
     this.nodeMapGetter = nodeMapGetter;
+    this.highlightedNodeGetter = highlightedNodeGetter;
     this.imgSrc = imgSrc;
     this.drawEveryN = drawEveryN;
     this.dims = dims;
@@ -52,6 +55,7 @@ export class NodeLayer extends AbstractLayerGenerator {
     //   () => (this.needsToRedraw = true),
     //   { deep: true }
     // );
+    watch(this.highlightedNodeGetter, () => (this.needsToRedraw = true));
     watch(
       () => this.nodeMapGetter.value(this.time_type),
       () => (this.needsToRedraw = true),
@@ -138,28 +142,54 @@ export class NodeLayer extends AbstractLayerGenerator {
     }
 
     const numAnchors = this.anchors.value["ids"].length;
+    const data = [];
     for (let i = 0; i < numAnchors; i++) {
       const id = this.anchors.value["ids"][i];
-      ret = [
-        ...ret,
-        new PathLayer({
-          id: `selected-anchor-border-layer-${id}`,
-          positionFormat: "XY",
-          getPath: (d) => d,
-          getWidth: 0.1,
-          getColor: [255, 0, 0],
-          data: [
-            [
-              [this.map[id].coords[0] - size, this.map[id].coords[1] - size], // Bottom-left corner
-              [this.map[id].coords[0] + size, this.map[id].coords[1] - size], // Bottom-right corner
-              [this.map[id].coords[0] + size, this.map[id].coords[1] + size], // Top-right corner
-              [this.map[id].coords[0] - size, this.map[id].coords[1] + size], // Top-left corner
-              [this.map[id].coords[0] - size, this.map[id].coords[1] - size], // Closing the rectangle
-            ],
-          ],
-        }),
-      ];
+      data.push([
+        [this.map[id].coords[0] - size, this.map[id].coords[1] - size], // Bottom-left corner
+        [this.map[id].coords[0] + size, this.map[id].coords[1] - size], // Bottom-right corner
+        [this.map[id].coords[0] + size, this.map[id].coords[1] + size], // Top-right corner
+        [this.map[id].coords[0] - size, this.map[id].coords[1] + size], // Top-left corner
+        [this.map[id].coords[0] - size, this.map[id].coords[1] - size], // Closing the rectangle
+      ]);
     }
+    ret = [
+      ...ret,
+      new PathLayer({
+        id: `selected-anchor-border-layer`,
+        positionFormat: "XY",
+        getPath: (d) => d,
+        getWidth: 0.1,
+        getColor: [255, 0, 0],
+        data: data,
+      }),
+    ];
+
+    const highlightedNodes = this.highlightedNodeGetter.value;
+    const highlightedNodeData = [];
+    for (let i = 0; i < highlightedNodes.length; i++) {
+      const id = highlightedNodes[i];
+      if (id % this.drawEveryN == 0) {
+        highlightedNodeData.push([
+          [this.map[id].coords[0] - size, this.map[id].coords[1] - size], // Bottom-left corner
+          [this.map[id].coords[0] + size, this.map[id].coords[1] - size], // Bottom-right corner
+          [this.map[id].coords[0] + size, this.map[id].coords[1] + size], // Top-right corner
+          [this.map[id].coords[0] - size, this.map[id].coords[1] + size], // Top-left corner
+          [this.map[id].coords[0] - size, this.map[id].coords[1] - size], // Closing the rectangle
+        ]);
+      }
+    }
+    ret = [
+      ...ret,
+      new PathLayer({
+        id: `highlighted-border-layer`,
+        positionFormat: "XY",
+        getPath: (d) => d,
+        getWidth: 0.1,
+        getColor: [0, 255, 0],
+        data: highlightedNodeData,
+      }),
+    ];
 
     if (this.imgSrc.value !== "") {
       console.log("DEBUG PATHLAYER", this.indexClicked);

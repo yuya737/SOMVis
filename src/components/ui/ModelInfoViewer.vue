@@ -1,17 +1,26 @@
 <template>
-  <div class="flex flex-col items-center p-6 bg-gray-100 rounded-lg shadow-md">
-    <h1 class="text-xl font-bold mb-4 text-gray-800">Model Info</h1>
-    <div
-      v-for="(value, key) in model_info"
-      :key="key"
-      class="flex justify-between w-full max-w-sm bg-white p-3 mb-2 rounded-lg shadow-sm border border-gray-200"
-    >
-      <span class="font-medium text-gray-600">{{ key }}</span>
-      <span
-        class="text-blue-600 font-semibold break-words"
-        :class="{ 'code-font': key === 'file' }"
-        >{{ value }}</span
+  <div
+    class="flex flex-col items-center py-4 bg-gray-100 rounded-lg shadow-md text-md w-full"
+  >
+    <Button
+      :icon="isOpened ? 'pi pi-minus' : 'pi pi-plus'"
+      @click="toggleIsOpened"
+      class="absolute top-0 right-0 m-2"
+    />
+    <h1 class="text-xl font-bold text-gray-800">Model Info</h1>
+    <div v-show="isOpened" class="mt-4">
+      <div
+        v-for="(value, key) in model_info"
+        :key="key"
+        class="flex justify-between w-full max-w-sm bg-white p-3 mb-2 rounded-lg shadow-sm border border-gray-200"
       >
+        <span class="font-medium text-gray-600">{{ key }}</span>
+        <span
+          class="text-blue-600 font-semibold break-words"
+          :class="{ 'code-font': key === 'file' }"
+          >{{ value }}</span
+        >
+      </div>
     </div>
   </div>
 </template>
@@ -28,6 +37,8 @@ const props = defineProps<{
 
 const store = useStore();
 const msg = ref("");
+const isOpened = ref(true);
+const toggleIsOpened = () => (isOpened.value = !isOpened.value);
 
 const model_info: Ref<{
   file: string;

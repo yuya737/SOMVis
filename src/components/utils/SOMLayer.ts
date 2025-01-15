@@ -528,7 +528,7 @@ export class SOMLayer extends AbstractLayerGenerator {
       //   [59, 15, 112],
       //   [0, 0, 4],
       // ],
-      visible: true,
+      visible: false,
       debounceTimeout: 750,
       opacity: 0.7,
       weightsTextureSize: 256,

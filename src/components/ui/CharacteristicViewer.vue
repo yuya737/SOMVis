@@ -15,7 +15,10 @@
 </template> -->
 <template>
   <div class="flex flex-col items-center p-6 bg-gray-100 rounded-lg shadow-md">
-    <h1 class="text-xl font-bold mb-4 text-gray-800">Characteristic</h1>
+    <h1 class="text-xl font-bold mb-4 text-gray-800">Characteristics</h1>
+    <div v-if="characteristic.length == 0" class="font-medium text-gray-600">
+      Must define regions to see their Characteristics
+    </div>
     <transition-group name="fade" tag="div" class="w-full max-w-sm">
       <div
         v-for="c in characteristic"

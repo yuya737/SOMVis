@@ -37,15 +37,17 @@
       :time_type="props.time_type"
       class="absolute top-0 right-0 z-[4] m-4"
     />
-    <ModelInfoViewer
-      :time_type="props.time_type"
-      class="absolute top-0 left-0 z-[4] m-4"
-    />
+    <div
+      class="flex flex-col justify-start items-start absolute top-0 left-0 z-[4] m-4 overflow-auto w-[500px] gap-2 h-full"
+    >
+      <ModelInfoViewer :time_type="props.time_type" />
+      <ChatbotInterface />
+    </div>
     <aside
       class="absolute bottom-0 right-0 h-fit z-[4] w-fit p-5 bg-gray-200 overflow-auto"
     >
       <div
-        class="flex flex-col h-fit w-fit items-center justify-evenly p-2 rounded-lg text-center gap-4"
+        class="flex flex-col h-full w-fit items-center justify-evenly p-2 rounded-lg text-center gap-4"
       >
         <Button label="Recalculate MDE" @click="recalculateMDE" />
         <ToggleButton
@@ -139,6 +141,7 @@ import { storeToRefs } from "pinia";
 import { Deck } from "@deck.gl/core/typed";
 import { LayersList } from "@deck.gl/core";
 import { COORDINATE_SYSTEM } from "@deck.gl/core";
+import { Layer } from "deck.gl/typed";
 
 // STORE IMPORT
 import { useStore } from "@/store/main";
@@ -148,6 +151,8 @@ import NodeInspector from "./ui/NodeInspector.vue";
 import MapAnnotationEditor from "./ui/MapAnnotationEditor.vue";
 import ElementSelector from "./ui/ElementSelector.vue";
 import CharacteristicViewer from "./ui/CharacteristicViewer.vue";
+import ModelInfoViewer from "./ui/ModelInfoViewer.vue";
+import ChatbotInterface from "./ui/ChatbotInterface.vue";
 
 // LAYER GENERATORS IMPORT
 import { AbstractLayerGenerator } from "./utils/AbstractLayerGenerator";
@@ -182,6 +187,7 @@ import {
   timeType,
   timeTypeMonths,
 } from "./utils/utils";
+import { get } from "@vueuse/core";
 
 const members = sspAllLabels;
 const models = ref(
@@ -197,8 +203,6 @@ const types = ref(
     return { name: type };
   })
 );
-import { Layer } from "deck.gl/typed";
-import ModelInfoViewer from "./ui/ModelInfoViewer.vue";
 const props = defineProps({
   isHistorical: Boolean,
   time_type: timeType,
@@ -273,6 +277,14 @@ onMounted(() => {
     );
     setLayerProps();
   });
+  watch(
+    () => store.getHighlightedNodes,
+    async () => {
+      console.log("DEBUG STORE.getHighlightedNodes");
+      await nextTick();
+      drawAllLayers();
+    }
+  );
 
   watch(
     () => store.getHoveredFile,
@@ -321,12 +333,14 @@ async function initializeLayers() {
     getHoveredFile,
     getVectorFieldData,
     getExlainablityPoints,
+    getHighlightedNodes,
     anchors,
   } = storeToRefs(store);
   let nodeLayerGenerator = new NodeLayer({
     dataset_type: dataset_name,
     time_type: props.time_type,
     nodeMapGetter: getNodeMap,
+    highlightedNodeGetter: getHighlightedNodes,
     imgSrc: imgSrc,
     drawEveryN: 7,
     dims: 30,
@@ -402,7 +416,7 @@ async function initializeLayers() {
     nodeclassifyLayerGenerator,
     node3DLayerGenerator,
     particleAdvectionLayerGenerator,
-    explainabilityLayerGenerator,
+    // explainabilityLayerGenerator,
     spaceAnnotationLayerGenerator,
   ];
   // Get the layers
@@ -445,7 +459,7 @@ function setLayerProps() {
 async function recalculateMDE() {
   isRecalculatingMDE.value = true;
   await store.updateMDE(store.anchors);
-  store.anchors = { ids: [], coords: [] };
+  // store.anchors = { ids: [], coords: [] };
   console.log("MDE recalculated");
   drawAllLayers();
   isRecalculatingMDE.value = false;

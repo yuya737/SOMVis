@@ -59,6 +59,8 @@ export const useStore = defineStore("main", {
         index: -1,
         coords: [0, 0],
       },
+      highlightedNodes: [],
+      LLMQueries: [] as LLMQueryResult[],
     });
     getNodeData().then((data) => {
       const {
@@ -124,6 +126,9 @@ export const useStore = defineStore("main", {
     },
     getVectorFieldData: (state) => {
       return (timeType: timeType) => state.vectorFieldData[timeType];
+    },
+    getHighlightedNodes(state) {
+      return this.highlightedNodes;
     },
     getMapEditFlag() {
       return this.mapEditFlag;

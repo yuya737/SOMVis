@@ -36,3 +36,9 @@ declare type PartialRecord<K extends keyof any, T> = {
 };
 
 declare type MapMode = "Expore" | "Annotate";
+
+declare type LLMQueryResult = {
+  query: string;
+  result: number[];
+  description: string;
+};
