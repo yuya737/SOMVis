@@ -1,18 +1,3 @@
-<!-- <template>
-  <div class="flex flex-col items-center p-6 bg-gray-100 rounded-lg shadow-md">
-    <h1 class="text-xl font-bold mb-4 text-gray-800">Characteristic</h1>
-    <div
-      v-for="c in characteristic"
-      :key="c.name"
-      class="flex justify-between w-full max-w-sm bg-white p-3 mb-2 rounded-lg shadow-sm border border-gray-200"
-    >
-      <span class="font-medium text-gray-600">{{ c.name }}</span>
-      <span class="text-blue-600 font-semibold"
-        >{{ Math.round(c.percentage * 100) }}%</span
-      >
-    </div>
-  </div>
-</template> -->
 <template>
   <div class="flex flex-col items-center p-6 bg-gray-100 rounded-lg shadow-md">
     <h1 class="text-xl font-bold mb-4 text-gray-800">Characteristics</h1>
@@ -50,6 +35,7 @@ import bearing from "@turf/bearing";
 
 const props = defineProps<{
   time_type: timeType;
+  isComparison: boolean;
 }>();
 
 const animateChange = ref([]);
@@ -93,7 +79,9 @@ watch(
 );
 
 async function getCharacteristic() {
-  const selectedFiles = store.getFiles[0];
+  const selectedFiles = props.isComparison
+    ? store.getFiles[1]
+    : store.getFiles[0];
   const selectedMonth = store.getMonthsSelected;
   const zones = store.mapAnnotation.features.map((d, i) => {
     let offsetGeometry = JSON.parse(JSON.stringify(d.geometry));
@@ -116,6 +104,10 @@ async function getCharacteristic() {
       id: i,
     };
   });
+  if (zones.length === 0) {
+    // No zones defined
+    return;
+  }
   const ret = await API.fetchData("/get_characteristic", true, {
     dataset_type: dataset_name,
     time_type: props.time_type,

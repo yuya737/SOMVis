@@ -41,7 +41,9 @@ export class SOMLayer extends AbstractLayerGenerator {
   // readonly name: string;
   readonly selectedTimeRange: any;
   readonly selectedMonthRange: any;
-  readonly selectedModel: ComputedRef<[EnsembleMember[], EnsembleMember[]]>;
+  // readonly selectedModel: ComputedRef<[EnsembleMember[], EnsembleMember[]]>;
+  readonly selectedModel: ComputedRef<EnsembleMember[]>;
+
   readonly selectedSubsetType: any;
   readonly hoveredFile: any;
 
@@ -86,9 +88,9 @@ export class SOMLayer extends AbstractLayerGenerator {
     this.selectedMonthRangeList = monthRange;
 
     // If two sets of models are selected, then we are in compare mode
-    this.selectedModel.value[1].length > 1
-      ? (this.mode = "compare")
-      : (this.mode = "single");
+    // this.selectedModel.value[1].length > 1
+    //   ? (this.mode = "compare")
+    //   : (this.mode = "single");
     this.selectedSubsetType = subsetType;
 
     // this.BMUData = Object.entries(this.data)
@@ -130,9 +132,9 @@ export class SOMLayer extends AbstractLayerGenerator {
         this.hoveredFile,
       ],
       () => {
-        this.selectedModel.value[1].length > 0
-          ? (this.mode = "compare")
-          : (this.mode = "single");
+        // this.selectedModel.value[1].length > 0
+        //   ? (this.mode = "compare")
+        //   : (this.mode = "single");
         this.needsToRedraw = true;
       }
     );
@@ -211,15 +213,15 @@ export class SOMLayer extends AbstractLayerGenerator {
       return curBMUData;
     }
 
-    if (this.mode === "single") {
-      curBMUData = selectData(this.selectedModel.value[0]);
-    } else {
-      // compare mode
-      curBMUData = [
-        selectData(this.selectedModel.value[0]),
-        selectData(this.selectedModel.value[1]),
-      ];
-    }
+    curBMUData = selectData(this.selectedModel.value);
+    // if (this.mode === "single") {
+    // } else {
+    //   // compare mode
+    //   curBMUData = [
+    //     selectData(this.selectedModel.value[0]),
+    //     selectData(this.selectedModel.value[1]),
+    //   ];
+    // }
     return curBMUData;
   }
 
@@ -260,7 +262,6 @@ export class SOMLayer extends AbstractLayerGenerator {
     if (this.layerList && !this.needsToRedraw) {
       return this.layerList;
     }
-    // console.log("Staring to generate layers");
     let ret = [];
     let curBMUData = this._subsetData();
     console.log("BMU Data length", curBMUData.length);

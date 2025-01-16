@@ -15,7 +15,6 @@ export class Node3DLayer extends AbstractLayerGenerator {
   readonly interpolatedSurfaceGetter: ComputedRef<(timeType: timeType) => any>;
   readonly mappingDataGetter: ComputedRef<(timeType: timeType) => any>;
   readonly meanPerNodeGetter: ComputedRef<(timeType: timeType) => any>;
-  readonly monthHovered: any;
   readonly hotspotPolygonsGetter: ComputedRef<(timeType: timeType) => any>;
   readonly multiplier: number;
   readonly time_type: timeType;
@@ -24,7 +23,6 @@ export class Node3DLayer extends AbstractLayerGenerator {
     interpolatedSurfaceGetter,
     mappingDataGetter,
     meanPerNodeGetter,
-    monthHovered,
     hotspotPolygonsGetter,
     time_type,
   }) {
@@ -32,15 +30,10 @@ export class Node3DLayer extends AbstractLayerGenerator {
     this.interpolatedSurfaceGetter = interpolatedSurfaceGetter;
     this.mappingDataGetter = mappingDataGetter;
     this.meanPerNodeGetter = meanPerNodeGetter;
-    this.monthHovered = monthHovered;
     this.hotspotPolygonsGetter = hotspotPolygonsGetter;
 
     this.multiplier = 10;
     this.time_type = time_type;
-
-    watch(monthHovered, (value) => {
-      this.needsToRedraw = true;
-    });
 
     watch(
       () => this.interpolatedSurfaceGetter.value(this.time_type),

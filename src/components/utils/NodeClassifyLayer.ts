@@ -15,7 +15,6 @@ export class NodeClassifyLayer extends AbstractLayerGenerator {
   readonly interpolatedSurfaceGetter;
 
   hotspotPolygonsGetter = null;
-  monthHovered = null;
   time_type: timeType = null;
   layerList: any = null;
 
@@ -24,7 +23,6 @@ export class NodeClassifyLayer extends AbstractLayerGenerator {
     hotspotPolygonsGetter,
     classifyDataGetter,
     contourDataGetter,
-    monthHovered,
     interpolatedSurfaceGetter,
     time_type,
   }) {
@@ -33,14 +31,9 @@ export class NodeClassifyLayer extends AbstractLayerGenerator {
     this.classifyDataGetter = classifyDataGetter;
     this.contourDataGetter = contourDataGetter;
     this.hotspotPolygonsGetter = hotspotPolygonsGetter;
-    this.monthHovered = monthHovered;
     this.interpolatedSurfaceGetter = interpolatedSurfaceGetter;
     this.time_type = time_type;
 
-    watch(monthHovered, (value) => {
-      console.log("DEBUG: NodeClassifyLayer watch", value);
-      this.needsToRedraw = true;
-    });
     watch(
       () => this.classifyDataGetter.value(this.time_type),
       () => {
@@ -83,43 +76,6 @@ export class NodeClassifyLayer extends AbstractLayerGenerator {
         fontFamily: "Arial",
       }),
     ];
-    if (this.monthHovered.value) {
-      let month = this.monthHovered.value;
-      console.log("DEBUG HOTSPOT POLYGONS MONTH CHANGED", month);
-      // hotspotPolygons[month].forEach((polygon, index) => {
-      //   // debugger;
-      //   ret.push(
-      //     new PolygonLayer({
-      //       id: `hotspot-polygon-${month}-${index}`,
-      //       data: [polygon],
-      //       // data: [this.hotspotPolygons[month]],
-      //       getPolygon: (vertices) => {
-      //         let ret = vertices.map((p) => [p[0], p[1]]);
-      //         // console.log("DEBUG HOTSPOT POLYGONS", ret, vertices);
-      //         return ret;
-      //       },
-      //       filled: true,
-      //       // stroked: true,
-      //       opacity: 0.2,
-      //       getLineWidth: 0.1,
-      //       visible: true,
-      //       pickable: true,
-      //       // getFillColor: d3.interpolateRainbow(month - 1 / 11),
-      //       getFillColor: d3
-      //         .interpolateRgbBasis(["purple", "green", "orange"])(
-      //           (month - 1) / 11
-      //         )
-      //         .replace(/[^\d,]/g, "")
-      //         .split(",")
-      //         .map((d) => Number(d)),
-
-      //       onClick: (info, event) => {
-      //         console.log("Clicked:", month);
-      //       },
-      //     })
-      //   );
-      // });
-    }
 
     this.layerList = ret;
     this.needsToRedraw = false;
