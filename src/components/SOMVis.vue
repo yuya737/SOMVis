@@ -31,11 +31,11 @@
     </SplitterPanel>
 
     <SplitterPanel class="h-full w-full" :size="40">
-      <!-- <TimelineViewer
+      <TimelineViewer
         v-if="store.isDataReady"
         class="h-full"
         :time_type="timeType.OctMay"
-      /> -->
+      />
       <!-- <Splitter
         class="h-full w-full"
         layout="horizontal"

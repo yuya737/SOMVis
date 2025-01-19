@@ -87,10 +87,6 @@ export class SOMLayer extends AbstractLayerGenerator {
 
     this.selectedMonthRangeList = monthRange;
 
-    // If two sets of models are selected, then we are in compare mode
-    // this.selectedModel.value[1].length > 1
-    //   ? (this.mode = "compare")
-    //   : (this.mode = "single");
     this.selectedSubsetType = subsetType;
 
     // this.BMUData = Object.entries(this.data)
@@ -138,41 +134,6 @@ export class SOMLayer extends AbstractLayerGenerator {
         this.needsToRedraw = true;
       }
     );
-  }
-
-  blockedCenterOfMass(month, points, blockSize, name) {
-    let numBlocks = Math.floor(points.length / blockSize);
-    let ret = [];
-    for (let block = 0; block < numBlocks; block++) {
-      let blockPoints = points.slice(block * 10, (block + 1) * 10);
-      let center = blockPoints.reduce(
-        (acc, curr) => [acc[0] + curr[0], acc[1] + curr[1]],
-        [0, 0]
-      );
-      center = [center[0] / blockPoints.length, center[1] / blockPoints.length];
-      ret.push({
-        coords: center,
-        block: block,
-        name: name,
-        month: month,
-      });
-    }
-    return ret;
-  }
-  globalCenterOfMass(month, points, name) {
-    let globalSum = points.reduce(
-      (acc, curr) => [acc[0] + curr[0], acc[1] + curr[1]],
-      [0, 0]
-    );
-    let ret = {
-      coords: [
-        globalSum[0] / globalSum.length,
-        globalSum[1] / globalSum.length,
-      ],
-      name: name,
-      month: month,
-    };
-    return ret;
   }
 
   _subsetData(): BMUData[] {
@@ -225,39 +186,6 @@ export class SOMLayer extends AbstractLayerGenerator {
     return curBMUData;
   }
 
-  _getFreq(curBMUData: BMUData[]) {
-    const countFrequecy = (arr) => {
-      let freq = {};
-      arr.forEach((d) => {
-        if (d.coords in freq) {
-          freq[d.coords] += 1;
-        } else {
-          freq[d.coords] = 1;
-        }
-      });
-      return Object.entries(freq).map((d) => [
-        d[0].split(",").map((d) => parseFloat(d)),
-        d[1] / arr.length,
-      ]);
-      // .filter((d) => d[1] > 0.01);
-    };
-    let freq;
-    if (this.mode == "single") {
-      freq = countFrequecy(curBMUData);
-    } else {
-      // console.log("Calculating freq for compare mode");
-      let g1 = countFrequecy(curBMUData[0]).map((d) => {
-        return { ...d, group: "group1" };
-      });
-      let g2 = countFrequecy(curBMUData[1]).map((d) => {
-        return { ...d, group: "group2" };
-      });
-      // concat the two groups
-      freq = g1.concat(g2);
-    }
-    return freq;
-  }
-
   getLayers() {
     if (this.layerList && !this.needsToRedraw) {
       return this.layerList;
@@ -266,14 +194,12 @@ export class SOMLayer extends AbstractLayerGenerator {
     let curBMUData = this._subsetData();
     console.log("BMU Data length", curBMUData.length);
 
-    let freq = this._getFreq(curBMUData);
-
-    if (freq.length == 0) {
+    if (curBMUData.length == 0) {
       this.layerList = [];
       return ret;
     }
 
-    const thresholds = [0.00015, 0.00025];
+    const thresholds = [0.3, 0.5];
 
     thresholds.forEach((threshold, i) => {
       const BMUPolygon = API.fetchData("/get_bounding_shape", true, {
@@ -285,284 +211,11 @@ export class SOMLayer extends AbstractLayerGenerator {
         data: BMUPolygon,
         getPolygon: (d) => d,
         stroked: false,
-        opacity: scaleLinear().domain([0.0001, 0.0003]).range([0.1, 0.2])(
-          threshold
-        ),
+        opacity: scaleLinear().domain(thresholds).range([0.1, 0.2])(threshold),
+        // opacity: 0.5,
       });
       ret = [...ret, layer];
     });
-
-    // ret = [...ret, heatmap];
-    // let gridcell = new GridCellLayer({
-    //   id: "grid-cell-layer",
-    //   data: freq,
-    //   getPosition: (d) => d[0],
-    //   getElevation: (d) => Math.abs(d[1] * 100),
-    //   getColor: (d) => {
-    //     if (this.mode == "single") {
-    //       return interpolateGreens(d[1] / 0.05)
-    //         .replace(/[^\d,]/g, "")
-    //         .split(",")
-    //         .map((d) => Number(d));
-    //     } else {
-    //       return d.group == "group1"
-    //         ? hexToRgb("#2b9e77")
-    //         : hexToRgb("#d95f02");
-    //     }
-    //   },
-    //   cellSize: 0.25,
-    // });
-    // ret = [...ret, gridcell];
-
-    // const resolution = 100;
-    // let heightMultiplier = 1000;
-
-    // if (this.mode == "single") {
-    //   let kdeResult = kde2d(
-    //     curBMUData.map((d) => d.coords[0]),
-    //     curBMUData.map((d) => d.coords[1]),
-    //     {
-    //       n: resolution,
-    //       h: [1, 1],
-    //       xMin: this.extent[0][0] * 1.2,
-    //       xMax: this.extent[0][1] * 1.2,
-    //       yMin: this.extent[1][0] * 1.2,
-    //       yMax: this.extent[1][1] * 1.2,
-    //     }
-    //   );
-    //   // console.log("Done KDE", kdeResult);
-    //   const sum = kdeResult.z._buffer.reduce((acc, curr) => acc + curr, 0);
-    //   kdeResult.z._buffer = kdeResult.z._buffer.map((d) => d / sum);
-    //   console.log(kdeResult.z._buffer, sum);
-    //   // Estimate the normal of the KDE surface
-    //   const getAdjacentIndices = (i) => {
-    //     let ret = [];
-    //     if (i % resolution > 0 && i % resolution < resolution - 1) {
-    //       ret = [...ret, i - 1, i + 1];
-    //     }
-    //     if (
-    //       Math.floor(i / resolution) > 0 &&
-    //       Math.floor(i / resolution) < resolution - 1
-    //     ) {
-    //       ret = [...ret, i - resolution, i + resolution];
-    //     }
-    //     return ret;
-    //   };
-
-    //   const crossProduct3DandNorm = (a, b) => {
-    //     let ret = [
-    //       a[1] * b[2] - a[2] * b[1],
-    //       a[2] * b[0] - a[0] * b[2],
-    //       a[0] * b[1] - a[1] * b[0],
-    //     ];
-    //     return ret.map(
-    //       (d) => d / Math.sqrt(ret.reduce((acc, curr) => acc + curr ** 2, 0))
-    //     );
-    //   };
-
-    //   ret = [
-    //     ...ret,
-    //     new PlotLayer({
-    //       id: "surface-layer",
-    //       getPosition: (u, v) => {
-    //         return [
-    //           kdeResult.x[Math.round(u * (resolution - 1))],
-    //           kdeResult.y[Math.round(v * (resolution - 1))],
-    //           kdeResult.z._buffer[
-    //             Math.round(
-    //               u * resolution * (resolution - 1) + v * (resolution - 1)
-    //             )
-    //           ] *
-    //             -heightMultiplier +
-    //             10,
-    //         ];
-    //       },
-    //       // getNormal: (u, v) => {
-    //       //   return normal[
-    //       //     parseInt(u * resolution * (resolution - 1) + v * (resolution - 1))
-    //       //   ];
-    //       // },
-    //       // getColor: (x, z, y) => [40, interpolateGreens(z/15), 160, (z / 15) * 255],
-    //       getColor: (x, y, z) => {
-    //         // let t = interpolateGreens(
-    //         let t = interpolateRdBu(
-    //           scaleLinear().domain([0, 10]).range([0, 1])(z)
-    //         )
-    //           .replace(/[^\d,]/g, "")
-    //           .split(",")
-    //           .map((d) => Number(d));
-    //         t.push(128);
-    //         // t.push((z / 4) * 255);
-    //         return t;
-    //       },
-    //       uCount: resolution,
-    //       vCount: resolution,
-    //       drawAxes: false,
-    //       axesPadding: 0.25,
-    //       axesColor: [0, 0, 0, 128],
-    //       pickable: true,
-    //       updateTriggers: {
-    //         getPosition: curBMUData,
-    //       },
-    //     }),
-    //   ];
-    // } else {
-    //   let kdeResult1 = kde2d(
-    //     curBMUData[0].map((d) => d.coords[0]),
-    //     curBMUData[0].map((d) => d.coords[1]),
-    //     {
-    //       n: resolution,
-    //       h: [1, 1],
-    //       xMin: this.extent[0][0] * 1.2,
-    //       xMax: this.extent[0][1] * 1.2,
-    //       yMin: this.extent[1][0] * 1.2,
-    //       yMax: this.extent[1][1] * 1.2,
-    //     }
-    //   );
-    //   let kdeResult2 = kde2d(
-    //     curBMUData[1].map((d) => d.coords[0]),
-    //     curBMUData[1].map((d) => d.coords[1]),
-    //     {
-    //       n: resolution,
-    //       h: [1, 1],
-    //       xMin: this.extent[0][0] * 1.2,
-    //       xMax: this.extent[0][1] * 1.2,
-    //       yMin: this.extent[1][0] * 1.2,
-    //       yMax: this.extent[1][1] * 1.2,
-    //     }
-    //   );
-
-    //   ret = [
-    //     ...ret,
-    //     new PlotLayer({
-    //       id: "surface-layer-1",
-    //       getPosition: (u, v) => {
-    //         return [
-    //           kdeResult1.x[Math.round(u * (resolution - 1))],
-    //           kdeResult1.y[Math.round(v * (resolution - 1))],
-    //           kdeResult1.z._buffer[
-    //             Math.round(
-    //               u * resolution * (resolution - 1) + v * (resolution - 1)
-    //             )
-    //           ] * heightMultiplier,
-    //         ];
-    //       },
-    //       // getColor: (x, z, y) => [40, interpolateGreens(z/15), 160, (z / 15) * 255],
-    //       getColor: (x, y, z) => {
-    //         let t = interpolateRgb(
-    //           "white",
-    //           "#1b9e77"
-    //         )(scaleLinear().domain([0, 25]).range([0, 1])(z))
-    //           .replace(/[^\d,]/g, "")
-    //           .split(",")
-    //           .map((d) => Number(d));
-    //         t.push((z / 8) * 255);
-    //         return t;
-    //       },
-    //       uCount: resolution,
-    //       vCount: resolution,
-    //       drawAxes: false,
-    //       axesPadding: 0.25,
-    //       axesColor: [0, 0, 0, 128],
-    //       pickable: true,
-    //       updateTriggers: {
-    //         getPosition: curBMUData,
-    //       },
-    //       parameters: { depthTest: false },
-    //     }),
-    //     new PlotLayer({
-    //       id: "surface-layer-2",
-    //       getPosition: (u, v) => {
-    //         return [
-    //           kdeResult2.x[Math.round(u * (resolution - 1))],
-    //           kdeResult2.y[Math.round(v * (resolution - 1))],
-    //           kdeResult2.z._buffer[
-    //             Math.round(
-    //               u * resolution * (resolution - 1) + v * (resolution - 1)
-    //             )
-    //           ] * heightMultiplier,
-    //         ];
-    //       },
-    //       // getColor: (x, z, y) => [40, interpolateGreens(z/15), 160, (z / 15) * 255],
-    //       getColor: (x, y, z) => {
-    //         let t = interpolateRgb(
-    //           "white",
-    //           "#d95f02"
-    //         )(scaleLinear().domain([0, 25]).range([0, 1])(z))
-    //           .replace(/[^\d,]/g, "")
-    //           .split(",")
-    //           .map((d) => Number(d));
-    //         t.push((z / 8) * 255);
-    //         // t.push(255);
-    //         return t;
-    //       },
-    //       uCount: resolution,
-    //       vCount: resolution,
-    //       drawAxes: false,
-    //       axesPadding: 0.25,
-    //       axesColor: [0, 0, 0, 128],
-    //       pickable: true,
-    //       updateTriggers: {
-    //         getPosition: curBMUData,
-    //       },
-    //       parameters: { depthTest: false },
-    //     }),
-    //   ];
-    // }
-    let heatmap = new HeatmapLayer({
-      id: `curve-heatmap`,
-      data: curBMUData.map((d) => {
-        return { ...d, coords: addJitter(d.coords, 0.01) };
-      }),
-      getColor: (d) => [...colorSim(d.name)],
-      // colorDomain: [10, 100],
-      getPosition: (d) => [d.coords[0], d.coords[1], 0],
-      aggregation: "SUM",
-      // getRadius: 2,
-      radiusPixels: 150,
-      threshold: 0.1,
-      // colorRange: [
-      //   [252, 253, 191],
-      //   [254, 159, 109],
-      //   [222, 73, 104],
-      //   [140, 41, 129],
-      //   [59, 15, 112],
-      //   [0, 0, 4],
-      // ],
-      visible: false,
-      debounceTimeout: 750,
-      opacity: 0.7,
-      weightsTextureSize: 256,
-    });
-    ret = [...ret, heatmap];
-    // let te = new TextLayer({
-    //     id: `curve-text-${this.name}`,
-    //     data: this.month_divided_data.map((d) => {
-    //         return {
-    //             coords: this.globalCenterOfMass(d.month, d.scatter),
-    //             name: d.name,
-    //             month: d.month,
-    //         };
-    //     }),
-    //     getPosition: (d) => d.coords,
-    //     getText: (d) => d.name,
-    //     getSize: 15,
-    //     getTextAnchor: "end",
-    //     getAlignmentBaseline: "top",
-    //     // getColor: (d) => colorSim(d.name),
-    //     // // d.name.includes("historical") ? [255, 0, 0] : [0, 0, 255],
-    //     // getRadius: 0.2,
-    //     // pickable: true,
-    //     // month: d.month,
-    //     // onClick: (info, event) => {
-    //     //     // imgSrc.value = `http://localhost:5002/node_images/${info.object.id}.png`;
-    //     //     console.log("Clicked:", info.object, event);
-    //     // },
-    // });
-
-    // let ret = [monthlyCOMPath, blockedMonthlyCOMScatter];
-    // let ret = [heatmap, monthlyCOMPath];
-    // ret = [...ret, blockedMonthlyCOMScatter];
 
     this.layerList = ret;
     this.needsToRedraw = false;

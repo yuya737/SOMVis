@@ -102,6 +102,8 @@ let monthListOriginal = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 // let monthListOriginal = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 let monthList = [10, 11, 12, 1, 2, 3, 4, 5];
 
+let initiatedChange = true;
+
 const props = defineProps({
   time_type: timeType,
 });
@@ -941,45 +943,48 @@ async function drawTimeline() {
           .classed("path-highlighted", false);
         // d3.selectAll("path").attr("stroke-opacity", 1).attr("stroke-width", 1);
       })
-      .on("click", function (event, d) {
+      .on("click", async function (event, d) {
+        initiatedChange = true;
         if (d.clicked) {
           d.clicked = false;
           d3.select(this).classed("selected-rect", false);
           showTooltip.value = false;
           store.setFiles({ group1: [], group2: [] });
-          return;
+        } else {
+          // Set all other clusterRect as not clicked
+          const clickedID = d3.select(this).attr("id");
+          console.log("DEBUG IN CLUSTER RECT CLICK ", clickedID);
+          d3.selectAll("rect")
+            .filter(function () {
+              return (
+                d3.select(this)?.attr("id") &&
+                d3.select(this).attr("id").startsWith("clusterRect") &&
+                d3.select(this).attr("id") !== clickedID
+              );
+            })
+            .each((d) => (d.clicked = false))
+            .classed("selected-rect", false);
+
+          // Set this clusterRect as clicked
+          d.clicked = true;
+          d3.select(this).classed("selected-rect", true);
+
+          let selected = d.members.map((member) => {
+            return {
+              model_name: members[member].model_name,
+              ssp: members[member].ssp,
+              variant: members[member].variant,
+            };
+          });
+          selectedTimelineCluster.value = selected;
+          selectedTimelineClusterMonth.value = d.month;
+          showTooltip.value = true;
+          store.monthsSelected = [d.month];
+          store.setFiles({ group1: selected, group2: [] });
         }
-
-        // Set all other clusterRect as not clicked
-        const clickedID = d3.select(this).attr("id");
-        console.log("DEBUG IN CLUSTER RECT CLICK ", clickedID);
-        d3.selectAll("rect")
-          .filter(function () {
-            return (
-              d3.select(this)?.attr("id") &&
-              d3.select(this).attr("id").startsWith("clusterRect") &&
-              d3.select(this).attr("id") !== clickedID
-            );
-          })
-          .each((d) => (d.clicked = false))
-          .classed("selected-rect", false);
-
-        // Set this clusterRect as clicked
-        d.clicked = true;
-        d3.select(this).classed("selected-rect", true);
-
-        let selected = d.members.map((member) => {
-          return {
-            model_name: members[member].model_name,
-            ssp: members[member].ssp,
-            variant: members[member].variant,
-          };
-        });
-        selectedTimelineCluster.value = selected;
-        selectedTimelineClusterMonth.value = d.month;
-        showTooltip.value = true;
-        store.monthsSelected = [d.month];
-        store.setFiles({ group1: selected, group2: [] });
+        await nextTick();
+        initiatedChange = false;
+        return;
       });
   }
 
@@ -1067,6 +1072,24 @@ async function drawTimeline() {
     .text((d) => d.name);
   // .attr("alignment-baseline", "before-edge");
 }
+
+watch(
+  () => [store.files, store.monthsSelected],
+  () => {
+    if (initiatedChange) return;
+    // Set all  clusterRect as not clicked
+    d3.selectAll("rect")
+      .filter(function () {
+        return (
+          d3.select(this)?.attr("id") &&
+          d3.select(this).attr("id").startsWith("clusterRect")
+        );
+      })
+      .each((d) => (d.clicked = false))
+      .classed("selected-rect", false);
+    showTooltip.value = false;
+  }
+);
 async function getData() {
   for (let i = 0; i < monthList.length; i += 1) {
     let month = monthList[i];

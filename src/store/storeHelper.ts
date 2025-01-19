@@ -9,25 +9,6 @@ import {
 
 const timeTypes = [timeType.OctMay];
 
-async function getVectorFieldData(setting) {
-  // [dataset_Type, model_type, time_type, data_type_cmp, month]
-  let vectorFieldData: PartialRecord<timeType, any> = {};
-  try {
-    let temp = await API.fetchData("get_forcing", true, {
-      dataset_type: setting[0],
-      model_type: setting[1],
-      time_type: setting[2],
-      data_type_cmp: setting[3],
-      month: setting[4],
-      resolution: 10,
-    });
-    vectorFieldData[setting[2]] = temp;
-  } catch (error) {
-    vectorFieldData[setting[2]] = null;
-  }
-  return vectorFieldData;
-}
-
 async function getPaths() {
   let pathData: PartialRecord<timeType, Record<string, BMUData[]>> = {};
 
@@ -87,17 +68,19 @@ async function getNodeData(anchors = null) {
   let interpolatedSurfaceData: PartialRecord<timeType, any> = {};
   let hotspotPolygonsData: PartialRecord<timeType, any> = {};
   let vectorFieldData: PartialRecord<timeType, any> = {};
+  let anchorsCopy: { ids: number[]; coords: number[] } = null;
 
   if (anchors) {
-    // anchors.coords = anchors.coords.map((d) => [d[0] / 3, d[1] / 3]);
-    anchors.coords = anchors.coords.map((d) => [d[0] / 10, d[1] / 10]);
+    anchorsCopy = JSON.parse(JSON.stringify(anchors));
+    anchorsCopy.coords = anchorsCopy.coords.map((d) => [d[0] / 10, d[1] / 10]);
   }
+  console.log("DEBUG ANCHORS COPY", anchorsCopy);
 
   const gigaPromise = timeTypes.map(async (curTimeType) => {
     let map = await API.fetchData("mapping", true, {
       dataset_type: dataset_name,
       time_type: curTimeType,
-      anchors: anchors,
+      anchors: anchorsCopy,
     });
     // map = map.map((d) => {
     //   return {

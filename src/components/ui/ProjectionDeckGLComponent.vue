@@ -16,12 +16,12 @@
         @settings-changed="settingsChanged"
       /> -->
     <div
-      class="flex flex-col justify-start items-end absolute top-0 right-0 z-[4] m-4 overflow-auto w-[500px] gap-2 h-fit max-h-[100%]"
+      class="flex flex-col justify-start items-end absolute top-0 right-0 z-[4] m-4 overflow-auto w-fit gap-2 h-fit max-h-[100%]"
     >
       <CharacteristicViewer
         :time_type="props.time_type"
-        class=""
         :isComparison="props.isComparison"
+        :isShowingVectorField="props.isShowingVectorField"
       />
       <div
         class="flex flex-col h-fit w-fit items-center justify-center p-2 rounded-lg text-center gap-4 bg-gray-100 rounded-lg shadow-md p-6"
@@ -116,6 +116,7 @@ import {
 const props = defineProps({
   time_type: timeType,
   isComparison: Boolean,
+  isShowingVectorField: Boolean,
 });
 
 let layerList: LayersList = [];
@@ -154,12 +155,34 @@ onMounted(() => {
     setLayerProps();
   });
 
+  let debounceTimer = null;
+
+  watch(
+    () => props.isShowingVectorField,
+    async (newVal) => {
+      if (newVal) {
+        await nextTick();
+        drawAllLayers();
+      }
+    }
+  );
+
   watch(
     props.isComparison ? () => store.getFiles[0] : () => store.getFiles[1],
     async () => {
-      if (!store.getFiles) return;
-      await nextTick();
-      drawAllLayers();
+      if (debounceTimer) {
+        clearTimeout(debounceTimer);
+      }
+
+      debounceTimer = setTimeout(async () => {
+        console.log(
+          "DEBUG PROJECTION DECKGL GET FILE CHANGE VECTOR FIELD NO CHANGE AFTER 3s"
+        );
+        // getComparisonVectorField();
+        if (!store.getFiles) return;
+        await nextTick();
+        drawAllLayers();
+      }, 3000);
     }
   );
 
@@ -176,7 +199,11 @@ onMounted(() => {
     }
   );
   watch(
-    () => [store.getNodeMap(props.time_type), store.getExlainablityPoints],
+    () => [
+      store.getNodeMap(props.time_type),
+      store.getExlainablityPoints,
+      store.anchors,
+    ],
     () => {
       drawAllLayers();
     },
@@ -287,16 +314,26 @@ async function initializeLayers() {
   layerGenerators = [
     // axisLayerGenerator,
     nodeLayerGenerator,
-    somLayerGenerator,
     nodeclassifyLayerGenerator,
     node3DLayerGenerator,
     particleAdvectionLayerGenerator,
+    somLayerGenerator,
     // explainabilityLayerGenerator,
     spaceAnnotationLayerGenerator,
   ];
   // Get the layers
   layerList = layerGenerators.map((g) => g.getLayers()).flat();
   return layerList;
+}
+
+function filterComparisonLayers(layerList) {
+  return layerList.filter((layer) => {
+    if (props.isShowingVectorField && layer.id.startsWith("polygon-layer"))
+      return false;
+    if (!props.isShowingVectorField && layer.id.startsWith("vector-field"))
+      return false;
+    return true;
+  });
 }
 
 function drawAllLayers() {
@@ -319,6 +356,7 @@ function drawAllLayers() {
         );
       })
       .flat();
+    layerList = filterComparisonLayers(layerList);
 
     if (layerList.length == 0) return;
     handleButtons();
@@ -338,7 +376,6 @@ async function recalculateMDE() {
   console.log("MDE recalculated");
   drawAllLayers();
   isRecalculatingMDE.value = false;
-  handleVectorFieldChanged();
 }
 function handleButtons() {
   layerList = layerList.map((l) => {

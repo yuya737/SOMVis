@@ -19,7 +19,7 @@ export const useStore = defineStore("main", {
   // other options...
   state: () => {
     const state = reactive({
-      files: [[], []], // Assume this is a list of two lists of files that we want to compare, for now
+      files: [[], []] as [EnsembleMember[], EnsembleMember[]], // Assume this is a list of two lists of files that we want to compare, for now
       monthsSelected: [10], // -1 means all months
       subsetType: subsetType.month,
       // subsetType: "month",
@@ -176,7 +176,28 @@ export const useStore = defineStore("main", {
       this.mapEditFlag = !this.mapEditFlag;
     },
     async updateVectorFieldSetting(setting) {
-      const vectorFieldData = await getVectorFieldData(setting);
+      let vectorFieldData: PartialRecord<timeType, any> = {};
+      try {
+        let vectorField = await API.fetchData("/get_forcing", true, setting);
+        vectorFieldData[setting["time_type"]] = vectorField;
+        // let transition = await API.fetchData("/get_forcing_transition", true, {
+        //   zones: setting["zones"],
+        //   u: vectorField["u"],
+        //   v: vectorField["v"],
+        //   x: vectorField["x"],
+        //   y: vectorField["y"],
+        // });
+
+        // Object.keys(transition).forEach((zoneID) => {
+        //   const counted = transition[zoneID].reduce((acc, item) => {
+        //     acc[item] = (acc[item] || 0) + 1;
+        //     return acc;
+        //   }, {});
+        //   console.log("DEBUG UPDATEVECTOR FIELD TRANSITION: ", zoneID, counted);
+        // });
+      } catch (error) {
+        vectorFieldData[setting["time_type"]] = null;
+      }
       this.vectorFieldData = vectorFieldData;
     },
   },

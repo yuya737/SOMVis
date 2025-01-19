@@ -21,12 +21,32 @@
         </svg>
       </div>
     </span>
-    <div class="leading-relaxed flex flex-col justify-start">
+    <div class="leading-relaxed flex flex-col justify-start w-full">
       <span class="font-bold text-gray-700 w-fit">AI </span>
-      <span v-if="isLoading"
+      <span v-if="isLoading" class="w-fit"
         >Loading<span class="dots">{{ dots }}</span></span
       >
-      <span class="text-left" v-else>{{ resolvedMessage }}</span>
+      <div v-else>
+        <!-- <span class="text-left">{{ resolvedMessage }}</span> -->
+        <div class="w-fit">
+          Given the query, we resolved regions to the below known counties and
+          queried the SOM node space.
+        </div>
+        <table class="w-full">
+          <thead>
+            <tr>
+              <th>Region</th>
+              <th>Resolved Counties</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(value, key) in resolvedMessage" :key="key">
+              <td>{{ key }}</td>
+              <td>{{ value.join(", ") }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   </div>
 </template>

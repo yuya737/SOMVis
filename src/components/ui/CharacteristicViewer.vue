@@ -15,10 +15,7 @@
           'bg-red-50': direction[c.name] === 'decrease',
         }"
       >
-        <span class="font-medium text-gray-600">{{ c.name }}</span>
-        <span class="text-blue-600 font-semibold">
-          {{ Math.round(c.percentage * 100) }}%
-        </span>
+        <CharacteristicViewerRow :characteristic="c" />
       </div>
     </transition-group>
   </div>
@@ -27,15 +24,15 @@
 <script setup lang="ts">
 import { ref, watch, Ref } from "vue";
 import { useStore } from "@/store/main";
-import { timeType, dataset_name } from "../utils/utils";
+import { timeType, dataset_name, constructZones } from "../utils/utils";
 import API from "@/api/api";
 
-import distance from "@turf/distance";
-import bearing from "@turf/bearing";
+import CharacteristicViewerRow from "./CharacteristicViewerRow.vue";
 
 const props = defineProps<{
   time_type: timeType;
   isComparison: boolean;
+  isShowingVectorField: Boolean;
 }>();
 
 const animateChange = ref([]);
@@ -44,7 +41,13 @@ const direction = ref({});
 const store = useStore();
 const msg = ref("");
 
-const characteristic: Ref<{ name: string; percentage: number }[]> = ref([]);
+const characteristic: Ref<
+  {
+    name: string;
+    percentage: number;
+    transition?: { name: string; percentage: number }[];
+  }[]
+> = ref([]);
 // Watch the characteristic array for changes
 watch(
   characteristic,
@@ -83,27 +86,7 @@ async function getCharacteristic() {
     ? store.getFiles[1]
     : store.getFiles[0];
   const selectedMonth = store.getMonthsSelected;
-  const zones = store.mapAnnotation.features.map((d, i) => {
-    let offsetGeometry = JSON.parse(JSON.stringify(d.geometry));
-
-    offsetGeometry.coordinates = [
-      offsetGeometry.coordinates[0].map((lngLat) => {
-        const d = distance([0, 0], lngLat, {
-          units: "meters",
-        });
-        const a = bearing([0, 0], lngLat);
-        const x = d * Math.sin((a * Math.PI) / 180);
-        const y = d * Math.cos((a * Math.PI) / 180);
-        return [x / 10, y / 10];
-      }),
-    ];
-    console.log("DEBUG getCharacteristic lngLat", offsetGeometry.coordinates);
-    return {
-      name: d.properties.name,
-      geometry: offsetGeometry,
-      id: i,
-    };
-  });
+  const zones = constructZones(store.mapAnnotation);
   if (zones.length === 0) {
     // No zones defined
     return;
@@ -115,8 +98,69 @@ async function getCharacteristic() {
     months: selectedMonth,
     zones: zones,
   });
+
+  let transition = null;
+
   characteristic.value = [];
   const sortedKeys = Object.keys(ret).sort((a, b) => ret[b] - ret[a]);
+
+  if (props.isShowingVectorField) {
+    watch(
+      () => store.vectorFieldData[props.time_type],
+      async (vectorField) => {
+        const transitionData = await API.fetchData(
+          "/get_forcing_transition",
+          true,
+          {
+            zones: zones,
+            u: vectorField["u"],
+            v: vectorField["v"],
+            x: vectorField["x"],
+            y: vectorField["y"],
+          }
+        );
+        // Object.keys(transitionData).forEach((zoneID) => {
+        //   const counted = transition[zoneID].reduce((acc, item) => {
+        //     acc[item] = (acc[item] || 0) + 1;
+        //     return acc;
+        //   }, {});
+        //   console.log("DEBUG UPDATEVECTOR FIELD TRANSITION: ", zoneID, counted);
+        // });
+
+        const temp = {};
+        transition = Object.keys(transitionData).forEach((zoneID) => {
+          const sourceZoneName =
+            store.mapAnnotation.features[zoneID].properties?.name;
+          const counted = transitionData[zoneID].reduce((acc, item) => {
+            const destZoneName =
+              store.mapAnnotation.features[item].properties?.name;
+            acc[destZoneName] = (acc[destZoneName] || 0) + 1;
+            return acc;
+          }, {});
+          const transitionList = Object.entries(counted).map(
+            ([name, count]) => {
+              return {
+                name: name,
+                percentage: count / transitionData[zoneID].length,
+              };
+            }
+          );
+          temp[sourceZoneName] = transitionList;
+          console.log(
+            "DEBUG UPDATEVECTOR FIELD TRANSITION: IN CHAR ",
+            zoneID,
+            counted
+          );
+        });
+        // Convert to array of objects
+
+        characteristic.value.forEach((c) => {
+          c.transition = temp[c.name];
+        });
+      },
+      { once: true }
+    );
+  }
   sortedKeys.forEach((key) => {
     characteristic.value.push({
       name: store.mapAnnotation.features[key].properties?.name,

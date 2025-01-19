@@ -9,6 +9,9 @@ import {
 import { line, curveNatural } from "d3";
 import { pointsOnPath } from "points-on-path";
 
+import distance from "@turf/distance";
+import bearing from "@turf/bearing";
+
 import { OrthographicView, MapView, OrbitView } from "@deck.gl/core/typed";
 
 // const prefix = 'CMIP6_pr_historical_S3L0.02_'
@@ -71,6 +74,30 @@ export function hexToRgb(hex: string) {
         parseInt(result[3], 16),
       ]
     : null;
+}
+
+export function constructZones(mapAnnotation) {
+  const zones = mapAnnotation.features.map((d, i) => {
+    let offsetGeometry = JSON.parse(JSON.stringify(d.geometry));
+    offsetGeometry.coordinates = [
+      offsetGeometry.coordinates[0].map((lngLat) => {
+        const d = distance([0, 0], lngLat, {
+          units: "meters",
+        });
+        const a = bearing([0, 0], lngLat);
+        const x = d * Math.sin((a * Math.PI) / 180);
+        const y = d * Math.cos((a * Math.PI) / 180);
+        return [x / 10, y / 10];
+      }),
+    ];
+    console.log("DEBUG getCharacteristic lngLat", offsetGeometry.coordinates);
+    return {
+      name: d.properties.name,
+      geometry: offsetGeometry,
+      id: i,
+    };
+  });
+  return zones;
 }
 
 // export function getMonthDividedData(data, name) {

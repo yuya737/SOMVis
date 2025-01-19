@@ -6,6 +6,7 @@ import { timeType } from "./utils";
 
 import distance from "@turf/distance";
 import bearing from "@turf/bearing";
+import { IconLayer } from "deck.gl/typed";
 
 export class NodeLayer extends AbstractLayerGenerator {
   readonly nodeMapGetter: ComputedRef<() => any>;
@@ -57,7 +58,7 @@ export class NodeLayer extends AbstractLayerGenerator {
     // );
     watch(this.highlightedNodeGetter, () => (this.needsToRedraw = true));
     watch(
-      () => this.nodeMapGetter.value(this.time_type),
+      () => [this.nodeMapGetter.value(this.time_type), this.anchors.value],
       () => (this.needsToRedraw = true),
       { deep: true }
     );
@@ -72,7 +73,6 @@ export class NodeLayer extends AbstractLayerGenerator {
     this.map = this.nodeMapGetter.value(this.time_type);
 
     const size = 4;
-
     for (let i = 0; i < this.dims * this.dims; i += this.drawEveryN) {
       ret = [
         ...ret,
@@ -126,8 +126,15 @@ export class NodeLayer extends AbstractLayerGenerator {
             const x = d * Math.sin((a * Math.PI) / 180);
             const y = d * Math.cos((a * Math.PI) / 180);
             this.map[info.layer.props.index].coords = [x, y];
-            this.anchors.value["ids"].push(info.layer.props.index);
-            this.anchors.value["coords"].push([x, y]);
+            if (!this.anchors.value["ids"].includes(info.layer.props.index)) {
+              this.anchors.value["ids"].push(info.layer.props.index);
+              this.anchors.value["coords"].push([x, y]);
+            } else {
+              const index = this.anchors.value["ids"].indexOf(
+                info.layer.props.index
+              );
+              this.anchors.value["coords"][index] = [x, y];
+            }
             console.log("DEBUG DRAG END", lngLat, d, x, y);
             this.deck.setProps({ controller: { dragPan: true } });
           },
@@ -140,30 +147,6 @@ export class NodeLayer extends AbstractLayerGenerator {
         }),
       ];
     }
-
-    const numAnchors = this.anchors.value["ids"].length;
-    const data = [];
-    for (let i = 0; i < numAnchors; i++) {
-      const id = this.anchors.value["ids"][i];
-      data.push([
-        [this.map[id].coords[0] - size, this.map[id].coords[1] - size], // Bottom-left corner
-        [this.map[id].coords[0] + size, this.map[id].coords[1] - size], // Bottom-right corner
-        [this.map[id].coords[0] + size, this.map[id].coords[1] + size], // Top-right corner
-        [this.map[id].coords[0] - size, this.map[id].coords[1] + size], // Top-left corner
-        [this.map[id].coords[0] - size, this.map[id].coords[1] - size], // Closing the rectangle
-      ]);
-    }
-    ret = [
-      ...ret,
-      new PathLayer({
-        id: `selected-anchor-border-layer`,
-        positionFormat: "XY",
-        getPath: (d) => d,
-        getWidth: 0.1,
-        getColor: [255, 0, 0],
-        data: data,
-      }),
-    ];
 
     const highlightedNodes = this.highlightedNodeGetter.value;
     const highlightedNodeData = [];
@@ -213,6 +196,74 @@ export class NodeLayer extends AbstractLayerGenerator {
         }),
       ];
     }
+
+    const numAnchors = this.anchors.value["ids"].length;
+    const data = [];
+    for (let i = 0; i < numAnchors; i++) {
+      const id = this.anchors.value["ids"][i];
+      data.push({
+        position: [
+          [this.map[id].coords[0] - size, this.map[id].coords[1] - size], // Bottom-left corner
+          [this.map[id].coords[0] + size, this.map[id].coords[1] - size], // Bottom-right corner
+          [this.map[id].coords[0] + size, this.map[id].coords[1] + size], // Top-right corner
+          [this.map[id].coords[0] - size, this.map[id].coords[1] + size], // Top-left corner
+          [this.map[id].coords[0] - size, this.map[id].coords[1] - size], // Closing the rectangle
+        ],
+        id: id,
+      });
+    }
+    ret = [
+      ...ret,
+      new PathLayer({
+        id: `selected-anchor-border-layer`,
+        positionFormat: "XY",
+        getPath: (d) => d.position,
+        getWidth: 0.1,
+        getColor: [255, 0, 0],
+        data: data,
+      }),
+      new IconLayer({
+        id: "selected-anchor-icon-layer",
+        data: data,
+        getPosition: (d) => d.position[2],
+        iconAtlas: new URL("/anchor.jpg", import.meta.url).href,
+        getIcon: (d) => "marker",
+        getSize: 40,
+        iconMapping: {
+          marker: {
+            x: 0,
+            y: 0,
+            width: 360,
+            height: 360,
+            // mask: true,
+          },
+        },
+      }),
+      new IconLayer({
+        id: "selected-anchor-cancel-icon-layer",
+        data: data,
+        getPosition: (d) => d.position[1],
+        iconAtlas: new URL("/cancel.png", import.meta.url).href,
+        getIcon: (d) => "marker",
+        getSize: 20,
+        iconMapping: {
+          marker: {
+            x: 0,
+            y: 0,
+            width: 225,
+            height: 225,
+            // mask: true,
+          },
+        },
+        pickable: true,
+        onClick: (info) => {
+          const index = this.anchors.value["ids"].indexOf(info.object.id);
+          console.log("DEBUG ANCHOR CANCEL ICON LAYER", index);
+          this.anchors.value["ids"].splice(index, 1);
+          this.anchors.value["coords"].splice(index, 1);
+        },
+      }),
+    ];
 
     this.layerList = ret;
     this.needsToRedraw = false;

@@ -1,6 +1,11 @@
 <template>
   <div class="flex flex-row justify-evenly items-center gap-4">
-    <div class="flex flex-row justify-center items-end gap-4">
+    <div class="flex flex-row justify-center items-center gap-4">
+      <span
+        v-if="isShowingComparison"
+        class="text-lg font-bold bg-gray-100 px-4 py-2 rounded-lg"
+        >Selection 1</span
+      >
       <form class="max-w-sm">
         <label for="models" class="block mb-2 text-sm font-medium text-gray-900"
           >Select model(s)</label
@@ -58,7 +63,13 @@
       </div>
     </div>
 
-    <div v-if="isShowingComparison" class="flex flex-row justify-center gap-4">
+    <div
+      v-if="isShowingComparison"
+      class="flex flex-row justify-center items-center gap-4"
+    >
+      <span class="text-lg font-bold bg-gray-100 px-4 py-2 rounded-lg"
+        >Selection 2</span
+      >
       <form class="max-w-sm">
         <label for="models" class="block mb-2 text-sm font-medium text-gray-900"
           >Select model(s)</label
@@ -104,7 +115,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, computed } from "vue";
+import { ref, watch, computed, nextTick } from "vue";
 import { sspAllLabels, months, timeType, timeTypeMonths } from "../utils/utils";
 import { useStore } from "@/store/main";
 import { isEqual } from "lodash";
@@ -128,9 +139,9 @@ const isShowingComparison = ref(false);
 
 const menu = ref();
 
-const toggle = () => {
+const toggle = (type: string) => {
   isShowingComparison.value = !isShowingComparison.value;
-  emit("comparisonModeChanged", isShowingComparison.value);
+  emit("comparisonModeChanged", type);
 };
 const comparisonModes = ref([
   {
@@ -139,16 +150,19 @@ const comparisonModes = ref([
       {
         label: "Side-by-side",
         icon: "pi pi-refresh",
-        command: toggle,
+        command: () => toggle("side-by-side"),
       },
       {
         label: "As vector field",
         icon: "pi pi-upload",
-        command: toggle,
+        command: () => toggle("vector-field"),
       },
     ],
   },
 ]);
+
+let initiatedChange = false;
+let ignoreUIChange = false;
 
 const selectedModel = ref([]);
 const selectedType = ref([]);
@@ -158,6 +172,7 @@ const selectedModelCMP = ref([]);
 const selectedTypeCMP = ref([]);
 
 const members = sspAllLabels;
+
 const models = ref(
   Array.from(new Set(members.map((member) => member.model_name))).map((d) => d)
 );
@@ -175,35 +190,39 @@ const resolveSelection = (model, type) => {
 
 watch(
   [selectedModel, selectedType, selectedModelCMP, selectedTypeCMP],
-  ([model, type, modelCMP, typeCMP]) => {
-    if (!model && !type && !modelCMP && !typeCMP) {
-      return;
-    }
-
+  async ([model, type, modelCMP, typeCMP]) => {
+    if (ignoreUIChange) return;
+    initiatedChange = true; // Flag that UI intiated the change
     store.setFiles({
       group1: resolveSelection(model, type),
       group2: isShowingComparison.value
         ? resolveSelection(modelCMP, typeCMP)
         : [],
-      // group2: [],
     });
+    await nextTick();
+    initiatedChange = false;
   }
 );
 
 watch(selectedMonth, (month: number): none => {
   store.monthsSelected = [month];
 });
+
 watch(
   () => [store.files, store.monthsSelected],
-  ([files, months]) => {
+  async ([files, months]) => {
+    if (initiatedChange) return;
+    ignoreUIChange = true; // Ignore the UI Change if the store changes but the UI did not initiate it
+
     let model = selectedModel.value;
     let type = selectedType.value;
     let other = resolveSelection(model, type);
 
     const isStoreEqualToSetting = isEqual(files[0], other);
+
     if (!isStoreEqualToSetting) {
-      selectedModel.value = null;
-      selectedType.value = null;
+      selectedModel.value = [];
+      selectedType.value = [];
     }
 
     let modelCMP = selectedModelCMP.value;
@@ -212,14 +231,22 @@ watch(
 
     const isStoreEqualToSettingCMP = isEqual(files[1], otherCMP);
     if (!isStoreEqualToSettingCMP) {
-      selectedModelCMP.value = null;
-      selectedTypeCMP.value = null;
+      selectedModelCMP.value = [];
+      selectedTypeCMP.value = [];
     }
+
+    selectedMonth.value = months[0];
+
+    await nextTick();
+    ignoreUIChange = false;
   }
 );
 
 function toggleShowingComparison(event) {
-  if (!isShowingComparison.value) menu.value.toggle(event);
-  else toggle();
+  if (!isShowingComparison.value) {
+    menu.value.toggle(event);
+  } else {
+    toggle();
+  }
 }
 </script>

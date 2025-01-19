@@ -1,7 +1,10 @@
 <template>
   <div class="relative h-full w-full">
     <div class="flex flex-row h-full w-full">
-      <ProjectionDeckGLComponent :time_type="props.time_type" />
+      <ProjectionDeckGLComponent
+        :time_type="props.time_type"
+        :isShowingVectorField="isShowingVectorField"
+      />
       <ProjectionDeckGLComponent
         v-if="isShowingComparisonMap"
         :time_type="props.time_type"
@@ -17,10 +20,10 @@
     <ElementSelector
       class="absolute bottom-0 w-full z-[4] mb-4"
       :time_type="props.time_type"
-      @comparisonModeChanged="(newValue) => (isShowingComparisonMap = newValue)"
+      @comparisonModeChanged="(newMode) => comparisonModeChanged(newMode)"
     />
     <div
-      class="flex flex-col justify-start items-start absolute top-0 left-0 z-[4] m-4 overflow-auto w-[400px] gap-2 h-fit max-h-[100%]"
+      class="flex flex-col justify-start items-start absolute top-0 left-0 z-[4] m-4 overflow-auto w-fit gap-2 h-fit max-h-[100%]"
     >
       <ModelInfoViewer :time_type="props.time_type" />
       <ChatbotInterface />
@@ -62,6 +65,7 @@ import {
   subsetType,
   dataset_name,
   timeType,
+  constructZones,
   timeTypeMonths,
 } from "./utils/utils";
 
@@ -69,28 +73,60 @@ const props = defineProps({
   isHistorical: Boolean,
   time_type: timeType,
 });
+const store = useStore();
 
 const isShowingComparisonMap = ref(false);
+const isShowingVectorField = ref(false);
+
+function comparisonModeChanged(newType: string) {
+  isShowingComparisonMap.value = newType === "side-by-side";
+  isShowingVectorField.value = newType === "vector-field";
+
+  if (isShowingVectorField.value) {
+    getComparisonVectorField();
+  }
+
+  nextTick(() => {
+    store.redrawFlag = !store.redrawFlag;
+  });
+}
+
 // const text = ref(props.isHistorical ? "Historical" : "SSP370");
 
-// async function handleVectorFieldChanged() {
-//   if (!checkValidStreamLines()) return;
-//   let selectedModels = [selectedStreamLinesModel.value.name];
-//   if (selectedStreamLinesModel.value.name == "All") {
-//     selectedModels = sspAllLabels.map((d) => d.model_name);
-//   }
-//   isCalculatingVectorField.value = true;
-//   await store.updateVectorFieldSetting([
-//     dataset_name,
-//     selectedModels,
-//     // [selectedStreamLinesModel.value.name],
-//     props.time_type,
-//     [selectedStreamLinesCmp1.value.name, selectedStreamLinesCmp2.value.name],
-//     selectedStreamLineMonth.value,
-//   ]);
-//   isCalculatingVectorField.value = false;
-//   drawAllLayers();
-// }
+let debounceTimer = null;
+
+watch(
+  () => [store.getFiles, store.monthsSelected],
+  () => {
+    if (!isShowingVectorField.value) return; // Don't fire if the vector field isn't showing
+
+    if (debounceTimer) {
+      clearTimeout(debounceTimer);
+    }
+
+    debounceTimer = setTimeout(() => {
+      console.log(
+        "DEBUG PROJECTION VIEWER FIRING GET COMPARISON VECTOR FIELD NO CHANGE AFTER 3s"
+      );
+      getComparisonVectorField();
+    }, 3000);
+  }
+);
+
+async function getComparisonVectorField() {
+  if (store.files[0].length == 0 || store.files[1].length === 0) return; // Only fire if both comparisons are set
+
+  await store.updateVectorFieldSetting({
+    dataset_type: dataset_name,
+    time_type: props.time_type,
+    group1: store.files[0],
+    group2: store.files[1],
+    month: store.monthsSelected,
+    resolution: 20,
+    zones: constructZones(store.mapAnnotation),
+  });
+  store.redrawFlag = !store.redrawFlag;
+}
 </script>
 
 <style scoped>
