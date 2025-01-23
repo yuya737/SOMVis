@@ -1,4 +1,12 @@
 <template>
+  <PopupView
+    ref="modal"
+    class="absolute z-[4]"
+    :style="{
+      top: `${clickedLocation.y}px`,
+      left: `${clickedLocation.x}px`,
+    }"
+  />
   <div id="timelineContainer" class="relative h-full w-full">
     <div
       class="absolute left-0 top-0 w-fit z-[2] h-fit text-black text-lg flex flex-row justify-normal items-center"
@@ -36,22 +44,37 @@
       />
       <Button
         @click="clearClusterSelection"
-        label="Clear Cluster Selection(s)"
+        label="Reset Cluster Selection(s)"
         class="m-2 p-2"
       />
     </div>
-    <TooltipView
+    <!-- <TooltipView
       v-if="showTooltip"
       id="tooltip"
       :members="selectedTimelineCluster"
       :month="selectedTimelineClusterMonth"
       @close-card="showTooltip = false"
       class="absolute bg-white border border-gray-300 shadow-lg rounded-lg text-black bottom-0 right-0"
-    />
-    <div
-      id="timelineSVG"
-      class="w-full h-full text-black flex justify-around"
-    ></div>
+    /> -->
+    <div id="timelineSVG" class="w-full h-full text-black flex justify-around">
+      <div
+        id="tag1"
+        v-show="isShowingTag1"
+        @click="isShowingTag1 = false"
+        class="absolute bg-white border border-gray-300 rounded-lg p-1 text-black"
+      >
+        {{ tag1Text }}
+      </div>
+
+      <div
+        id="tag2"
+        v-show="isShowingTag2"
+        @click="isShowingTag2 = false"
+        class="absolute bg-white border border-gray-300 rounded-lg p-1 text-black"
+      >
+        {{ tag2Text }}
+      </div>
+    </div>
     <div v-if="isRecalculatingTimeline" class="overlay">
       <div class="overlay-text">Recalculating Timeline...</div>
     </div>
@@ -72,7 +95,7 @@ import API from "@/api/api";
 import { onMounted, ref, inject, reactive, watch, nextTick } from "vue";
 import Dropdown from "primevue/dropdown";
 import Button from "primevue/button";
-import TooltipView from "./TooltipView.vue";
+import PopupView from "./ui/PopupView.vue";
 import { dataset_name, timeType } from "./utils/utils";
 
 import ToggleButton from "primevue/togglebutton";
@@ -96,6 +119,10 @@ const splitterResized = inject("splitterResized");
 const selectedModel = ref();
 const selectedType = ref();
 const tooltipData = ref();
+// Reference for the Modal component
+const modal = ref(null);
+
+const clickedLocation = ref({ x: 0, y: 0 });
 
 // let monthList = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 let monthListOriginal = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
@@ -103,6 +130,11 @@ let monthListOriginal = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 let monthList = [10, 11, 12, 1, 2, 3, 4, 5];
 
 let initiatedChange = true;
+
+const isShowingTag1 = ref(false);
+const isShowingTag2 = ref(false);
+const tag1Text = ref("");
+const tag2Text = ref("");
 
 const props = defineProps({
   time_type: timeType,
@@ -127,8 +159,9 @@ function clearClusterSelection() {
         d3.select(this).attr("id").startsWith("clusterRect")
       );
     })
-    .each((d) => (d.clicked = false))
-    .classed("selected-rect", false);
+    .each((d) => (d.clicked = false));
+  handleTags("hide", null, null);
+  store.setFiles({ group1: [], group2: [] });
 }
 
 watch(selectedModel, (value) => {
@@ -848,10 +881,10 @@ async function drawTimeline() {
     .attr("id", (d) => `clusterPath${d.index}`)
     .attr("stroke", (d) => {
       if (members[d.index].ssp == "historical") {
-        return "steelblue";
+        return "forestgreen";
       }
       if (members[d.index].ssp == "ssp245") {
-        return "forestgreen";
+        return "steelblue";
       }
       if (members[d.index].ssp == "ssp370") {
         return "darkkhaki";
@@ -929,9 +962,7 @@ async function drawTimeline() {
           .classed("path-highlighted", true);
       })
       .on("mouseout", function (event, d) {
-        if (!d.clicked) {
-          d3.select(this).classed("selected-rect", false);
-        }
+        d3.select(this).classed("selected-rect", false);
         d3.selectAll("path")
           .filter(function () {
             return (
@@ -947,27 +978,28 @@ async function drawTimeline() {
         initiatedChange = true;
         if (d.clicked) {
           d.clicked = false;
-          d3.select(this).classed("selected-rect", false);
-          showTooltip.value = false;
+          // d3.select(this).classed("selected-rect", false);
+          // showTooltip.value = false;
           store.setFiles({ group1: [], group2: [] });
+          handleTags("hide", null, null);
         } else {
           // Set all other clusterRect as not clicked
-          const clickedID = d3.select(this).attr("id");
-          console.log("DEBUG IN CLUSTER RECT CLICK ", clickedID);
-          d3.selectAll("rect")
-            .filter(function () {
-              return (
-                d3.select(this)?.attr("id") &&
-                d3.select(this).attr("id").startsWith("clusterRect") &&
-                d3.select(this).attr("id") !== clickedID
-              );
-            })
-            .each((d) => (d.clicked = false))
-            .classed("selected-rect", false);
+          // const clickedID = d3.select(this).attr("id");
+          // console.log("DEBUG IN CLUSTER RECT CLICK ", clickedID);
+          // d3.selectAll("rect")
+          //   .filter(function () {
+          //     return (
+          //       d3.select(this)?.attr("id") &&
+          //       d3.select(this).attr("id").startsWith("clusterRect") &&
+          //       d3.select(this).attr("id") !== clickedID
+          //     );
+          //   })
+          //   .each((d) => (d.clicked = false))
+          //   .classed("selected-rect", false);
 
           // Set this clusterRect as clicked
           d.clicked = true;
-          d3.select(this).classed("selected-rect", true);
+          // d3.select(this).classed("selected-rect", true);
 
           let selected = d.members.map((member) => {
             return {
@@ -976,14 +1008,60 @@ async function drawTimeline() {
               variant: members[member].variant,
             };
           });
+
+          console.log(event);
+
           selectedTimelineCluster.value = selected;
           selectedTimelineClusterMonth.value = d.month;
-          showTooltip.value = true;
           store.monthsSelected = [d.month];
-          store.setFiles({ group1: selected, group2: [] });
+
+          // Function to handle the popup logic
+          const showPopup = async (event, d) => {
+            const result = await modal.value.show("Add as comparison");
+            if (result === "yes") {
+              store.setFiles({ group1: store.files[0], group2: selected });
+              handleTags(
+                "show",
+                {
+                  x: d.x + xScale.bandwidth() / 2 + d.width,
+                  y: d.y - d.height / 2,
+                },
+                true
+              );
+            } else {
+              store.setFiles({ group1: selected, group2: [] });
+              handleTags(
+                "show",
+                {
+                  x: d.x + xScale.bandwidth() / 2 + d.width,
+                  y: d.y - d.height / 2,
+                },
+                false
+              );
+            }
+            await nextTick();
+            initiatedChange = false;
+          };
+
+          if (store.files[0].length > 0) {
+            clickedLocation.value.x = event.clientX;
+            clickedLocation.value.y = event.clientY;
+            showPopup(event, d);
+          } else {
+            showTooltip.value = true;
+            handleTags(
+              "show",
+              {
+                x: d.x + xScale.bandwidth() / 2 + d.width,
+                y: d.y - d.height / 2,
+              },
+              false
+            );
+            store.setFiles({ group1: selected, group2: [] });
+            await nextTick();
+            initiatedChange = false;
+          }
         }
-        await nextTick();
-        initiatedChange = false;
         return;
       });
   }
@@ -1078,16 +1156,17 @@ watch(
   () => {
     if (initiatedChange) return;
     // Set all  clusterRect as not clicked
-    d3.selectAll("rect")
-      .filter(function () {
-        return (
-          d3.select(this)?.attr("id") &&
-          d3.select(this).attr("id").startsWith("clusterRect")
-        );
-      })
-      .each((d) => (d.clicked = false))
-      .classed("selected-rect", false);
+    // d3.selectAll("rect")
+    //   .filter(function () {
+    //     return (
+    //       d3.select(this)?.attr("id") &&
+    //       d3.select(this).attr("id").startsWith("clusterRect")
+    //     );
+    //   })
+    //   .each((d) => (d.clicked = false))
+    //   .classed("selected-rect", false);
     showTooltip.value = false;
+    handleTags("hide", null, null);
   }
 );
 async function getData() {
@@ -1105,21 +1184,21 @@ async function getData() {
     });
     console.log("DEBUG: DISTANCES ", month, distances);
 
-    let models = Array.from(
-      new Set(sspAllLabels.map((member) => member.model_name))
-    );
-    const temp = await API.fetchData("distance_matrix_forcing", true, {
-      dataset_type: dataset_name,
-      // time_type: (month <= 3 || month >=10) timeType.All,
-      // time_type: month <= 5 || month >= 10 ? timeType.OctMay : timeType.AprSep,
-      time_type: props.time_type,
-      model_names: models,
-      subsetType: "month",
-      resolution: 100,
-      months: month,
-      years: [-1],
-    });
-    console.log("DEBUG: FORCING DISTANCES ", month, temp);
+    // let models = Array.from(
+    //   new Set(sspAllLabels.map((member) => member.model_name))
+    // );
+    // const temp = await API.fetchData("distance_matrix_forcing", true, {
+    //   dataset_type: dataset_name,
+    //   // time_type: (month <= 3 || month >=10) timeType.All,
+    //   // time_type: month <= 5 || month >= 10 ? timeType.OctMay : timeType.AprSep,
+    //   time_type: props.time_type,
+    //   model_names: models,
+    //   subsetType: "month",
+    //   resolution: 100,
+    //   months: month,
+    //   years: [-1],
+    // });
+    // console.log("DEBUG: FORCING DISTANCES ", month, temp);
     const { clustering } = await API.fetchData("run_clustering", true, {
       distance_matrix: distances,
       n_neighbors: 6, // For UMAP
@@ -1173,5 +1252,29 @@ async function getData() {
 // const arrToI = (i, start=) => Array.from({ length: i }, (_, index) => index);
 function arrToI(i, start = 0) {
   return Array.from({ length: i }, (_, index) => index + start);
+}
+
+function handleTags(action, coords, addAsCMP: boolean) {
+  if (action == "hide") {
+    isShowingTag1.value = false;
+    isShowingTag2.value = false;
+    return;
+  }
+
+  if (!addAsCMP) {
+    document.getElementById("tag1")?.style.setProperty("top", `${coords.y}px`);
+    document.getElementById("tag1")?.style.setProperty("left", `${coords.x}px`);
+
+    tag1Text.value = "Showing";
+    isShowingTag1.value = true;
+  } else {
+    document.getElementById("tag2")?.style.setProperty("top", `${coords.y}px`);
+    document.getElementById("tag2")?.style.setProperty("left", `${coords.x}px`);
+
+    tag1Text.value = "Selection 1";
+    tag2Text.value = "Selection 2";
+    isShowingTag1.value = true;
+    isShowingTag2.value = true;
+  }
 }
 </script>

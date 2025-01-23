@@ -111,19 +111,19 @@ async function getNodeData(anchors = null) {
 
     vectorFieldData[curTimeType] = null;
 
-    const { interpolatedSurface, resolution, x, y } = await API.fetchData(
-      "interpolatedSurface",
-      true,
-      {
-        data: data,
-      }
-    );
-    interpolatedSurfaceData[curTimeType] = {
-      interpolatedSurface,
-      resolution,
-      x,
-      y,
-    };
+    // const { interpolatedSurface, resolution, x, y } = await API.fetchData(
+    //   "interpolatedSurface",
+    //   true,
+    //   {
+    //     data: data,
+    //   }
+    // );
+    // interpolatedSurfaceData[curTimeType] = {
+    //   interpolatedSurface,
+    //   resolution,
+    //   x,
+    //   y,
+    // };
 
     let hotspotPolygons = {};
 
@@ -141,7 +141,7 @@ async function getNodeData(anchors = null) {
     hotspotPolygonsData[curTimeType] = hotspotPolygons;
 
     // await Promise.all(hotspotPromises);
-    console.log("DEBUG DONE HOTSPOT PROMISES");
+    // console.log("DEBUG DONE HOTSPOT PROMISES");
   });
   await Promise.all(gigaPromise);
 
@@ -156,4 +156,4 @@ async function getNodeData(anchors = null) {
   };
 }
 
-export { getVectorFieldData, getPaths, getNodeData };
+export { getPaths, getNodeData };

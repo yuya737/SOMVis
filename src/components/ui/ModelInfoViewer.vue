@@ -1,6 +1,6 @@
 <template>
   <div
-    class="flex flex-col items-center py-4 bg-gray-100 rounded-lg shadow-md text-md w-full"
+    class="flex flex-col items-center py-4 bg-gray-100 rounded-lg shadow-md text-md w-full relative"
   >
     <Button
       :icon="isOpened ? 'pi pi-minus' : 'pi pi-plus'"

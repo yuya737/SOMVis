@@ -6,7 +6,7 @@
         0 0 #0000,
         0 1px 2px 0 rgb(0 0 0 / 0.05);
     "
-    class="bg-gray-100 p-6 rounded-lg border border-[#e5e7eb] w-full h-fit relative"
+    class="bg-gray-100 p-4 rounded-lg border border-[#e5e7eb] w-full h-fit relative"
   >
     <Button
       :icon="isOpened ? 'pi pi-minus' : 'pi pi-plus'"
@@ -48,7 +48,7 @@
           />
           <button
             type="button"
-            class="inline-flex items-center justify-center rounded-md text-sm font-medium text-[#f9fafb] disabled:pointer-events-none disabled:opacity-50 bg-black hover:bg-[#111827E6] h-10 px-4 py-2"
+            class="inline-flex items-center justify-center rounded-md text-sm font-medium bg-blue-500 text-white hover:bg-blue-600 focus:outline-none h-10 px-4 py-2"
             @click="sendQuery"
           >
             Send

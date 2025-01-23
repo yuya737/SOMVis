@@ -1,31 +1,52 @@
 <template>
-  <div class="flex flex-col items-center p-6 bg-gray-100 rounded-lg shadow-md">
-    <h1 class="text-xl font-bold mb-4 text-gray-800">Characteristics</h1>
-    <div v-if="characteristic.length == 0" class="font-medium text-gray-600">
-      Must define regions to see their Characteristics
-    </div>
-    <transition-group name="fade" tag="div" class="w-full max-w-sm">
-      <div
-        v-for="c in characteristic"
-        :key="c.name"
-        class="flex justify-between bg-white p-3 mb-2 rounded-lg shadow-sm border border-gray-200 transition-transform duration-300"
-        :class="{
-          'scale-105': animateChange.includes(c.name),
-          'bg-green-50': direction[c.name] === 'increase',
-          'bg-red-50': direction[c.name] === 'decrease',
-        }"
-      >
-        <CharacteristicViewerRow :characteristic="c" />
+  <div
+    class="flex flex-col items-center p-6 bg-gray-100 rounded-lg shadow-md relative"
+  >
+    <Button
+      :icon="isOpened ? 'pi pi-minus' : 'pi pi-plus'"
+      @click="toggleIsOpened"
+      class="absolute top-0 right-0 m-2"
+    />
+    <h1 class="text-xl font-bold text-gray-800">Characteristics</h1>
+    <div v-if="isOpened" class="mt-4">
+      <div v-if="characteristic.length == 0" class="font-medium text-gray-600">
+        Must define regions to see their Characteristics
       </div>
-    </transition-group>
+      <div
+        v-if="characteristic.length > 0 && characteristic[0].transition != null"
+        class="flex flex-row justify-evenly w-full"
+      >
+        <span class="text-lg font-bold bg-gray-100 px-4 py-2 rounded-lg"
+          >Selection 1</span
+        >
+        <span class="text-lg font-bold bg-gray-100 px-4 py-2 rounded-lg"
+          >Selection 2</span
+        >
+      </div>
+      <transition-group name="fade" tag="div" class="w-full max-w-sm">
+        <div
+          v-for="c in characteristic"
+          :key="c.name"
+          class="bg-white p-3 mb-2 rounded-lg shadow-sm border border-gray-200 transition-transform duration-300"
+          :class="{
+            'scale-105': animateChange.includes(c.name),
+            'bg-green-50': direction[c.name] === 'increase',
+            'bg-red-50': direction[c.name] === 'decrease',
+          }"
+        >
+          <CharacteristicViewerRow :characteristic="c" />
+        </div>
+      </transition-group>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, watch, Ref } from "vue";
+import { ref, watch, Ref, onMounted } from "vue";
 import { useStore } from "@/store/main";
 import { timeType, dataset_name, constructZones } from "../utils/utils";
 import API from "@/api/api";
+const blah = ref("");
 
 import CharacteristicViewerRow from "./CharacteristicViewerRow.vue";
 
@@ -41,10 +62,16 @@ const direction = ref({});
 const store = useStore();
 const msg = ref("");
 
+const isOpened = ref(true);
+const toggleIsOpened = () => (isOpened.value = !isOpened.value);
+
 const characteristic: Ref<
   {
     name: string;
-    percentage: number;
+    // percentage: number;
+    count: number;
+    total: number;
+
     transition?: { name: string; percentage: number }[];
   }[]
 > = ref([]);
@@ -91,18 +118,26 @@ async function getCharacteristic() {
     // No zones defined
     return;
   }
-  const ret = await API.fetchData("/get_characteristic", true, {
-    dataset_type: dataset_name,
-    time_type: props.time_type,
-    members: selectedFiles,
-    months: selectedMonth,
-    zones: zones,
-  });
+  console.log("DEBUG GET CHARACTERISTIC", selectedFiles, props.isComparison);
+  const { zoneCounts, total } = await API.fetchData(
+    "/get_characteristic",
+    true,
+    {
+      dataset_type: dataset_name,
+      time_type: props.time_type,
+      members: selectedFiles,
+      months: selectedMonth,
+      zones: zones,
+    }
+  );
 
   let transition = null;
 
   characteristic.value = [];
-  const sortedKeys = Object.keys(ret).sort((a, b) => ret[b] - ret[a]);
+  console.log("DEBUG GET CHARACTERISTIC", zoneCounts, total);
+  const sortedKeys = Object.keys(zoneCounts).sort(
+    (a, b) => zoneCounts[b] - zoneCounts[a]
+  );
 
   if (props.isShowingVectorField) {
     watch(
@@ -137,13 +172,14 @@ async function getCharacteristic() {
             acc[destZoneName] = (acc[destZoneName] || 0) + 1;
             return acc;
           }, {});
-          const transitionList = Object.entries(counted).map(
-            ([name, count]) => {
-              return {
-                name: name,
-                percentage: count / transitionData[zoneID].length,
-              };
-            }
+          let transitionList = Object.entries(counted).map(([name, count]) => {
+            return {
+              name: name,
+              percentage: count / transitionData[zoneID].length,
+            };
+          });
+          transitionList = transitionList.sort(
+            (a, b) => b.percentage - a.percentage
           );
           temp[sourceZoneName] = transitionList;
           console.log(
@@ -164,17 +200,29 @@ async function getCharacteristic() {
   sortedKeys.forEach((key) => {
     characteristic.value.push({
       name: store.mapAnnotation.features[key].properties?.name,
-      percentage: ret[key],
+      count: zoneCounts[key],
+      total: total,
+      // percentage: ret[key],
     });
   });
 }
 
-watch(
-  () => [store.getFiles, store.monthsSelected],
-  () => {
-    getCharacteristic();
-  }
-);
+onMounted(() => {
+  watch(
+    () => [
+      store.getFiles,
+      store.monthsSelected,
+      props.isComparison,
+      props.isShowingVectorField,
+    ],
+    () => {
+      blah.value = "SDFDSFSF";
+      console.log("SDFSFSDFD");
+      getCharacteristic();
+    },
+    { immediate: true }
+  );
+});
 </script>
 <style>
 .fade-enter-active,

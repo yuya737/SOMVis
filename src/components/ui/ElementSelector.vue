@@ -1,6 +1,6 @@
 <template>
-  <div class="flex flex-row justify-evenly items-center gap-4">
-    <div class="flex flex-row justify-center items-center gap-4">
+  <div class="flex flex-row justify-evenly items-end gap-4">
+    <div class="flex flex-row justify-center items-end gap-4">
       <span
         v-if="isShowingComparison"
         class="text-lg font-bold bg-gray-100 px-4 py-2 rounded-lg"
@@ -10,6 +10,7 @@
         <label for="models" class="block mb-2 text-sm font-medium text-gray-900"
           >Select model(s)</label
         >
+
         <MultiSelect
           id="models"
           v-model="selectedModel"
@@ -46,26 +47,30 @@
           display="chip"
         />
       </form>
-      <div class="flex justify-content-center" v-if="isShowingComparisonButton">
-        <Button
-          :label="isShowingComparison ? 'Remove Comparison' : 'Add Comparison'"
-          class="bg-blue-500 text-white font-semibold h-fit p-2 hover:bg-blue-600"
-          @click="toggleShowingComparison"
-          aria-haspopup="true"
-          aria-controls="overlay_menu"
-        />
-        <Menu
-          ref="menu"
-          id="overlay_menu"
-          :model="comparisonModes"
-          :popup="true"
-        />
+      <div class="flex flex-row justify-center items-center">
+        <div class="flex flex-col justify-center items-center gap-1">
+          <Button
+            :label="
+              isShowingComparison ? 'Remove Comparison' : 'Add Comparison'
+            "
+            class="bg-blue-500 text-white h-fit p-1 hover:bg-blue-600"
+            @click="toggleShowingComparison"
+          />
+
+          <Button
+            v-if="isShowingComparison"
+            label="Switch comparison mode"
+            class="bg-blue-500 text-white h-fit p-1 hover:bg-blue-600"
+            @click="toggleComparisonMode"
+          />
+        </div>
+        <Menu ref="menu" :model="comparisonModes" :popup="true" />
       </div>
     </div>
 
     <div
       v-if="isShowingComparison"
-      class="flex flex-row justify-center items-center gap-4"
+      class="flex flex-row justify-center items-end gap-4"
     >
       <span class="text-lg font-bold bg-gray-100 px-4 py-2 rounded-lg"
         >Selection 2</span
@@ -74,6 +79,7 @@
         <label for="models" class="block mb-2 text-sm font-medium text-gray-900"
           >Select model(s)</label
         >
+
         <MultiSelect
           id="models"
           v-model="selectedModelCMP"
@@ -115,12 +121,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, computed, nextTick } from "vue";
+import { ref, watch, computed, nextTick, toRaw } from "vue";
 import { sspAllLabels, months, timeType, timeTypeMonths } from "../utils/utils";
 import { useStore } from "@/store/main";
 import { isEqual } from "lodash";
 import Dropdown from "primevue/dropdown";
 import Menu from "primevue/menu";
+import TooltipView from "../TooltipView.vue";
 
 const props = defineProps<{
   time_type: timeType;
@@ -136,11 +143,26 @@ const isShowingComparisonButton = computed(
     selectedMonth.value.length > 0
 );
 const isShowingComparison = ref(false);
+const isShowingVectorField = ref(false);
+
+// const formatMmeber = (value) => {
+//   return `${value.model_name}-${value.ssp}-${value.ssp}-${value.variant}`;
+// };
+
+watch(
+  () => store.files[1],
+  (newVal) => {
+    if (newVal.length > 0 && !isShowingComparison.value) {
+      toggle("side-by-side");
+    }
+  }
+);
 
 const menu = ref();
 
 const toggle = (type: string) => {
   isShowingComparison.value = !isShowingComparison.value;
+  isShowingVectorField.value = type == "vector-field";
   emit("comparisonModeChanged", type);
 };
 const comparisonModes = ref([
@@ -149,12 +171,12 @@ const comparisonModes = ref([
     items: [
       {
         label: "Side-by-side",
-        icon: "pi pi-refresh",
+        icon: "pi pi-images",
         command: () => toggle("side-by-side"),
       },
       {
         label: "As vector field",
-        icon: "pi pi-upload",
+        icon: "pi pi-arrow-up-left",
         command: () => toggle("vector-field"),
       },
     ],
@@ -164,10 +186,12 @@ const comparisonModes = ref([
 let initiatedChange = false;
 let ignoreUIChange = false;
 
+const selectedMembers = ref([]);
 const selectedModel = ref([]);
 const selectedType = ref([]);
 const selectedMonth = ref([]);
 
+const selectedMembersCMP = ref([]);
 const selectedModelCMP = ref([]);
 const selectedTypeCMP = ref([]);
 
@@ -187,6 +211,11 @@ const resolveSelection = (model, type) => {
       (type && type.length > 0 ? type.includes(member.ssp) : true)
   );
 };
+
+watch(selectedMembers, async (newVal) => {
+  store.setFiles({ group1: toRaw(newVal), group2: store.files[1] });
+  await nextTick();
+});
 
 watch(
   [selectedModel, selectedType, selectedModelCMP, selectedTypeCMP],
@@ -248,5 +277,16 @@ function toggleShowingComparison(event) {
   } else {
     toggle();
   }
+}
+
+function toggleComparisonMode() {
+  console.log("DEBUG TOGGLE COMPARISON MODE", isShowingVectorField.value);
+  const curShowingVectorField = isShowingVectorField.value;
+  isShowingVectorField.value = !curShowingVectorField;
+  console.log("DEBUG TOGGLE COMPARISON MODE 2", isShowingVectorField.value);
+  emit(
+    "comparisonModeChanged",
+    curShowingVectorField ? "side-by-side" : "vector-field"
+  );
 }
 </script>

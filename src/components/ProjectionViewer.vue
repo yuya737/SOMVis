@@ -23,10 +23,22 @@
       @comparisonModeChanged="(newMode) => comparisonModeChanged(newMode)"
     />
     <div
-      class="flex flex-col justify-start items-start absolute top-0 left-0 z-[4] m-4 overflow-auto w-fit gap-2 h-fit max-h-[100%]"
+      class="flex flex-col justify-start items-start absolute top-0 left-0 z-[4] m-4 overflow-auto min-w-0 w-1/4 gap-2 h-fit max-h-[100%] pr-4"
     >
-      <ModelInfoViewer :time_type="props.time_type" />
-      <ChatbotInterface />
+      <button
+        @click="isSidePanelOpen = !isSidePanelOpen"
+        class="w-fit px-4 py-2 text-white bg-gray-500 rounded-md hover:bg-gray-600 focus:outline-none"
+      >
+        {{ isSidePanelOpen ? "Collapse" : "Expand" }}
+      </button>
+      <div
+        v-if="isSidePanelOpen"
+        class="flex flex-col gap-2 transition-all duration-300"
+      >
+        <ModelInfoViewer :time_type="props.time_type" />
+        <ChatbotInterface />
+        <ProjectionSettings />
+      </div>
     </div>
   </div>
 </template>
@@ -45,6 +57,7 @@ import ElementSelector from "./ui/ElementSelector.vue";
 import ModelInfoViewer from "./ui/ModelInfoViewer.vue";
 import ChatbotInterface from "./ui/ChatbotInterface.vue";
 import ProjectionDeckGLComponent from "./ui/ProjectionDeckGLComponent.vue";
+import ProjectionSettings from "./ui/ProjectionSettings.vue";
 
 // PRIMEVUE IMPORTS
 import ToggleButton from "primevue/togglebutton";
@@ -77,6 +90,7 @@ const store = useStore();
 
 const isShowingComparisonMap = ref(false);
 const isShowingVectorField = ref(false);
+const isSidePanelOpen = ref(true);
 
 function comparisonModeChanged(newType: string) {
   isShowingComparisonMap.value = newType === "side-by-side";
@@ -90,8 +104,6 @@ function comparisonModeChanged(newType: string) {
     store.redrawFlag = !store.redrawFlag;
   });
 }
-
-// const text = ref(props.isHistorical ? "Historical" : "SSP370");
 
 let debounceTimer = null;
 

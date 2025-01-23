@@ -37,6 +37,7 @@ export class SOMLayer extends AbstractLayerGenerator {
   // readonly coords: any;
   readonly nodeMapGetter: ComputedRef<(timeType: timeType) => any>;
   readonly pathDataGetter: ComputedRef<(timeType: timeType) => any>;
+  readonly contourLevelGetter: ComputedRef<number[]>;
 
   // readonly name: string;
   readonly selectedTimeRange: any;
@@ -64,6 +65,7 @@ export class SOMLayer extends AbstractLayerGenerator {
   constructor({
     nodeMapGetter,
     pathDataGetter,
+    contourLevelGetter,
     timeRange,
     monthRange,
     model,
@@ -76,6 +78,7 @@ export class SOMLayer extends AbstractLayerGenerator {
     super();
     this.nodeMapGetter = nodeMapGetter;
     this.pathDataGetter = pathDataGetter;
+    this.contourLevelGetter = contourLevelGetter;
 
     this.selectedTimeRange = timeRange;
     this.selectedMonthRange = monthRange;
@@ -126,6 +129,7 @@ export class SOMLayer extends AbstractLayerGenerator {
         this.selectedModel,
         this.selectedSubsetType,
         this.hoveredFile,
+        this.contourLevelGetter,
       ],
       () => {
         // this.selectedModel.value[1].length > 0
@@ -199,22 +203,42 @@ export class SOMLayer extends AbstractLayerGenerator {
       return ret;
     }
 
-    const thresholds = [0.3, 0.5];
+    // const thresholds = [0.25, 0.5, 0.75];
+    const thresholds = this.contourLevelGetter.value;
 
     thresholds.forEach((threshold, i) => {
       const BMUPolygon = API.fetchData("/get_bounding_shape", true, {
         points: curBMUData.map((d) => d.coords),
         threshold: threshold,
       });
+
+      const labelsPromise = BMUPolygon.then((BMUPolygon) => {
+        console.log("BMUPolygon", BMUPolygon);
+        const locations = BMUPolygon.map((d) => d[0]);
+        return locations;
+      });
+
       const layer = new PolygonLayer({
         id: `polygon-layer-${i}`,
         data: BMUPolygon,
         getPolygon: (d) => d,
         stroked: false,
-        opacity: scaleLinear().domain(thresholds).range([0.1, 0.2])(threshold),
+        // opacity: scaleLinear().domain(thresholds).range([0.1, 0.2])(threshold),
+        opacity: 0.1,
         // opacity: 0.5,
       });
-      ret = [...ret, layer];
+      const polygonLabelLayer = new TextLayer({
+        id: `polygon-layer-label-${i}`,
+        data: labelsPromise,
+        getPosition: (d) => [...d, 2],
+        getText: () => `Top ${threshold * 100}%`,
+        getColor: () => [0, 0, 0, 255],
+        background: true,
+        backgroundPadding: [4, 4],
+        getSize: 20,
+        fontFamily: "Arial",
+      });
+      ret = [...ret, layer, polygonLabelLayer];
     });
 
     this.layerList = ret;

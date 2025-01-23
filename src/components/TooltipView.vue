@@ -1,43 +1,39 @@
 <template>
-  <div class="card w-fit">
-    <Button
-      @click="$emit('closeCard')"
-      class="absolute m-2 p-3 z-[2] top-0 right-0 bg-slate-200 aspect-square"
-      >X</Button
-    >
-    <DataTable
-      :value="membersWithMean"
-      scrollable
-      scrollHeight="400px"
-      showGridlines
-      class="tight-rows"
-    >
-      <Column field="model_name" sortable header="Model Name"></Column>
-      <Column field="variant" sortable header="Variant"></Column>
-      <Column field="ssp" sortable header="SSP Type">
-        <template #body="slotProps">
-          <Tag
-            :value="slotProps.data.ssp"
-            :severity="getSeverity(slotProps.data.ssp)"
-          />
-        </template>
-      </Column>
-      <Column field="mean" sortable header="Mean(Δhistorical) kg/m^2/s">
-        <template #body="slotProps">
-          <span style="display: inline-flex; align-items: center">
-            {{ formatScientificNotation(slotProps.data) }}
-            <svg width="20" height="20" style="margin-left: 8px">
-              <rect
-                width="20"
-                height="20"
-                :style="computeBoxColor(slotProps.data.mean)"
-              />
-            </svg>
-          </span>
-        </template>
-      </Column>
-    </DataTable>
-  </div>
+  <DataTable
+    :value="membersWithMean"
+    scrollable
+    scrollHeight="400px"
+    showGridlines
+    class="w-fit"
+  >
+    <Column field="model_name" sortable header="Model Name"></Column>
+    <!-- <Column field="variant" sortable header="Variant"></Column> -->
+    <Column field="ssp" sortable header="SSP Type">
+      <template #body="slotProps">
+        <Tag
+          :value="slotProps.data.ssp"
+          :style="{
+            backgroundColor: setSSPColors(slotProps.data),
+            color: '#fff',
+          }"
+        />
+      </template>
+    </Column>
+    <Column field="mean" sortable header="Mean(Δhistorical)" class="w-fit">
+      <template #body="slotProps">
+        <span style="display: inline-flex; align-items: center">
+          {{ formatScientificNotation(slotProps.data) }}
+          <svg width="20" height="20" style="margin-left: 8px">
+            <rect
+              width="20"
+              height="20"
+              :style="computeBoxColor(slotProps.data.mean)"
+            />
+          </svg>
+        </span>
+      </template>
+    </Column>
+  </DataTable>
 </template>
 
 <script setup lang="ts">
@@ -56,6 +52,18 @@ import * as d3 from "d3";
 
 let monthlyMeanMin = Infinity;
 let monthlyMeanMax = -Infinity;
+
+const setSSPColors = (member) => {
+  if (member.ssp === "historical") {
+    return "forestgreen";
+  } else if (member.ssp === "ssp245") {
+    return "steelblue";
+  } else if (member.ssp === "ssp370") {
+    return "darkkhaki";
+  } else if (member.ssp === "ssp585") {
+    return "crimson";
+  }
+};
 
 const props = defineProps<{
   members: EnsembleMember[];

@@ -18,6 +18,11 @@
     <div
       class="flex flex-col justify-start items-end absolute top-0 right-0 z-[4] m-4 overflow-auto w-fit gap-2 h-fit max-h-[100%]"
     >
+      <MemberViewer
+        :time_type="props.time_type"
+        :isComparison="props.isComparison"
+        :isShowingVectorField="props.isShowingVectorField"
+      />
       <CharacteristicViewer
         :time_type="props.time_type"
         :isComparison="props.isComparison"
@@ -112,6 +117,8 @@ import {
   timeType,
   timeTypeMonths,
 } from "@/components/utils/utils";
+import TooltipView from "../TooltipView.vue";
+import MemberViewer from "../MemberViewer.vue";
 
 const props = defineProps({
   time_type: timeType,
@@ -168,7 +175,7 @@ onMounted(() => {
   );
 
   watch(
-    props.isComparison ? () => store.getFiles[0] : () => store.getFiles[1],
+    props.isComparison ? () => store.getFiles[1] : () => store.getFiles[0],
     async () => {
       if (debounceTimer) {
         clearTimeout(debounceTimer);
@@ -234,6 +241,7 @@ async function initializeLayers() {
     getVectorFieldData,
     getExlainablityPoints,
     getHighlightedNodes,
+    getContourLevels,
     anchors,
   } = storeToRefs(store);
   let nodeLayerGenerator = new NodeLayer({
@@ -278,6 +286,7 @@ async function initializeLayers() {
   let somLayerGenerator = new SOMLayer({
     nodeMapGetter: getNodeMap,
     pathDataGetter: getPathData,
+    contourLevelGetter: getContourLevels,
     timeRange: getYearsSelected,
     monthRange: getMonthsSelected,
     model: curGetFiles,
@@ -291,13 +300,13 @@ async function initializeLayers() {
     time_type: props.time_type,
   });
 
-  let node3DLayerGenerator = new Node3DLayer({
-    interpolatedSurfaceGetter: getInterpolatedSurfaceData,
-    mappingDataGetter: getNodeMap,
-    meanPerNodeGetter: getClassifyData,
-    hotspotPolygonsGetter: getHotspotPolygons,
-    time_type: props.time_type,
-  });
+  // let node3DLayerGenerator = new Node3DLayer({
+  //   interpolatedSurfaceGetter: getInterpolatedSurfaceData,
+  //   mappingDataGetter: getNodeMap,
+  //   meanPerNodeGetter: getClassifyData,
+  //   hotspotPolygonsGetter: getHotspotPolygons,
+  //   time_type: props.time_type,
+  // });
 
   let particleAdvectionLayerGenerator = new ParticleAdvectionLayer({
     vectorFieldGetter: getVectorFieldData,
@@ -315,7 +324,7 @@ async function initializeLayers() {
     // axisLayerGenerator,
     nodeLayerGenerator,
     nodeclassifyLayerGenerator,
-    node3DLayerGenerator,
+    // node3DLayerGenerator,
     particleAdvectionLayerGenerator,
     somLayerGenerator,
     // explainabilityLayerGenerator,

@@ -61,6 +61,7 @@ export const useStore = defineStore("main", {
       },
       highlightedNodes: [],
       LLMQueries: [] as LLMQueryResult[],
+      contourLevels: [0.25, 0.5, 0.75] as number[],
     });
     getNodeData().then((data) => {
       const {
@@ -141,6 +142,9 @@ export const useStore = defineStore("main", {
     },
     getMapMode() {
       return this.mapMode;
+    },
+    getContourLevels() {
+      return this.contourLevels;
     },
   },
   actions: {
