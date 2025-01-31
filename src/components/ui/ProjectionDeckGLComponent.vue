@@ -20,13 +20,13 @@
     >
       <MemberViewer
         :time_type="props.time_type"
-        :isComparison="props.isComparison"
-        :isShowingVectorField="props.isShowingVectorField"
+        :is-comparison="props.isComparison"
+        :is-showing-vector-field="props.isShowingVectorField"
       />
       <CharacteristicViewer
         :time_type="props.time_type"
-        :isComparison="props.isComparison"
-        :isShowingVectorField="props.isShowingVectorField"
+        :is-comparison="props.isComparison"
+        :is-showing-vector-field="props.isShowingVectorField"
       />
       <div
         class="flex flex-col h-fit w-fit items-center justify-center p-2 rounded-lg text-center gap-4 bg-gray-100 rounded-lg shadow-md p-6"
@@ -55,12 +55,12 @@
         </div>
       </div>
     </div>
-    <NodeInspector
+    <!-- <NodeInspector
       v-if="imgSrc != ''"
       class="absolute top-0 left-0 z-[2]"
       :img-src="imgSrc"
       @close-node-inspector="imgSrc = ''"
-    />
+    /> -->
     <div v-if="isRecalculatingMDE" class="overlay">
       <div class="overlay-text">Recalculating MDE...</div>
     </div>
@@ -199,6 +199,7 @@ onMounted(() => {
       store.getHoveredFile,
       store.getHighlightedNodes,
       store.getRedrawFlag,
+      store.nodeClickedID,
     ],
     async () => {
       await nextTick();
@@ -216,12 +217,6 @@ onMounted(() => {
     },
     { deep: true }
   );
-});
-
-const imgSrc = ref("");
-watch(imgSrc, (newVal) => {
-  console.log("imgSrc changed", newVal);
-  drawAllLayers();
 });
 
 async function initializeLayers() {
@@ -243,17 +238,18 @@ async function initializeLayers() {
     getHighlightedNodes,
     getContourLevels,
     anchors,
+    nodeClickedID,
   } = storeToRefs(store);
   let nodeLayerGenerator = new NodeLayer({
     dataset_type: dataset_name,
     time_type: props.time_type,
     nodeMapGetter: getNodeMap,
     highlightedNodeGetter: getHighlightedNodes,
-    imgSrc: imgSrc,
     drawEveryN: 7,
     dims: 30,
     deck: deck,
     anchors: anchors,
+    nodeClickedID: nodeClickedID,
   });
   let nodeclassifyLayerGenerator = new NodeClassifyLayer({
     mappingDataGetter: getNodeMap,

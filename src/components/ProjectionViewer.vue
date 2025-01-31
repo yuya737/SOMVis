@@ -3,12 +3,12 @@
     <div class="flex flex-row h-full w-full">
       <ProjectionDeckGLComponent
         :time_type="props.time_type"
-        :isShowingVectorField="isShowingVectorField"
+        :is-showing-vector-field="isShowingVectorField"
       />
       <ProjectionDeckGLComponent
         v-if="isShowingComparisonMap"
         :time_type="props.time_type"
-        isComparison
+        is-comparison
       />
     </div>
 
@@ -20,72 +20,53 @@
     <ElementSelector
       class="absolute bottom-0 w-full z-[4] mb-4"
       :time_type="props.time_type"
-      @comparisonModeChanged="(newMode) => comparisonModeChanged(newMode)"
+      @comparison-mode-changed="(newMode) => comparisonModeChanged(newMode)"
     />
     <div
-      class="flex flex-col justify-start items-start absolute top-0 left-0 z-[4] m-4 overflow-auto min-w-0 w-1/4 gap-2 h-fit max-h-[100%] pr-4"
+      class="flex flex-col justify-start items-start absolute top-0 left-0 z-[4] m-4 overflow-auto min-w-0 w-fit gap-2 h-fit max-h-[100%] pr-4"
     >
       <button
-        @click="isSidePanelOpen = !isSidePanelOpen"
         class="w-fit px-4 py-2 text-white bg-gray-500 rounded-md hover:bg-gray-600 focus:outline-none"
+        @click="isSidePanelOpen = !isSidePanelOpen"
       >
         {{ isSidePanelOpen ? "Collapse" : "Expand" }}
       </button>
       <div
         v-if="isSidePanelOpen"
-        class="flex flex-col gap-2 transition-all duration-300"
+        class="flex flex-col gap-2 transition-all duration-300 max-w-[400px]"
       >
         <ModelInfoViewer :time_type="props.time_type" />
         <ChatbotInterface />
         <ProjectionSettings />
+        <SOMNodeViewer
+          :time_type="props.time_type"
+          :nodeClickedID="store.nodeClickedID"
+        />
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, watch, computed, nextTick } from "vue";
-import { storeToRefs } from "pinia";
+import { ref, watch, nextTick } from "vue";
 
 // STORE IMPORT
 import { useStore } from "@/store/main";
 
 // UI ELEMENTS IMPORT
-import NodeInspector from "./ui/NodeInspector.vue";
-import MapAnnotationEditor from "./ui/MapAnnotationEditor.vue";
 import ElementSelector from "./ui/ElementSelector.vue";
 import ModelInfoViewer from "./ui/ModelInfoViewer.vue";
 import ChatbotInterface from "./ui/ChatbotInterface.vue";
+import SOMNodeViewer from "./SOMNodeViewer.vue";
 import ProjectionDeckGLComponent from "./ui/ProjectionDeckGLComponent.vue";
 import ProjectionSettings from "./ui/ProjectionSettings.vue";
 
-// PRIMEVUE IMPORTS
-import ToggleButton from "primevue/togglebutton";
-import Dropdown from "primevue/dropdown";
-import ProgressSpinner from "primevue/progressspinner";
-import SelectButton from "primevue/selectbutton";
-import Button from "primevue/button";
+import { dataset_name, timeType, constructZones } from "./utils/utils";
 
-// UTILS IMPORTS
-import API from "@/api/api";
-
-import {
-  mapView,
-  DECKGL_SETTINGS,
-  generateMonthRangeList,
-  months,
-  sspAllLabels,
-  subsetType,
-  dataset_name,
-  timeType,
-  constructZones,
-  timeTypeMonths,
-} from "./utils/utils";
-
-const props = defineProps({
-  isHistorical: Boolean,
-  time_type: timeType,
-});
+const props = defineProps<{
+  isHistorical: Boolean;
+  time_type: timeType;
+}>();
 const store = useStore();
 
 const isShowingComparisonMap = ref(false);

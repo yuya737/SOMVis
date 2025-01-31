@@ -11,7 +11,7 @@
       {{ props.isShowingVectorField ? "Selection 1" : "Members" }}
     </h1>
     <div v-if="isOpened">
-      <h2>Precipitation reported in kg/m^2/s</h2>
+      <h2 class="font-semibold">Precipitation reported in kg/m^2/s</h2>
       <TooltipView
         v-if="
           props.isComparison

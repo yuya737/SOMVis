@@ -31,7 +31,12 @@
     </SplitterPanel>
 
     <SplitterPanel class="h-full w-full" :size="40">
-      <TimelineViewer
+      <!-- <TimelineViewer
+        v-if="store.isDataReady"
+        class="h-full"
+        :time_type="timeType.OctMay"
+      /> -->
+      <ForcingTimelineViewer
         v-if="store.isDataReady"
         class="h-full"
         :time_type="timeType.OctMay"
@@ -71,7 +76,7 @@ import ProjectionViewer from "./ProjectionViewer.vue";
 import MapViewer from "./MapViewer.vue";
 import HeatmapViewer from "./HeatmapViewer.vue";
 import TimelineViewer from "./TimelineViewer.vue";
-import TimelineViewerTemporal from "./TimelineViewerTemporal.vue";
+import ForcingTimelineViewer from "./ForcingTimelineViewer.vue";
 import { provide, ref, watch } from "vue";
 import { timeType } from "./utils/utils";
 

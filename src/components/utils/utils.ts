@@ -1,4 +1,5 @@
 import { scaleOrdinal, scaleLinear } from "d3-scale";
+import * as d3 from "d3";
 import {
   interpolateRainbow,
   interpolateBlues,
@@ -525,5 +526,69 @@ export const historicalLabelsSfbay = [
   //   "CMIP6_pr_historical_sfbay_S3L0.1_20x20_MRI-ESM2-0_historical_r5i1p1f1_pr_sfbay.nc",
   "CMIP6_pr_historical_sfbay_S3L0.1_20x20_TaiESM1_historical_r1i1p1f1_pr_sfbay.nc",
 ];
+
+export function makeAnnotationGlyph(mapAnnotation, nodeMap, index, WIDTH) {
+  const minX = Math.min(...nodeMap.map((d) => d.coords[0] / 10));
+  const maxX = Math.max(...nodeMap.map((d) => d.coords[0] / 10));
+  const minY = Math.min(...nodeMap.map((d) => d.coords[1] / 10));
+  const maxY = Math.max(...nodeMap.map((d) => d.coords[1] / 10));
+  const zones = constructZones(mapAnnotation);
+
+  console.log("DEBUG makeAnnotationGlyph", minX, maxX, minY, maxY);
+
+  const HEIGHT = WIDTH * ((maxY - minY) / (maxX - minX));
+
+  // add a border
+  let svg = d3
+    .create("svg")
+    .attr("width", WIDTH)
+    .attr("height", HEIGHT)
+    .style("border", "1px solid black");
+  const expandRange = (min, max, factor) => {
+    const range = max - min;
+    const padding = range * factor;
+    return [min - padding, max + padding];
+  };
+  const xScale = d3
+    .scaleLinear()
+    .domain(expandRange(minX, maxX, 0.2))
+    .range([0, WIDTH]);
+  const yScale = d3
+    .scaleLinear()
+    .domain(expandRange(minY, maxY, 0.2))
+    .range([HEIGHT, 0]);
+
+  svg
+    .selectAll("polygon")
+    .data(zones)
+    .join("polygon")
+    .attr("points", (d) =>
+      d.geometry.coordinates[0]
+        .map((d) => [xScale(d[0]), yScale(d[1])].join(","))
+        .join(" ")
+    )
+    .style("fill", (d, i) => (i == index ? "darkgrey" : "#F5F5F5"))
+    .style("stroke", "black");
+  return svg.node().outerHTML;
+}
+export function argmin(array: number[]): number {
+  if (array.length === 0) {
+    throw new Error("Array is empty");
+  }
+
+  return array.reduce((minIndex, currentValue, currentIndex, arr) => {
+    return currentValue < arr[minIndex] ? currentIndex : minIndex;
+  }, 0);
+}
+
+export function argmax(array: number[]): number {
+  if (array.length === 0) {
+    throw new Error("Array is empty");
+  }
+
+  return array.reduce((maxIndex, currentValue, currentIndex, arr) => {
+    return currentValue > arr[maxIndex] ? currentIndex : maxIndex;
+  }, 0);
+}
 
 // export const labels = historicalLabelsfbay;

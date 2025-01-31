@@ -109,7 +109,7 @@ export class ParticleAdvectionLayer extends AbstractLayerGenerator {
       loaders: [OBJLoader],
       getPosition: (d) => [d[0], d[1]],
       getColor: (d) => [
-        130, 130, 130, 255,
+        150, 150, 150, 130,
         // d3.scaleLinear().domain([0, 360]).range([0, 255])(d[2]),
         // 0,
         // 0,
@@ -121,6 +121,7 @@ export class ParticleAdvectionLayer extends AbstractLayerGenerator {
       // getScale: [0.3, 0.3, 0.3],
       pickable: true,
       onHover: (d) => console.log(d),
+      parameters: { cull: true },
     });
 
     // console.log("DEBUG IN PARTICLE ADVECTION LAYER", this.vectorField);

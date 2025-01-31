@@ -1,16 +1,21 @@
 <template>
   <div
-    class="flex flex-col items-center p-6 bg-gray-100 rounded-lg shadow-md relative"
+    class="flex flex-col items-center p-6 bg-gray-100 rounded-lg shadow-md relative w-fit"
   >
     <Button
       :icon="isOpened ? 'pi pi-minus' : 'pi pi-plus'"
-      @click="toggleIsOpened"
       class="absolute top-0 right-0 m-2"
+      @click="toggleIsOpened"
     />
-    <h1 class="text-xl font-bold text-gray-800">Characteristics</h1>
-    <div v-if="isOpened" class="mt-4">
+    <h1 id="temp" class="text-xl font-bold text-gray-800">Characteristics</h1>
+    <div v-if="isOpened" class="mt-4 w-fit">
       <div v-if="characteristic.length == 0" class="font-medium text-gray-600">
         Must define regions to see their Characteristics
+      </div>
+      <div
+        v-if="characteristic.length > 0 && characteristic[0].transition != null"
+      >
+        Estimated transition from Selection 1 to Selection 2
       </div>
       <div
         v-if="characteristic.length > 0 && characteristic[0].transition != null"
@@ -23,18 +28,22 @@
           >Selection 2</span
         >
       </div>
-      <transition-group name="fade" tag="div" class="w-full max-w-sm">
+      <div v-if="isLoading" class="font-medium text-gray-600">Loading...</div>
+      <transition-group name="fade" tag="div" class="w-fit">
         <div
           v-for="c in characteristic"
-          :key="c.name"
-          class="bg-white p-3 mb-2 rounded-lg shadow-sm border border-gray-200 transition-transform duration-300"
+          :key="c.index"
+          class="bg-white p-3 mb-2 rounded-lg shadow-sm border border-gray-200 transition-transform duration-300 w-full"
           :class="{
-            'scale-105': animateChange.includes(c.name),
-            'bg-green-50': direction[c.name] === 'increase',
-            'bg-red-50': direction[c.name] === 'decrease',
+            'scale-105': animateChange.includes(c.index),
+            'bg-green-50': direction[c.index] === 'increase',
+            'bg-red-50': direction[c.index] === 'decrease',
           }"
         >
-          <CharacteristicViewerRow :characteristic="c" />
+          <CharacteristicViewerRow
+            :characteristic="c"
+            :time_type="props.time_type"
+          />
         </div>
       </transition-group>
     </div>
@@ -44,9 +53,13 @@
 <script setup lang="ts">
 import { ref, watch, Ref, onMounted } from "vue";
 import { useStore } from "@/store/main";
-import { timeType, dataset_name, constructZones } from "../utils/utils";
+import {
+  timeType,
+  dataset_name,
+  constructZones,
+  makeAnnotationGlyph,
+} from "../utils/utils";
 import API from "@/api/api";
-const blah = ref("");
 
 import CharacteristicViewerRow from "./CharacteristicViewerRow.vue";
 
@@ -58,6 +71,7 @@ const props = defineProps<{
 
 const animateChange = ref([]);
 const direction = ref({});
+const isLoading = ref(false);
 
 const store = useStore();
 const msg = ref("");
@@ -67,7 +81,7 @@ const toggleIsOpened = () => (isOpened.value = !isOpened.value);
 
 const characteristic: Ref<
   {
-    name: string;
+    index: number;
     // percentage: number;
     count: number;
     total: number;
@@ -82,22 +96,22 @@ watch(
     // Identify which items have changed
     const changedItems = newVal.filter((newItem, index) => {
       const oldItem = oldVal[index];
-      return !oldItem || oldItem.percentage !== newItem.percentage;
+      return !oldItem || oldItem.count !== newItem.count;
     });
 
     // Track direction of change (increase or decrease)
     changedItems.forEach((item) => {
-      const previousPercentage = oldVal.find(
-        (oldItem) => oldItem.name === item.name
-      )?.percentage;
-      if (previousPercentage != null) {
-        direction.value[item.name] =
-          item.percentage > previousPercentage ? "increase" : "decrease";
+      const previousCount = oldVal.find(
+        (oldItem) => oldItem.index === item.index
+      )?.count;
+      if (previousCount != null) {
+        direction.value[item.index] =
+          item.count > previousCount ? "increase" : "decrease";
       }
     });
 
     // Collect names of changed items
-    animateChange.value = changedItems.map((item) => item.name);
+    animateChange.value = changedItems.map((item) => item.index);
 
     // Remove animation after a short delay
     setTimeout(() => {
@@ -109,6 +123,7 @@ watch(
 );
 
 async function getCharacteristic() {
+  isLoading.value = true;
   const selectedFiles = props.isComparison
     ? store.getFiles[1]
     : store.getFiles[0];
@@ -131,8 +146,6 @@ async function getCharacteristic() {
     }
   );
 
-  let transition = null;
-
   characteristic.value = [];
   console.log("DEBUG GET CHARACTERISTIC", zoneCounts, total);
   const sortedKeys = Object.keys(zoneCounts).sort(
@@ -143,6 +156,7 @@ async function getCharacteristic() {
     watch(
       () => store.vectorFieldData[props.time_type],
       async (vectorField) => {
+        isLoading.value = true;
         const transitionData = await API.fetchData(
           "/get_forcing_transition",
           true,
@@ -154,34 +168,29 @@ async function getCharacteristic() {
             y: vectorField["y"],
           }
         );
-        // Object.keys(transitionData).forEach((zoneID) => {
-        //   const counted = transition[zoneID].reduce((acc, item) => {
-        //     acc[item] = (acc[item] || 0) + 1;
-        //     return acc;
-        //   }, {});
-        //   console.log("DEBUG UPDATEVECTOR FIELD TRANSITION: ", zoneID, counted);
-        // });
 
-        const temp = {};
-        transition = Object.keys(transitionData).forEach((zoneID) => {
-          const sourceZoneName =
-            store.mapAnnotation.features[zoneID].properties?.name;
+        const temp = {}; // Temporary object to store transition data { sourceZoneIndex: { destZoneIndex: percentage } }
+        Object.keys(transitionData).forEach((zoneID) => {
+          // const sourceZoneName =
+          // store.mapAnnotation.features[zoneID].properties?.name;
+          const sourceZoneIndex = zoneID;
           const counted = transitionData[zoneID].reduce((acc, item) => {
-            const destZoneName =
-              store.mapAnnotation.features[item].properties?.name;
-            acc[destZoneName] = (acc[destZoneName] || 0) + 1;
+            // const destZoneName =
+            //   store.mapAnnotation.features[item].properties?.name;
+            const destZoneIndex = item;
+            acc[destZoneIndex] = (acc[destZoneIndex] || 0) + 1;
             return acc;
           }, {});
-          let transitionList = Object.entries(counted).map(([name, count]) => {
+          let transitionList = Object.entries(counted).map(([index, count]) => {
             return {
-              name: name,
+              index: index,
               percentage: count / transitionData[zoneID].length,
             };
           });
           transitionList = transitionList.sort(
             (a, b) => b.percentage - a.percentage
           );
-          temp[sourceZoneName] = transitionList;
+          temp[sourceZoneIndex] = transitionList;
           console.log(
             "DEBUG UPDATEVECTOR FIELD TRANSITION: IN CHAR ",
             zoneID,
@@ -191,20 +200,21 @@ async function getCharacteristic() {
         // Convert to array of objects
 
         characteristic.value.forEach((c) => {
-          c.transition = temp[c.name];
+          c.transition = temp[c.index];
         });
+        isLoading.value = false;
       },
       { once: true }
     );
   }
   sortedKeys.forEach((key) => {
     characteristic.value.push({
-      name: store.mapAnnotation.features[key].properties?.name,
+      index: parseInt(key),
       count: zoneCounts[key],
       total: total,
-      // percentage: ret[key],
     });
   });
+  isLoading.value = false;
 }
 
 onMounted(() => {
@@ -216,8 +226,6 @@ onMounted(() => {
       props.isShowingVectorField,
     ],
     () => {
-      blah.value = "SDFDSFSF";
-      console.log("SDFSFSDFD");
       getCharacteristic();
     },
     { immediate: true }

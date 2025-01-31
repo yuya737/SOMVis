@@ -1,5 +1,5 @@
 import { BitmapLayer, PathLayer } from "@deck.gl/layers";
-import { watch, ComputedRef } from "vue";
+import { watch, ComputedRef, Ref } from "vue";
 import { AbstractLayerGenerator } from "./AbstractLayerGenerator";
 
 import { timeType } from "./utils";
@@ -14,7 +14,6 @@ export class NodeLayer extends AbstractLayerGenerator {
 
   readonly dataset_type;
   readonly time_type: timeType;
-  readonly imgSrc;
   readonly drawEveryN: number;
   readonly dims: number;
   readonly deck: any;
@@ -23,6 +22,7 @@ export class NodeLayer extends AbstractLayerGenerator {
   layerList: any = null;
 
   anchors: any;
+  nodeClickedID: Ref<number>;
 
   map: any;
 
@@ -31,26 +31,23 @@ export class NodeLayer extends AbstractLayerGenerator {
     time_type,
     nodeMapGetter,
     highlightedNodeGetter,
-    imgSrc,
     drawEveryN,
     dims = 30,
     deck,
     anchors,
+    nodeClickedID,
   }) {
     super();
     this.dataset_type = dataset_type;
     this.time_type = time_type;
     this.nodeMapGetter = nodeMapGetter;
     this.highlightedNodeGetter = highlightedNodeGetter;
-    this.imgSrc = imgSrc;
     this.drawEveryN = drawEveryN;
     this.dims = dims;
     this.deck = deck;
     this.anchors = anchors;
+    this.nodeClickedID = nodeClickedID;
 
-    watch(imgSrc, () => {
-      this.needsToRedraw = true;
-    });
     // watch(
     //   () => this.nodeMapGetter.value(this.time_type),
     //   () => (this.needsToRedraw = true),
@@ -58,8 +55,19 @@ export class NodeLayer extends AbstractLayerGenerator {
     // );
     watch(this.highlightedNodeGetter, () => (this.needsToRedraw = true));
     watch(
+      this.nodeClickedID,
+      () => {
+        this.needsToRedraw = true;
+        console.log("DEBUG: CLICKED NODE ID", this.nodeClickedID.value);
+      },
+      { deep: true }
+    );
+
+    watch(
       () => [this.nodeMapGetter.value(this.time_type), this.anchors.value],
-      () => (this.needsToRedraw = true),
+      () => {
+        this.needsToRedraw = true;
+      },
       { deep: true }
     );
   }
@@ -100,9 +108,13 @@ export class NodeLayer extends AbstractLayerGenerator {
           },
           // pickable: true,
           onClick: (info) => {
-            this.imgSrc.value = `http://localhost:5002/node_images/${this.dataset_type}/${this.time_type}/${info.layer.props.index}.png`;
-            this.indexClicked = info.layer.props.index;
-            console.log("Clicked:", info);
+            if (info.layer.props.index == this.indexClicked) {
+              this.indexClicked = -1;
+              this.nodeClickedID.value = -1;
+            } else {
+              this.indexClicked = info.layer.props.index;
+              this.nodeClickedID.value = info.layer.props.index;
+            }
           },
           onDragStart: () => {
             this.deck.setProps({ controller: { dragPan: false } });
@@ -174,8 +186,8 @@ export class NodeLayer extends AbstractLayerGenerator {
       }),
     ];
 
-    if (this.imgSrc.value !== "") {
-      console.log("DEBUG PATHLAYER", this.indexClicked);
+    console.log("DEBUG PATHLAYER", this.indexClicked);
+    if (this.indexClicked != -1) {
       let id = this.indexClicked;
       ret = [
         ...ret,
@@ -193,6 +205,25 @@ export class NodeLayer extends AbstractLayerGenerator {
               [this.map[id].coords[0] - size, this.map[id].coords[1] - size], // Closing the rectangle
             ],
           ],
+        }),
+        new IconLayer({
+          id: "selected-node-icon-layer",
+          data: [
+            [this.map[id].coords[0] + size, this.map[id].coords[1] + size],
+          ],
+          getPosition: (d) => d,
+          iconAtlas: new URL("/magnifying-glass.svg", import.meta.url).href,
+          getIcon: (d) => "marker",
+          getSize: 40,
+          iconMapping: {
+            marker: {
+              x: 0,
+              y: 0,
+              width: 800,
+              height: 800,
+              // mask: true,
+            },
+          },
         }),
       ];
     }
@@ -221,6 +252,7 @@ export class NodeLayer extends AbstractLayerGenerator {
         getWidth: 0.1,
         getColor: [255, 0, 0],
         data: data,
+        visible: false,
       }),
       new IconLayer({
         id: "selected-anchor-icon-layer",
@@ -238,6 +270,7 @@ export class NodeLayer extends AbstractLayerGenerator {
             // mask: true,
           },
         },
+        visible: false,
       }),
       new IconLayer({
         id: "selected-anchor-cancel-icon-layer",
@@ -262,6 +295,7 @@ export class NodeLayer extends AbstractLayerGenerator {
           this.anchors.value["ids"].splice(index, 1);
           this.anchors.value["coords"].splice(index, 1);
         },
+        visible: false,
       }),
     ];
 

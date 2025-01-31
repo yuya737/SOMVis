@@ -59,7 +59,11 @@
 
           <Button
             v-if="isShowingComparison"
-            label="Switch comparison mode"
+            :label="
+              isShowingVectorField
+                ? 'Switch to Side-by-Side'
+                : 'Switch to Vector Field'
+            "
             class="bg-blue-500 text-white h-fit p-1 hover:bg-blue-600"
             @click="toggleComparisonMode"
           />
