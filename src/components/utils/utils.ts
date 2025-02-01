@@ -259,9 +259,9 @@ export const colorInterp = (value: number) =>
     .split(",")
     .map((d) => Number(d));
 
-export const pointsToCurve = (points: number[][]) => {
+export const pointsToCurve = (points: number[][], threshold) => {
   let curve = line().curve(curveNatural);
-  return pointsOnPath(curve(points), 0.001)[0];
+  return pointsOnPath(curve(points), threshold)[0];
 };
 
 export const approx = (a, b, epsilon = 0.0001) => Math.abs(a - b) < epsilon;
@@ -534,7 +534,15 @@ export function makeAnnotationGlyph(mapAnnotation, nodeMap, index, WIDTH) {
   const maxY = Math.max(...nodeMap.map((d) => d.coords[1] / 10));
   const zones = constructZones(mapAnnotation);
 
-  console.log("DEBUG makeAnnotationGlyph", minX, maxX, minY, maxY);
+  console.log(
+    "DEBUG1 makeAnnotationGlyph",
+    minX,
+    maxX,
+    minY,
+    maxY,
+    index,
+    WIDTH
+  );
 
   const HEIGHT = WIDTH * ((maxY - minY) / (maxX - minX));
 
@@ -567,9 +575,11 @@ export function makeAnnotationGlyph(mapAnnotation, nodeMap, index, WIDTH) {
         .map((d) => [xScale(d[0]), yScale(d[1])].join(","))
         .join(" ")
     )
-    .style("fill", (d, i) => (i == index ? "darkgrey" : "#F5F5F5"))
+    .style("fill", (d, i) => (i == index ? "#787878" : "#F5F5F5"))
+    .style("fill-opacity", 0.5)
     .style("stroke", "black");
-  return svg.node().outerHTML;
+  return svg;
+  // return svg.node().outerHTML;
 }
 export function argmin(array: number[]): number {
   if (array.length === 0) {

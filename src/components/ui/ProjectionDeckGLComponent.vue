@@ -10,50 +10,22 @@
         left: `${store.mapAnnotationPopup.coords[0]}px`,
       }"
     />
-    <!-- <InfoPanel
-        class="z-[4]"
-        :settings="InfoPanelSettings"
-        @settings-changed="settingsChanged"
-      /> -->
     <div
       class="flex flex-col justify-start items-end absolute top-0 right-0 z-[4] m-4 overflow-auto w-fit gap-2 h-fit max-h-[100%]"
     >
-      <MemberViewer
-        :time_type="props.time_type"
-        :is-comparison="props.isComparison"
-        :is-showing-vector-field="props.isShowingVectorField"
-      />
       <CharacteristicViewer
+        v-if="store.currentStep == 'Analyze'"
         :time_type="props.time_type"
         :is-comparison="props.isComparison"
         :is-showing-vector-field="props.isShowingVectorField"
       />
-      <div
-        class="flex flex-col h-fit w-fit items-center justify-center p-2 rounded-lg text-center gap-4 bg-gray-100 rounded-lg shadow-md p-6"
-      >
-        <Button label="Recalculate MDE" @click="recalculateMDE" />
-        <ToggleButton
-          v-model="isHidingSurface"
-          on-label="Show Distribution"
-          off-label="Hide Distribution"
-          @change="handleButtons"
-        />
-        <ToggleButton
-          v-model="isHiding3D"
-          on-label="Show 3D"
-          off-label="Hide 3D"
-          @change="handleButtons"
-        />
-        <SelectButton
-          v-model:="store.mapMode"
-          :options="modeOptions"
-          @change="handleMapModeChanged"
-        />
-        <!-- <Button label="Get Characteristic" @click="getCharacteristic" /> -->
-        <div class="flex flex-col items-center gap-2 text-center">
-          <div class="font-bold flex flex-row">Showing {{ time_type }}</div>
-        </div>
-      </div>
+      <MemberViewer
+        v-if="store.currentStep == 'Analyze'"
+        :time_type="props.time_type"
+        :is-comparison="props.isComparison"
+        :is-showing-vector-field="props.isShowingVectorField"
+        :is-showing-comparison="props.isShowingComparison"
+      />
     </div>
     <!-- <NodeInspector
       v-if="imgSrc != ''"
@@ -62,7 +34,9 @@
       @close-node-inspector="imgSrc = ''"
     /> -->
     <div v-if="isRecalculatingMDE" class="overlay">
-      <div class="overlay-text">Recalculating MDE...</div>
+      <div class="overlay-text">
+        Recalculating mapping based on the given anchors...
+      </div>
     </div>
   </div>
 </template>
@@ -77,13 +51,6 @@ import { LayersList } from "@deck.gl/core";
 import { COORDINATE_SYSTEM } from "@deck.gl/core";
 import { Layer } from "deck.gl/typed";
 
-// PRIMEVUE IMPORTS
-import ToggleButton from "primevue/togglebutton";
-import Dropdown from "primevue/dropdown";
-import ProgressSpinner from "primevue/progressspinner";
-import SelectButton from "primevue/selectbutton";
-import Button from "primevue/button";
-
 // STORE IMPORT
 import { useStore } from "@/store/main";
 
@@ -96,33 +63,27 @@ import { AbstractLayerGenerator } from "@/components/utils/AbstractLayerGenerato
 
 import { NodeLayer } from "@/components/utils/NodeLayer";
 import { NodeClassifyLayer } from "@/components/utils/NodeClassifyLayer";
-import { Node3DLayer } from "@/components/utils/Node3DLayer";
 import { ParticleAdvectionLayer } from "@/components/utils/ParticleAdvectionLayer";
-import { ExplainabilityLayer } from "@/components/utils/ExplainabilityLayer";
 import { SpaceAnnotationLayer } from "@/components/utils/SpaceAnnotationLayer";
 import { SOMLayer } from "@/components/utils/SOMLayer";
-import { AxisLayer } from "@/components/utils/AxisLayer";
-
-// UTILS IMPORTS
-import API from "@/api/api";
+import { LLMRegionLayer } from "@/components/utils/LLMRegionLayer";
 
 import {
   mapView,
   DECKGL_SETTINGS,
-  generateMonthRangeList,
-  months,
-  sspAllLabels,
-  subsetType,
   dataset_name,
   timeType,
-  timeTypeMonths,
 } from "@/components/utils/utils";
 import TooltipView from "../TooltipView.vue";
 import MemberViewer from "../MemberViewer.vue";
 
+import distance from "@turf/distance";
+import bearing from "@turf/bearing";
+
 const props = defineProps({
   time_type: timeType,
   isComparison: Boolean,
+  isShowingComparison: Boolean,
   isShowingVectorField: Boolean,
 });
 
@@ -137,14 +98,15 @@ let deck: any = null;
 const deckglCanvas = `deck-canvas-projection-viewer-${Math.random()}`;
 
 const mode = ref("Explore");
-const modeOptions = ["Explore", "Annotate"];
-const isHidingSurface = ref(false);
 const isHiding3D = ref(false);
 const isRecalculatingMDE = ref(false);
 
 onMounted(() => {
   deck = new Deck({
     ...DECKGL_SETTINGS,
+    glOptions: {
+      preserveDrawingBuffer: true,
+    },
     canvas: deckglCanvas,
     views: mapView,
   });
@@ -200,18 +162,19 @@ onMounted(() => {
       store.getHighlightedNodes,
       store.getRedrawFlag,
       store.nodeClickedID,
+      store.isHidingDistribution,
+      store.currentStep,
+      store.LLMQueriedRegionIndex,
+      store.isShowingLLMQueriedRegion,
     ],
     async () => {
+      console.log("DEBUG PROJECTIONDECKGL REDRAW");
       await nextTick();
       drawAllLayers();
     }
   );
   watch(
-    () => [
-      store.getNodeMap(props.time_type),
-      store.getExlainablityPoints,
-      store.anchors,
-    ],
+    () => [store.getNodeMap(props.time_type), store.anchors],
     () => {
       drawAllLayers();
     },
@@ -234,11 +197,14 @@ async function initializeLayers() {
     getSubsetType,
     getHoveredFile,
     getVectorFieldData,
-    getExlainablityPoints,
+    getLLMQueryResult,
     getHighlightedNodes,
     getContourLevels,
     anchors,
     nodeClickedID,
+    currentStep,
+    LLMQueriedRegionIndex,
+    isShowingLLMQueriedRegion,
   } = storeToRefs(store);
   let nodeLayerGenerator = new NodeLayer({
     dataset_type: dataset_name,
@@ -250,6 +216,7 @@ async function initializeLayers() {
     deck: deck,
     anchors: anchors,
     nodeClickedID: nodeClickedID,
+    currentStep: currentStep,
   });
   let nodeclassifyLayerGenerator = new NodeClassifyLayer({
     mappingDataGetter: getNodeMap,
@@ -258,9 +225,8 @@ async function initializeLayers() {
     contourDataGetter: getContourData,
     interpolatedSurfaceGetter: getInterpolatedSurfaceData,
     time_type: props.time_type,
+    currentStep: currentStep,
   });
-  let axisLayerGenerator = new AxisLayer(-100, 100, 100, true);
-  // let axisLayerGenerator = new AxisLayer(-1000, 1000, 50, true);
 
   let xMin = Math.min(
     ...store.nodeMap[props.time_type].map((d) => d.coords[0])
@@ -294,37 +260,34 @@ async function initializeLayers() {
     ],
     interpolatedSurface: store.interpolatedSurfaceData[props.time_type],
     time_type: props.time_type,
+    currentStep: currentStep,
   });
-
-  // let node3DLayerGenerator = new Node3DLayer({
-  //   interpolatedSurfaceGetter: getInterpolatedSurfaceData,
-  //   mappingDataGetter: getNodeMap,
-  //   meanPerNodeGetter: getClassifyData,
-  //   hotspotPolygonsGetter: getHotspotPolygons,
-  //   time_type: props.time_type,
-  // });
 
   let particleAdvectionLayerGenerator = new ParticleAdvectionLayer({
     vectorFieldGetter: getVectorFieldData,
     time_type: props.time_type,
+    currentStep: currentStep,
   });
 
-  let explainabilityLayerGenerator = new ExplainabilityLayer({
-    explainablityPointsGetter: getExlainablityPoints,
-    deck: deck,
+  let spaceAnnotationLayerGenerator = new SpaceAnnotationLayer({
+    currentStep: currentStep,
   });
 
-  let spaceAnnotationLayerGenerator = new SpaceAnnotationLayer();
+  let llmRegionLayerGenerator = new LLMRegionLayer({
+    nodeMapGetter: getNodeMap,
+    indexToShow: LLMQueriedRegionIndex,
+    LLMQueryGetter: getLLMQueryResult,
+    isShowingLLMRegion: isShowingLLMQueriedRegion,
+    time_type: props.time_type,
+  });
 
   layerGenerators = [
-    // axisLayerGenerator,
     nodeLayerGenerator,
     nodeclassifyLayerGenerator,
-    // node3DLayerGenerator,
     particleAdvectionLayerGenerator,
     somLayerGenerator,
-    // explainabilityLayerGenerator,
     spaceAnnotationLayerGenerator,
+    llmRegionLayerGenerator,
   ];
   // Get the layers
   layerList = layerGenerators.map((g) => g.getLayers()).flat();
@@ -341,24 +304,26 @@ function filterComparisonLayers(layerList) {
   });
 }
 
-function drawAllLayers() {
+function drawAllLayers(afterMDE = false) {
   // Need to make sure that the 'watch's on the layer generators are flagged with a nextTick()
   nextTick(() => {
     layerList = layerGenerators
       .map((g) => {
-        return g.getLayers().map(
-          (d: Layer) =>
-            d.id == "nebula"
-              ? d
-              : d.clone({
-                  coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
-                  coordinateOrigin: [0, 0, 0],
-                })
-          // d.clone({
-          //   coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
-          //   coordinateOrigin: [0, 0, 0],
-          // })
-        );
+        return g.getLayers().map((d: Layer) => {
+          let ret = d;
+          if (d.id !== "nebula") {
+            ret = ret.clone({
+              coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
+              coordinateOrigin: [0, 0, 0],
+            });
+          }
+          if (d.id.startsWith("image-layer")) {
+            ret = ret.clone({
+              transitions: { bounds: afterMDE ? 1000 : 0 },
+            });
+          }
+          return ret;
+        });
       })
       .flat();
     layerList = filterComparisonLayers(layerList);
@@ -370,22 +335,10 @@ function drawAllLayers() {
   });
 }
 
-function setLayerProps() {
-  deck.setProps({ layers: layerList });
-}
-
-async function recalculateMDE() {
-  isRecalculatingMDE.value = true;
-  await store.updateMDE(store.anchors);
-  // store.anchors = { ids: [], coords: [] };
-  console.log("MDE recalculated");
-  drawAllLayers();
-  isRecalculatingMDE.value = false;
-}
 function handleButtons() {
   layerList = layerList.map((l) => {
     if (l.id.startsWith("polygon-layer")) {
-      return l.clone({ visible: !isHidingSurface.value });
+      return l.clone({ visible: !store.isHidingDistribution });
     } else if (l.id.startsWith("node3d")) {
       return l.clone({ visible: !isHiding3D.value });
     } else {
@@ -395,10 +348,36 @@ function handleButtons() {
   setLayerProps();
 }
 
-function handleMapModeChanged({ value }) {
+function setLayerProps() {
+  deck.setProps({ layers: layerList });
+}
+
+watch(
+  () => store.recalculateMDEFlag,
+  () => {
+    recalculateMDE();
+  }
+);
+
+async function recalculateMDE() {
+  isRecalculatingMDE.value = true;
+  await store.updateMDE(store.anchors);
+  // store.anchors = { ids: [], coords: [] };
+  console.log("MDE recalculated");
+  drawAllLayers(true);
+  isRecalculatingMDE.value = false;
+}
+
+watch(
+  () => store.mapMode,
+  (newVal) => {
+    handleMapModeChanged(newVal);
+  }
+);
+
+function handleMapModeChanged(value) {
   if (value == "Annotate") {
     let spaceAnnotationLayer = layerList.find((d) => d.id == "nebula");
-    console.log("DEBUG ANNOTATE", spaceAnnotationLayer);
     deck.setProps({
       getCursor: spaceAnnotationLayer.getCursor.bind(spaceAnnotationLayer),
     });
@@ -409,4 +388,140 @@ function handleMapModeChanged({ value }) {
   }
   drawAllLayers();
 }
+
+function projectLayerCoordToLngLat([x, y]) {
+  // Earth radius in meters (WGS84)
+  const R = 6378137; // Radius of Earth in meters
+
+  const latChange = y / R;
+  const lonChange = x / R;
+
+  // Convert radians to degrees
+  const lat = latChange * (180 / Math.PI); // Convert to degrees
+  const lon = lonChange * (180 / Math.PI); // Convert to degrees
+
+  // Reversed coordinates in [longitude, latitude] format
+  const reversedLngLat = [lon, lat];
+
+  console.log("Reversed coordinates:", reversedLngLat);
+
+  return reversedLngLat;
+}
+
+function toCanvasCoords([screenX, screenY]) {
+  const dpr = window.devicePixelRatio; // Get the device pixel ratio
+
+  // Convert screen (CSS) coordinates to canvas coordinates
+  const canvasX = screenX * dpr;
+  const canvasY = screenY * dpr;
+  return [canvasX, canvasY];
+}
+function cropCanvas() {
+  const minX = Math.min(
+    ...store.nodeMap[props.time_type].map((d) => d.coords[0])
+  );
+  const maxX = Math.max(
+    ...store.nodeMap[props.time_type].map((d) => d.coords[0])
+  );
+  const minY = Math.min(
+    ...store.nodeMap[props.time_type].map((d) => d.coords[1])
+  );
+  const maxY = Math.max(
+    ...store.nodeMap[props.time_type].map((d) => d.coords[1])
+  );
+
+  const expandRange = (min, max, factor) => {
+    const range = max - min;
+    const padding = range * factor;
+    return [min - padding, max + padding];
+  };
+
+  const [expandedMinX, expandedMaxX] = expandRange(minX, maxX, 0.2);
+  const [expandedMinY, expandedMaxY] = expandRange(minY, maxY, 0.2);
+
+  // Convert to canvas coordinates
+  const [canvasExpandedMinX, canvasExpandedMinY] = toCanvasCoords(
+    deck
+      .getViewports()[0]
+      .project(projectLayerCoordToLngLat([expandedMinX, expandedMaxY]))
+  );
+  const [canvasExpandedMaxX, canvasExpandedMaxY] = toCanvasCoords(
+    deck
+      .getViewports()[0]
+      .project(projectLayerCoordToLngLat([expandedMaxX, expandedMinY]))
+  );
+
+  const width = canvasExpandedMaxX - canvasExpandedMinX;
+  const height = canvasExpandedMaxY - canvasExpandedMinY;
+
+  const canvas = document.getElementById(deckglCanvas);
+
+  // Get the WebGL2 context
+  const gl = canvas.getContext("webgl2");
+
+  // Define the crop area (x, y, width, height)
+  const cropArea = {
+    x: Math.round(canvasExpandedMinX),
+    y: Math.round(canvasExpandedMaxY),
+    width: Math.round(width),
+    height: Math.round(height),
+  };
+
+  // Create a new 2D canvas for the cropped area
+  const croppedCanvas = document.createElement("canvas");
+  croppedCanvas.width = cropArea.width;
+  croppedCanvas.height = cropArea.height;
+
+  // Get the 2D context of the new canvas
+  const ctx = croppedCanvas.getContext("2d");
+
+  // Read the pixel data from the WebGL2 canvas
+  const pixelData = new Uint8Array(cropArea.width * cropArea.height * 4); // RGBA (4 channels)
+
+  // Read the pixels from the WebGL canvas
+  gl.readPixels(
+    cropArea.x,
+    deck.canvas.height - cropArea.y,
+    cropArea.width,
+    cropArea.height,
+    gl.RGBA,
+    gl.UNSIGNED_BYTE,
+    pixelData
+  );
+
+  // Flip the image vertically by reversing the rows
+  const flippedPixelData = new Uint8Array(pixelData.length);
+
+  for (let row = 0; row < cropArea.height; row++) {
+    const sourceRowOffset = row * cropArea.width * 4;
+    const targetRowOffset = (cropArea.height - row - 1) * cropArea.width * 4;
+    flippedPixelData.set(
+      pixelData.slice(sourceRowOffset, sourceRowOffset + cropArea.width * 4),
+      targetRowOffset
+    );
+  }
+
+  // Create an ImageData object with the flipped pixel data
+  const imageData = new ImageData(
+    new Uint8ClampedArray(flippedPixelData),
+    cropArea.width,
+    cropArea.height
+  );
+
+  // Draw the ImageData onto the new 2D canvas
+  ctx.putImageData(imageData, 0, 0);
+  return croppedCanvas;
+}
+
+watch(
+  () => store.currentStep,
+  (newVal) => {
+    if (newVal == "Analyze")
+      requestAnimationFrame(() => {
+        console.log("DEBUG: Saving nodemap to canvas");
+        const croppedCanvas = cropCanvas();
+        store.nodeMapCanvas = croppedCanvas;
+      });
+  }
+);
 </script>

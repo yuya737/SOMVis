@@ -16,14 +16,19 @@ export class ParticleAdvectionLayer extends AbstractLayerGenerator {
 
   vectorField: any;
   time_type: timeType;
+  currentStep: Ref<step>;
 
-  constructor({ vectorFieldGetter, time_type }) {
+  constructor({ vectorFieldGetter, time_type, currentStep }) {
     super();
     this.vectorFieldGetter = vectorFieldGetter;
     this.time_type = time_type;
+    this.currentStep = currentStep;
 
     watch(
-      () => this.vectorFieldGetter.value(this.time_type),
+      () => [
+        this.vectorFieldGetter.value(this.time_type),
+        this.currentStep.value,
+      ],
       () => (this.needsToRedraw = true),
       { deep: true }
     );
@@ -103,13 +108,12 @@ export class ParticleAdvectionLayer extends AbstractLayerGenerator {
     // });
     let layer = new SimpleMeshLayer({
       id: "vector-field",
-      visible: true,
       data: data,
       mesh: "https://raw.githubusercontent.com/yuya737/arrow_obj/main/Arrow5.obj",
       loaders: [OBJLoader],
       getPosition: (d) => [d[0], d[1]],
       getColor: (d) => [
-        150, 150, 150, 130,
+        120, 120, 120, 130,
         // d3.scaleLinear().domain([0, 360]).range([0, 255])(d[2]),
         // 0,
         // 0,
@@ -122,72 +126,9 @@ export class ParticleAdvectionLayer extends AbstractLayerGenerator {
       pickable: true,
       onHover: (d) => console.log(d),
       parameters: { cull: true },
+      visible: this.currentStep.value == "Analyze",
     });
 
-    // console.log("DEBUG IN PARTICLE ADVECTION LAYER", this.vectorField);
-    // let textureData = {
-    //   width: this.vectorField.x.length,
-    //   height: this.vectorField.y.length,
-    //   data: [],
-    //   type: GL.UNSIGNED_BYTE,
-    //   format: GL.RGBA,
-    //   dataFormat: GL.RGBA,
-    //   parameters: {
-    //     [GL.TEXTURE_MAG_FILTER]: GL.LINEAR,
-    //     [GL.TEXTURE_MIN_FILTER]: GL.LINEAR,
-    //   },
-    //   pixelStore: {
-    //     [GL.UNPACK_FLIP_Y_WEBGL]: false,
-    //   },
-    // };
-    // // console.log("windData", windData.grids.wind_direction);
-    // // console.log("extent", d3.extent(windData.grids.wind_speed));
-
-    // // const windScale = d3
-    // //   .scaleLinear()
-    // //   .domain(d3.extent(windData.grids.wind_speed))
-    // //   .range([0.3, 1]);
-
-    // let minMax = d3.extent([
-    //   ...this.vectorField.u.flat(),
-    //   ...this.vectorField.v.flat(),
-    // ]);
-    // console.log("minMax", minMax);
-
-    // const vectorScale = d3.scaleLinear().domain(minMax).range([0, 255]);
-
-    // for (let i = 0; i < this.vectorField.x.length; i++) {
-    //   for (let j = 0; j < this.vectorField.y.length; j++) {
-    //     let valid =
-    //       this.vectorField.u[i][j] != 0 && this.vectorField.v[i][j] != 0;
-    //     textureData.data.push(vectorScale(this.vectorField.u[i][j]));
-    //     textureData.data.push(vectorScale(this.vectorField.v[i][j]));
-    //     textureData.data.push(0);
-    //     textureData.data.push(valid ? 255 : 0);
-    //   }
-    // }
-
-    // textureData.data = new Uint8Array([...textureData.data]);
-    // const bounds = [
-    //   this.vectorField.x[0] * 10,
-    //   this.vectorField.y[0] * 10,
-    //   this.vectorField.x[this.vectorField.x.length - 1] * 10,
-    //   this.vectorField.y[this.vectorField.y.length - 1] * 10,
-    // ];
-
-    // let particleLayer = new ParticleLayer({
-    //   id: `wind_particle-${Math.random()}`,
-    //   image: textureData,
-    //   imageUnscale: minMax,
-    //   bounds: bounds,
-    //   numParticles: 250,
-    //   maxAge: 150,
-    //   speedFactor: 5000000,
-    //   color: [0, 0, 0],
-    //   width: 5,
-    //   opacity: 0.1,
-    //   visible: false
-    // });
     this.needsToRedraw = false;
     this.layerList = [layer];
     // this.layerList = [particleLayer];

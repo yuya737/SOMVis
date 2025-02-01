@@ -1,6 +1,7 @@
 <template>
   <!--  User Chat Message -->
-  <div class="flex gap-3 my-4 text-gray-600 text-sm flex-1">
+  <hr class="border-t border-gray-300" />
+  <div :class="tailwindClass" @click="toggleMessageActive">
     <span class="relative flex shrink-0 overflow-hidden rounded-full w-8 h-8">
       <div class="rounded-full bg-gray-100 border p-1">
         <svg
@@ -25,7 +26,24 @@
   </div>
 </template>
 <script setup lang="ts">
+import { useStore } from "@/store/main";
+import { computed } from "vue";
+const store = useStore();
 const props = defineProps<{
   message: string;
+  messageIndex: number;
 }>();
+const tailwindClass = computed(() =>
+  store.LLMQueriedRegionIndex == props.messageIndex
+    ? "flex gap-3 px-1 py-2 text-gray-600 text-sm flex-1 hover:bg-slate-200 rounded-lg bg-slate-300"
+    : "flex gap-3 px-1 py-2 text-gray-600 text-sm flex-1 hover:bg-slate-200 rounded-lg"
+);
+
+function toggleMessageActive() {
+  if (store.LLMQueriedRegionIndex == props.messageIndex) {
+    store.LLMQueriedRegionIndex = -1;
+  } else {
+    store.LLMQueriedRegionIndex = props.messageIndex;
+  }
+}
 </script>

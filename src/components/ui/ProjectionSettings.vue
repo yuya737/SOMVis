@@ -12,7 +12,9 @@
     <!-- Add New Level -->
     <div v-if="isOpened" class="flex flex-col items-center justify-center">
       <h2 olass="text-lg font-bold text-gray-700 mb-4">Set Contour Levels</h2>
-      <div class="flex flex-row items-center space-x-2 mb-4">
+      <div
+        class="flex flex-row justify-between items-center space-x-2 mb-4 w-full"
+      >
         <input
           type="number"
           placeholder="Enter contour level (%)"

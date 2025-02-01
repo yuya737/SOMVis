@@ -14,16 +14,21 @@ import { timeType } from "./utils";
 export class SpaceAnnotationLayer extends AbstractLayerGenerator {
   readonly store;
 
+  currentStep: Ref<step>;
+
   featureCollection: any;
-  constructor() {
+
+  constructor({ currentStep }) {
     super();
     this.store = useStore();
-    // this.featureCollection = {
-    //   type: "FeatureCollection",
-    //   features: [],
-    // };
+    this.currentStep = currentStep;
+
     watch(
-      () => [this.store.mapAnnotation.features, this.store.mapMode],
+      () => [
+        this.store.mapAnnotation.features,
+        this.store.mapMode,
+        this.currentStep.value,
+      ],
       () => {
         console.log("DEBUG: WATCHING MAP ANNOTATION FEATURES");
         this.needsToRedraw = true;
@@ -69,6 +74,9 @@ export class SpaceAnnotationLayer extends AbstractLayerGenerator {
       // getPosition: [0, 0],
       getSize: 24,
       getText: (d) => d.properties.name,
+      visible:
+        this.currentStep.value == "Analyze" ||
+        this.currentStep.value == "Annotate",
     });
     let layer = new EditableGeoJsonLayer({
       id: "nebula",
@@ -116,6 +124,9 @@ export class SpaceAnnotationLayer extends AbstractLayerGenerator {
           this.store.redrawFlag = !this.store.redrawFlag;
         }
       },
+      visible:
+        this.currentStep.value == "Analyze" ||
+        this.currentStep.value == "Annotate",
     });
     this.layerList = [layer, textLayer];
     this.needsToRedraw = false;

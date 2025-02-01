@@ -1,8 +1,8 @@
 <template>
-  <div
+  <!-- <div
     id="memberViewerLegend"
     class="flex flex-row justify-evenly items-center my-2"
-  ></div>
+  ></div> -->
   <DataTable
     :value="membersWithMean"
     scrollable
@@ -23,7 +23,7 @@
         />
       </template>
     </Column>
-    <Column field="mean" sortable header="Mean(Δhistorical)" class="w-fit">
+    <!-- <Column field="mean" sortable header="Mean(Δhistorical)" class="w-fit">
       <template #body="slotProps">
         <span class="inline-flex items-center justify-between w-full">
           {{ formatScientificNotation(slotProps.data) }}
@@ -36,7 +36,7 @@
           </svg>
         </span>
       </template>
-    </Column>
+    </Column> -->
   </DataTable>
 </template>
 
@@ -140,8 +140,8 @@ const membersWithMean = computedAsync(async () => {
   });
   await Promise.all([...promises, ...perMemberMeans]);
   console.log("Members with mean", ret);
-  drawLegend();
-  return ret;
+  // drawLegend();
+  return ret.sort((a, b) => a.model_name.localeCompare(b.model_name));
 });
 
 watch(
@@ -150,85 +150,57 @@ watch(
     console.log("Members with mean updated", val);
   }
 );
-function drawLegend() {
-  const numBoxes = 7;
-  let color = d3
-    .scaleDiverging(d3.interpolateBrBG)
-    .domain([monthlyMeanMin, 0, monthlyMeanMax]);
-  const legendData = Array.from({ length: numBoxes }, (_, i) => {
-    console.log(
-      (i / numBoxes) * (monthlyMeanMax - monthlyMeanMin) + monthlyMeanMin,
-      monthlyMeanMax,
-      monthlyMeanMin
-    );
-    return color(
-      (i / numBoxes) * (monthlyMeanMax - monthlyMeanMin) + monthlyMeanMin
-    );
-  });
-  console.log("DEBUG: LGEND", legendData);
+// function drawLegend() {
+//   const numBoxes = 7;
+//   let color = d3
+//     .scaleDiverging(d3.interpolateBrBG)
+//     .domain([monthlyMeanMin, 0, monthlyMeanMax]);
+//   const legendData = Array.from({ length: numBoxes }, (_, i) => {
+//     console.log(
+//       (i / numBoxes) * (monthlyMeanMax - monthlyMeanMin) + monthlyMeanMin,
+//       monthlyMeanMax,
+//       monthlyMeanMin
+//     );
+//     return color(
+//       (i / numBoxes) * (monthlyMeanMax - monthlyMeanMin) + monthlyMeanMin
+//     );
+//   });
+//   console.log("DEBUG: LGEND", legendData);
 
-  // Check if the legend already exists
-  if (document.getElementById("memberViewerLegend")) {
-    document.getElementById("memberViewerLegend").innerHTML = "";
-  }
+//   // Check if the legend already exists
+//   if (document.getElementById("memberViewerLegend")) {
+//     document.getElementById("memberViewerLegend").innerHTML = "";
+//   }
 
-  const legendItems = d3
-    .select("#memberViewerLegend")
-    .selectAll(".legend-item")
-    .data(legendData)
-    .join("div")
-    .attr("class", "legend-item");
+//   const legendItems = d3
+//     .select("#memberViewerLegend")
+//     .selectAll(".legend-item")
+//     .data(legendData)
+//     .join("div")
+//     .attr("class", "legend-item");
 
-  // Add colored boxes
-  legendItems
-    .append("svg")
-    .attr("width", 20)
-    .attr("height", 20)
-    .append("rect")
-    .attr("width", 20)
-    .attr("height", 20)
-    .style("fill", (d) => d);
+//   // Add colored boxes
+//   legendItems
+//     .append("svg")
+//     .attr("width", 20)
+//     .attr("height", 20)
+//     .append("rect")
+//     .attr("width", 20)
+//     .attr("height", 20)
+//     .style("fill", (d) => d);
 
-  // Add labels
-  legendItems
-    .append("text")
-    .style("font-size", "0.8rem")
-    .attr("text-anchor", "end") // Align text properly
-    .text((d, i) =>
-      (
-        (i / numBoxes) * (monthlyMeanMax - monthlyMeanMin) +
-        monthlyMeanMin
-      ).toExponential(1)
-    );
-
-  // const boxWidth = 30;
-  // // Create legend boxes
-  // svg
-  //   .selectAll(".legend-box")
-  //   .data(legendData)
-  //   .enter()
-  //   .append("rect")
-  //   .attr("x", (d, i) => i * boxWidth) // Set X position of each box
-  //   .attr("y", 30) // Y position
-  //   .attr("width", boxWidth) // Width of each box
-  //   .attr("height", 20) // Height of each box
-  //   .attr("fill", (d) => d);
-
-  // // Add text labels
-  // svg
-  //   .selectAll(".legend-label")
-  //   .data(legendData)
-  //   .enter()
-  //   .append("text")
-  //   .attr("x", (d, i) => i * boxWidth + boxWidth / 2)
-  //   .attr("y", 60)
-  //   .attr("text-anchor", "middle")
-  //   .attr("alignment-baseline", "middle")
-  //   .text(
-  //     (d, i) =>
-  //       (i / numBoxes) * (monthlyMeanMax - monthlyMeanMin) + monthlyMeanMin
-  // ); // Display value on the label
-}
+//   // Add labels
+//   legendItems
+//     .append("text")
+//     .style("font-size", "0.8rem")
+//     .attr("text-anchor", "end") // Align text properly
+//     .text((d, i) =>
+//       (
+//         (i / numBoxes) * (monthlyMeanMax - monthlyMeanMin) +
+//         monthlyMeanMin
+//       ).toExponential(1)
+//     );
+// }
 
 // // Add a title to the legend
 // svg.append("text")

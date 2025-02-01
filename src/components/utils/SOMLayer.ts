@@ -1,37 +1,10 @@
-import {
-  ScatterplotLayer,
-  PathLayer,
-  TextLayer,
-  CompositeLayer,
-  GridCellLayer,
-  PolygonLayer,
-} from "@deck.gl/layers";
-import { DataFilterExtension } from "@deck.gl/extensions";
-import { HeatmapLayer } from "@deck.gl/aggregation-layers";
-import { interpolateGreens } from "d3-scale-chromatic";
-import { interpolateRgb } from "d3-interpolate";
-import { interpolateRdBu } from "d3-scale-chromatic";
-import { scaleLinear } from "d3-scale";
-import PlotLayer from "@/components/layers/plot-layer";
-import kde2d from "@stdlib/stats-kde2d";
-import { scaleLinear } from "d3-scale";
+import { TextLayer, PolygonLayer } from "@deck.gl/layers";
 
-import {
-  colorSim,
-  addJitter,
-  getModelType,
-  pointsToCurve,
-  generateMonthRangeList,
-  hexToRgb,
-  stripSOMprefix,
-  subsetType,
-  timeType,
-} from "./utils";
+import { subsetType, timeType } from "./utils";
 
 import { AbstractLayerGenerator } from "./AbstractLayerGenerator";
-import { ComputedRef, watch } from "vue";
+import { ComputedRef, watch, Ref } from "vue";
 import API from "@/api/api";
-import { useStore } from "@/store/main";
 
 export class SOMLayer extends AbstractLayerGenerator {
   // readonly coords: any;
@@ -61,6 +34,8 @@ export class SOMLayer extends AbstractLayerGenerator {
   time_type: timeType;
   BMUData: BMUData[];
 
+  currentStep: Ref<step>;
+
   // constructor(coords, name: string, timeRange: any, monthRange: any) {
   constructor({
     nodeMapGetter,
@@ -74,6 +49,7 @@ export class SOMLayer extends AbstractLayerGenerator {
     extent,
     interpolatedSurface,
     time_type,
+    currentStep,
   }) {
     super();
     this.nodeMapGetter = nodeMapGetter;
@@ -87,6 +63,7 @@ export class SOMLayer extends AbstractLayerGenerator {
     this.extent = extent;
     this.interpolatedSurface = interpolatedSurface;
     this.time_type = time_type;
+    this.currentStep = currentStep;
 
     this.selectedMonthRangeList = monthRange;
 
@@ -130,6 +107,7 @@ export class SOMLayer extends AbstractLayerGenerator {
         this.selectedSubsetType,
         this.hoveredFile,
         this.contourLevelGetter,
+        this.currentStep.value,
       ],
       () => {
         // this.selectedModel.value[1].length > 0
@@ -223,9 +201,8 @@ export class SOMLayer extends AbstractLayerGenerator {
         data: BMUPolygon,
         getPolygon: (d) => d,
         stroked: false,
-        // opacity: scaleLinear().domain(thresholds).range([0.1, 0.2])(threshold),
         opacity: 0.1,
-        // opacity: 0.5,
+        visible: this.currentStep.value == "Analyze",
       });
       const polygonLabelLayer = new TextLayer({
         id: `polygon-layer-label-${i}`,
@@ -237,6 +214,7 @@ export class SOMLayer extends AbstractLayerGenerator {
         backgroundPadding: [4, 4],
         getSize: 20,
         fontFamily: "Arial",
+        visible: this.currentStep.value == "Analyze",
       });
       ret = [...ret, layer, polygonLabelLayer];
     });

@@ -23,6 +23,7 @@ export class NodeLayer extends AbstractLayerGenerator {
 
   anchors: any;
   nodeClickedID: Ref<number>;
+  currentStep: Ref<step>;
 
   map: any;
 
@@ -36,6 +37,7 @@ export class NodeLayer extends AbstractLayerGenerator {
     deck,
     anchors,
     nodeClickedID,
+    currentStep,
   }) {
     super();
     this.dataset_type = dataset_type;
@@ -47,6 +49,7 @@ export class NodeLayer extends AbstractLayerGenerator {
     this.deck = deck;
     this.anchors = anchors;
     this.nodeClickedID = nodeClickedID;
+    this.currentStep = currentStep;
 
     // watch(
     //   () => this.nodeMapGetter.value(this.time_type),
@@ -64,7 +67,11 @@ export class NodeLayer extends AbstractLayerGenerator {
     );
 
     watch(
-      () => [this.nodeMapGetter.value(this.time_type), this.anchors.value],
+      () => [
+        this.nodeMapGetter.value(this.time_type),
+        this.anchors.value,
+        this.currentStep.value,
+      ],
       () => {
         this.needsToRedraw = true;
       },
@@ -153,38 +160,38 @@ export class NodeLayer extends AbstractLayerGenerator {
           // updateTriggers: {
           //   bounds: this.map,
           // },
-          // transitions: {
-          //   bounds: 1000,
-          // },
+          transitions: {
+            bounds: 300,
+          },
         }),
       ];
     }
 
-    const highlightedNodes = this.highlightedNodeGetter.value;
-    const highlightedNodeData = [];
-    for (let i = 0; i < highlightedNodes.length; i++) {
-      const id = highlightedNodes[i];
-      if (id % this.drawEveryN == 0) {
-        highlightedNodeData.push([
-          [this.map[id].coords[0] - size, this.map[id].coords[1] - size], // Bottom-left corner
-          [this.map[id].coords[0] + size, this.map[id].coords[1] - size], // Bottom-right corner
-          [this.map[id].coords[0] + size, this.map[id].coords[1] + size], // Top-right corner
-          [this.map[id].coords[0] - size, this.map[id].coords[1] + size], // Top-left corner
-          [this.map[id].coords[0] - size, this.map[id].coords[1] - size], // Closing the rectangle
-        ]);
-      }
-    }
-    ret = [
-      ...ret,
-      new PathLayer({
-        id: `highlighted-border-layer`,
-        positionFormat: "XY",
-        getPath: (d) => d,
-        getWidth: 0.1,
-        getColor: [0, 255, 0],
-        data: highlightedNodeData,
-      }),
-    ];
+    // const highlightedNodes = this.highlightedNodeGetter.value;
+    // const highlightedNodeData = [];
+    // for (let i = 0; i < highlightedNodes.length; i++) {
+    //   const id = highlightedNodes[i];
+    //   if (id % this.drawEveryN == 0) {
+    //     highlightedNodeData.push([
+    //       [this.map[id].coords[0] - size, this.map[id].coords[1] - size], // Bottom-left corner
+    //       [this.map[id].coords[0] + size, this.map[id].coords[1] - size], // Bottom-right corner
+    //       [this.map[id].coords[0] + size, this.map[id].coords[1] + size], // Top-right corner
+    //       [this.map[id].coords[0] - size, this.map[id].coords[1] + size], // Top-left corner
+    //       [this.map[id].coords[0] - size, this.map[id].coords[1] - size], // Closing the rectangle
+    //     ]);
+    //   }
+    // }
+    // ret = [
+    //   ...ret,
+    //   new PathLayer({
+    //     id: `highlighted-border-layer`,
+    //     positionFormat: "XY",
+    //     getPath: (d) => d,
+    //     getWidth: 0.1,
+    //     getColor: [0, 255, 0],
+    //     data: highlightedNodeData,
+    //   }),
+    // ];
 
     console.log("DEBUG PATHLAYER", this.indexClicked);
     if (this.indexClicked != -1) {
@@ -252,7 +259,7 @@ export class NodeLayer extends AbstractLayerGenerator {
         getWidth: 0.1,
         getColor: [255, 0, 0],
         data: data,
-        visible: false,
+        visible: this.currentStep.value == "Anchor",
       }),
       new IconLayer({
         id: "selected-anchor-icon-layer",
@@ -270,7 +277,7 @@ export class NodeLayer extends AbstractLayerGenerator {
             // mask: true,
           },
         },
-        visible: false,
+        visible: this.currentStep.value == "Anchor",
       }),
       new IconLayer({
         id: "selected-anchor-cancel-icon-layer",
@@ -295,7 +302,7 @@ export class NodeLayer extends AbstractLayerGenerator {
           this.anchors.value["ids"].splice(index, 1);
           this.anchors.value["coords"].splice(index, 1);
         },
-        visible: false,
+        visible: this.currentStep.value == "Anchor",
       }),
     ];
 

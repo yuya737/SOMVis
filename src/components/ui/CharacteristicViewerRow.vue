@@ -5,17 +5,17 @@
   >
     <div class="flex flex-row justify-between items-center gap-4 w-full">
       <span class="font-medium text-gray-600">{{
-        store.mapAnnotation.features[props.characteristic.index].properties
-          ?.name
+        props.characteristic.index == -1
+          ? "Rest"
+          : store.mapAnnotation.features[props.characteristic.index].properties
+              ?.name
       }}</span>
       <span
         v-html="
-          makeAnnotationGlyph(
-            store.mapAnnotation,
-            store.nodeMap[props.time_type],
-            props.characteristic.index,
-            70
-          )
+          makeAnnotationGlyphWithBG({
+            indexToHighlight: props.characteristic.index,
+            width: 70,
+          })
         "
       />
     </div>
@@ -34,17 +34,17 @@
     <div class="flex flex-row justify-between items-center w-full gap-4">
       <div class="flex flex-row justify-between items-center gap-4 w-full">
         <span class="font-medium text-gray-600">{{
-          store.mapAnnotation.features[props.characteristic.index].properties
-            ?.name
+          props.characteristic.index == -1
+            ? "Rest"
+            : store.mapAnnotation.features[props.characteristic.index]
+                .properties?.name
         }}</span>
         <span
           v-html="
-            makeAnnotationGlyph(
-              store.mapAnnotation,
-              store.nodeMap[props.time_type],
-              props.characteristic.index,
-              70
-            )
+            makeAnnotationGlyphWithBG({
+              indexToHighlight: props.characteristic.index,
+              width: 70,
+            })
           "
         />
       </div>
@@ -75,12 +75,10 @@
           }}</span>
           <span
             v-html="
-              makeAnnotationGlyph(
-                store.mapAnnotation,
-                store.nodeMap[props.time_type],
-                t.index,
-                30
-              )
+              makeAnnotationGlyphWithBG({
+                indexToHighlight: t.index,
+                width: 40,
+              })
             "
           />
         </div>
@@ -106,6 +104,37 @@ const props = defineProps<{
   time_type: timeType;
 }>();
 const store = useStore();
+
+function makeAnnotationGlyphWithBG({ indexToHighlight, width }) {
+  if (indexToHighlight == -1) {
+    return;
+  }
+  let svg = makeAnnotationGlyph(
+    store.mapAnnotation,
+    store.nodeMap[props.time_type],
+    indexToHighlight,
+    width
+  );
+  const scaledCanvas = document.createElement("canvas");
+  const scaleFactor = width / store.nodeMapCanvas.width;
+
+  scaledCanvas.width = store.nodeMapCanvas.width * scaleFactor;
+  scaledCanvas.height = store.nodeMapCanvas.height * scaleFactor;
+
+  const ctx = scaledCanvas.getContext("2d");
+  ctx.scale(scaleFactor, scaleFactor); // Apply scaling transformation
+  ctx.drawImage(store.nodeMapCanvas, 0, 0); // Draw the original canvas content
+  const img = document.createElementNS(svg, "image");
+  img.setAttribute("href", scaledCanvas.toDataURL());
+  img.setAttribute("width", scaledCanvas.width);
+  img.setAttribute("height", scaledCanvas.height);
+
+  const svgNode = svg.node();
+  const firstChild = svgNode.firstChild; // Get the first child of the SVG
+  svgNode.insertBefore(img, firstChild);
+
+  return svgNode.outerHTML;
+}
 
 // let characteristicGlyph = makeAnnotationGlyph(
 //   store.mapAnnotation,

@@ -1,16 +1,27 @@
 <template>
-  <PopupView
-    ref="modal"
-    class="absolute z-[4]"
-    :style="{
-      top: `${clickedLocation.y}px`,
-      left: `${clickedLocation.x}px`,
-    }"
-  />
   <div id="timelineContainer" class="relative h-full w-full">
     <div
-      class="absolute left-0 top-0 w-fit z-[2] h-fit text-black text-lg flex flex-row justify-normal items-center"
+      class="absolute left-0 top-0 w-full z-[2] h-fit text-black text-lg flex flex-row justify-normal items-center"
     >
+      <div
+        class="text-sm bg-gray-100 text-gray-800 m-2 p-2 rounded-lg max-w-[33%]"
+      >
+        Forcing clustering per month - GCMs are clustering based on its forcing
+        from <kbd>historical</kbd> to <kbd>{{ selectedType }}</kbd
+        >. Pick on the right.
+      </div>
+      <Dropdown
+        v-model="selectedType"
+        :options="['ssp245', 'ssp370', 'ssp585']"
+        class="m-2"
+        placeholder="Select a Type"
+      />
+      <Button
+        @click="selectedType = null"
+        icon="pi pi-times"
+        class="m-2 p-2 bg-red-200 aspect-square w-fit h-fit flex flex-row justify-normal items-center"
+      />
+
       <Dropdown
         v-model="selectedModel"
         :options="models"
@@ -24,17 +35,6 @@
         class="m-2 p-2 bg-red-200 aspect-square w-fit h-fit flex flex-row justify-normal items-center"
       />
 
-      <Dropdown
-        v-model="selectedType"
-        :options="['ssp245', 'ssp370', 'ssp585']"
-        class="m-2"
-        placeholder="Select a Type"
-      />
-      <Button
-        @click="selectedType = null"
-        icon="pi pi-times"
-        class="m-2 p-2 bg-red-200 aspect-square w-fit h-fit flex flex-row justify-normal items-center"
-      />
       <!-- <ToggleButton
         v-model="isShowingClusterMean"
         on-label="Color by cluster means"
@@ -115,8 +115,6 @@ const splitterResized = inject("splitterResized");
 const selectedModel = ref();
 const selectedType = ref("ssp585");
 const tooltipData = ref();
-// Reference for the Modal component
-const modal = ref(null);
 
 let modelNames = Array.from(
   new Set(sspAllLabels.map((member) => member.model_name))
@@ -229,6 +227,7 @@ function draw() {
     nextTick(() => {
       const element = document.getElementById("timelineSVG");
       if (element) {
+        element.innerHTML = "";
         drawTimeline();
       }
     });
@@ -660,12 +659,10 @@ async function drawTimeline() {
       stroke-width: 4 !important;
     }
     .path-highlighted {
-      stroke-width: 4 !important;
     }
     .path-not-highlighted {
-      stroke: black;
-      stroke-width: 0.5 !important;
-      stroke-opacity: 0.5 !important;
+      stroke-width: 0.1 !important;
+      stroke-opacity: 0.1 !important;
     }
     .selected-rect {
       opacity: 1 !important;
@@ -834,18 +831,7 @@ async function drawTimeline() {
     .attr("fill", "none")
     .attr("id", (d) => `clusterPath${d.index}`)
     .attr("stroke", (d) => {
-      if (members[d.index].ssp == "historical") {
-        return "forestgreen";
-      }
-      if (members[d.index].ssp == "ssp245") {
-        return "steelblue";
-      }
-      if (members[d.index].ssp == "ssp370") {
-        return "darkkhaki";
-      }
-      if (members[d.index].ssp == "ssp585") {
-        return "crimson";
-      }
+      return "steelblue";
     })
     // .attr("stroke-dasharray", (d) =>
     //   members[d.index].ssp == "historical" ? "10,10" : "0"

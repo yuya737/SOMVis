@@ -1,7 +1,7 @@
 <template>
   <div class="w-full h-full">
     <div
-      class="flex flex-col items-center py-4 bg-gray-100 rounded-lg shadow-md text-md w-full relative h-[600px]"
+      class="flex flex-col items-center py-4 bg-gray-100 rounded-lg shadow-md text-md w-full relative h-full"
     >
       <h1 class="text-xl font-bold text-gray-800">SOM Node Viewer</h1>
       <div class="text-xs text-gray-600 my-2">

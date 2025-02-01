@@ -18,6 +18,8 @@ export class NodeClassifyLayer extends AbstractLayerGenerator {
   time_type: timeType = null;
   layerList: any = null;
 
+  currentStep: Ref<step>;
+
   constructor({
     mappingDataGetter,
     hotspotPolygonsGetter,
@@ -25,6 +27,7 @@ export class NodeClassifyLayer extends AbstractLayerGenerator {
     contourDataGetter,
     interpolatedSurfaceGetter,
     time_type,
+    currentStep,
   }) {
     super();
     this.mappingDataGetter = mappingDataGetter;
@@ -33,6 +36,7 @@ export class NodeClassifyLayer extends AbstractLayerGenerator {
     this.hotspotPolygonsGetter = hotspotPolygonsGetter;
     this.interpolatedSurfaceGetter = interpolatedSurfaceGetter;
     this.time_type = time_type;
+    this.currentStep = currentStep;
 
     watch(
       () => this.classifyDataGetter.value(this.time_type),
@@ -49,17 +53,21 @@ export class NodeClassifyLayer extends AbstractLayerGenerator {
     }
 
     const contourData = this.contourDataGetter.value(this.time_type);
-    const hotspotPolygons = this.hotspotPolygonsGetter.value(this.time_type);
+    console.log("DEBUG: contourData", contourData);
 
     let ret = [
       new PathLayer({
         id: "classify-layer",
         data: contourData,
-        getPath: (d) => d.contours.map((c) => [c[0], c[1]]).flat(),
+        getPath: (d) =>
+          pointsToCurve(
+            d.contours.map((c) => [c[0], c[1]]),
+            0.0001
+          ).flat(),
         // pointsToCurve(d.contours.map((c) => [c[0], -c[1]])).flat(),
 
         positionFormat: "XY",
-        getWidth: 0.2,
+        getWidth: 0.5,
         // pickable: true,
         getColor: (d) => colorPercentile(d.percentile),
       }),

@@ -3,7 +3,7 @@
     <div class="mb-3">
       <label
         for="small-input"
-        class="block mb-2 text-sm font-medium text-gray-900"
+        class="block mb-2 text-lg font-medium text-gray-900"
         >Name this Region</label
       >
       <input
@@ -11,26 +11,26 @@
         id="small-input"
         v-model="text"
         :placeholder="prevName"
-        class="block w-full p-2 text-gray-900 border border-gray-300 rounded-lg bg-gray-50 text-xs focus:ring-blue-500 focus:border-blue-500"
+        class="block w-full p-2 text-gray-900 border border-gray-300 rounded-lg bg-gray-50 text-md focus:ring-blue-500 focus:border-blue-500"
       />
     </div>
     <button
       type="button"
-      class="text-gray-900 bg-white border border-gray-300 focus:outline-none hover:bg-gray-100 focus:ring-4 focus:ring-gray-100 font-medium rounded-lg text-xs px-3 py-1 me-2 mb-2"
+      class="text-gray-900 bg-white border border-gray-300 focus:outline-none hover:bg-gray-100 focus:ring-4 focus:ring-gray-100 font-medium rounded-lg text-sm px-3 py-1 me-2 mb-2"
       @click="saveAnnotation"
     >
       Save
     </button>
     <button
       type="button"
-      class="text-gray-900 bg-white border border-gray-300 focus:outline-none hover:bg-gray-100 focus:ring-4 focus:ring-gray-100 font-medium rounded-lg text-xs px-3 py-1 me-2 mb-2"
+      class="text-gray-900 bg-white border border-gray-300 focus:outline-none hover:bg-gray-100 focus:ring-4 focus:ring-gray-100 font-medium rounded-lg text-sm px-3 py-1 me-2 mb-2"
       @click="deleteAnnotation"
     >
       Delete
     </button>
     <button
       type="button"
-      class="text-gray-900 bg-white border border-gray-300 focus:outline-none hover:bg-gray-100 focus:ring-4 focus:ring-gray-100 font-medium rounded-lg text-xs px-3 py-1 me-2 mb-2"
+      class="text-gray-900 bg-white border border-gray-300 focus:outline-none hover:bg-gray-100 focus:ring-4 focus:ring-gray-100 font-medium rounded-lg text-sm px-3 py-1 me-2 mb-2"
       @click="closeAnnotation"
     >
       Close

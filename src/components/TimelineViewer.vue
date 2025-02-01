@@ -11,6 +11,9 @@
     <div
       class="absolute left-0 top-0 w-fit z-[2] h-fit text-black text-lg flex flex-row justify-normal items-center"
     >
+      >
+       Ensemble Model clustering per month - GCM:SSP pairs are clustered per month based on their behavior
+      </div>
       <Dropdown
         v-model="selectedModel"
         :options="models"

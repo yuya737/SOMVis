@@ -63,6 +63,15 @@ export const useStore = defineStore("main", {
       LLMQueries: [] as LLMQueryResult[],
       contourLevels: [0.25, 0.5, 0.75] as number[],
       nodeClickedID: -1 as number,
+      currentStep: "Anchor" as step,
+
+      recalculateMDEFlag: false,
+      isHidingDistribution: false,
+
+      nodeMapCanvas: null,
+
+      isShowingLLMQueriedRegion: true,
+      LLMQueriedRegionIndex: -1,
     });
     getNodeData().then((data) => {
       const {
@@ -128,6 +137,9 @@ export const useStore = defineStore("main", {
     },
     getVectorFieldData: (state) => {
       return (timeType: timeType) => state.vectorFieldData[timeType];
+    },
+    getLLMQueryResult() {
+      return this.LLMQueries;
     },
     getHighlightedNodes(state) {
       return this.highlightedNodes;

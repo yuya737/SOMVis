@@ -3,10 +3,12 @@
     <div class="flex flex-row h-full w-full">
       <ProjectionDeckGLComponent
         :time_type="props.time_type"
+        :is-showing-comparison="isShowingComparisonMap"
         :is-showing-vector-field="isShowingVectorField"
       />
       <ProjectionDeckGLComponent
         v-if="isShowingComparisonMap"
+        :is-showing-comparison="isShowingComparisonMap"
         :time_type="props.time_type"
         is-comparison
       />
@@ -18,31 +20,33 @@
       style="display: none"
     />
     <ElementSelector
+      v-if="store.currentStep == 'Analyze'"
       class="absolute bottom-0 w-full z-[4] mb-4"
       :time_type="props.time_type"
       @comparison-mode-changed="(newMode) => comparisonModeChanged(newMode)"
     />
     <div
-      class="flex flex-col justify-start items-start absolute top-0 left-0 z-[4] m-4 overflow-auto min-w-0 w-fit gap-2 h-fit max-h-[100%] pr-4"
+      class="absolute top-0 left-0 z-[4] m-4 overflow-auto min-w-0 w-fit gap-2 h-full pr-4"
     >
-      <button
-        class="w-fit px-4 py-2 text-white bg-gray-500 rounded-md hover:bg-gray-600 focus:outline-none"
-        @click="isSidePanelOpen = !isSidePanelOpen"
-      >
-        {{ isSidePanelOpen ? "Collapse" : "Expand" }}
-      </button>
       <div
-        v-if="isSidePanelOpen"
-        class="flex flex-col gap-2 transition-all duration-300 max-w-[400px]"
+        v-show="isSidePanelOpen"
+        class="flex flex-col gap-2 transition-all duration-300 max-w-[400px] h-full"
       >
-        <ModelInfoViewer :time_type="props.time_type" />
-        <ChatbotInterface />
-        <ProjectionSettings />
+        <!-- <ModelInfoViewer :time_type="props.time_type" /> -->
+        <ChatbotInterface class="max-h-[50%] overflow-auto" />
+        <!-- <ProjectionSettings v-if="store.currentStep == 'Analyze'" /> -->
         <SOMNodeViewer
+          class="max-h-[50%]"
           :time_type="props.time_type"
           :nodeClickedID="store.nodeClickedID"
         />
       </div>
+      <!-- <button
+        class="w-fit px-4 py-2 text-white bg-gray-500 rounded-md hover:bg-gray-600 focus:outline-none"
+        @click="isSidePanelOpen = !isSidePanelOpen"
+      >
+        {{ isSidePanelOpen ? "Collapse" : "Expand" }}
+      </button> -->
     </div>
   </div>
 </template>

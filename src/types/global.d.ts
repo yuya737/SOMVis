@@ -35,10 +35,12 @@ declare type PartialRecord<K extends keyof any, T> = {
   [P in K]?: T;
 };
 
-declare type MapMode = "Expore" | "Annotate";
+declare type MapMode = "Explore" | "Annotate";
 
 declare type LLMQueryResult = {
   query: string;
   result: number[];
   description: string;
 };
+
+declare type step = "Anchor" | "Annotate" | "Analyze";

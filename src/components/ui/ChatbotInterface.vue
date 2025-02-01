@@ -15,11 +15,13 @@
     />
     <!-- Heading -->
     <div class="flex flex-col space-y-1.5">
-      <h1 class="text-xl font-bold text-gray-800">LLM-Based Explorer</h1>
-      <!-- <h2 class="font-semibold text-lg tracking-tight">Chatbot</h2>
+      <h1 class="text-xl font-bold text-gray-800">LLM Exploration History</h1>
+
+      <!-- <h2 class="font-semibold text-lg tracking-tight">Chatbot</h2> -->
       <p class="text-sm text-[#6b7280] leading-3">
-        Powered by Mendable and Vercel
-      </p> -->
+        Given a query, the LLM will first resolve any queried region to a list
+        of counties.
+      </p>
     </div>
 
     <!-- Chat Container -->
@@ -29,6 +31,7 @@
         v-for="(message, index) in messages"
         :key="index"
         :message="message.text"
+        :messageIndex="Math.floor(index / 2)"
       />
 
       <!-- Input box  -->
@@ -98,6 +101,7 @@ async function sendQuery() {
       description: res["description"],
       result: result,
     });
+    store.LLMQueriedRegionIndex = Math.floor(messages.value.length / 2) - 1;
   });
 }
 </script>

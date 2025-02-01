@@ -214,6 +214,16 @@ async function getCharacteristic() {
       total: total,
     });
   });
+  characteristic.value.push({
+    index: -1,
+    count:
+      total -
+      Object.values(characteristic.value).reduce(
+        (sum, item) => sum + item.count,
+        0
+      ),
+    total: total,
+  });
   isLoading.value = false;
 }
 

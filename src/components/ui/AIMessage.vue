@@ -1,6 +1,6 @@
 <template>
   <!-- Chat Message AI -->
-  <div class="flex gap-3 my-4 text-gray-600 text-sm flex-1">
+  <div class="flex gap-3 px-1 py-2 text-gray-600 text-sm flex-1 rounded-lg">
     <span class="relative flex shrink-0 overflow-hidden rounded-full w-8 h-8">
       <div class="rounded-full bg-gray-100 border p-1">
         <svg
@@ -51,14 +51,17 @@
   </div>
 </template>
 <script setup lang="ts">
-import { ref, watch, onMounted } from "vue";
+import { ref, watch, onMounted, computed } from "vue";
+import { useStore } from "@/store/main";
 
 const isLoading = ref(true);
 const resolvedMessage = ref("");
+const store = useStore();
 const dots = ref("");
 
 const props = defineProps<{
   message: Promise<string>;
+  messageIndex: number;
 }>();
 
 // Watch the message prop for changes and handle the promise
