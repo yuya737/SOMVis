@@ -55,6 +55,10 @@ export class LLMRegionLayer extends AbstractLayerGenerator {
     const nodesToShow =
       this.LLMQueryGetter.value[this.indexToShow.value].result;
 
+    if (nodesToShow[0] == -1) {
+      return this.layerList;
+    }
+
     const BMUPolygon = API.fetchData("/get_bounding_shape", true, {
       points: this.nodeMapGetter
         .value(this.time_type)

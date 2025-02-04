@@ -2,8 +2,8 @@
   <!--  User Chat Message -->
   <hr class="border-t border-gray-300" />
   <div :class="tailwindClass" @click="toggleMessageActive">
-    <span class="relative flex shrink-0 overflow-hidden rounded-full w-8 h-8">
-      <div class="rounded-full bg-gray-100 border p-1">
+    <span class="relative flex h-8 w-8 shrink-0 overflow-hidden rounded-full">
+      <div class="rounded-full border bg-white p-1">
         <svg
           stroke="none"
           fill="black"
@@ -19,19 +19,32 @@
         </svg>
       </div>
     </span>
-    <div class="leading-relaxed flex flex-col justify-start">
-      <span class="font-bold text-gray-700 w-fit">You </span>
-      <span class="text-left"> {{ props.message }} </span>
+    <div class="flex w-full flex-row items-start justify-between">
+      <div class="flex flex-col justify-start leading-relaxed">
+        <span class="w-fit font-bold text-gray-700">You </span>
+        <span class="text-left"> {{ props.payload.message }} </span>
+      </div>
+      <MapGlyph
+        v-if="props.payload?.['typeDetail'] == 'backward'"
+        :index-to-highlight="props.payload?.zoneID"
+        :time_type="props.time_type"
+        :width="100"
+        justIndex
+      />
     </div>
   </div>
 </template>
 <script setup lang="ts">
 import { useStore } from "@/store/main";
 import { computed } from "vue";
+import MapGlyph from "./MapGlyph.vue";
+import { timeType } from "../utils/utils";
+
 const store = useStore();
 const props = defineProps<{
-  message: string;
+  payload: { message: string; typeDetail?: string; zoneID?: number };
   messageIndex: number;
+  time_type: timeType;
 }>();
 const tailwindClass = computed(() =>
   store.LLMQueriedRegionIndex == props.messageIndex
@@ -40,6 +53,7 @@ const tailwindClass = computed(() =>
 );
 
 function toggleMessageActive() {
+  if (props.payload.typeDetail == "backward") return;
   if (store.LLMQueriedRegionIndex == props.messageIndex) {
     store.LLMQueriedRegionIndex = -1;
   } else {

@@ -221,10 +221,4 @@ watch(
 .p-datatable-tfoot > tr > td {
   padding: 0.25rem 0.25rem;
 }
-.legend-item {
-  display: flex;
-  flex-direction: column;
-  justify-items: center;
-  align-items: center;
-}
 </style>

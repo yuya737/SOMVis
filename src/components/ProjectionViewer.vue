@@ -1,6 +1,6 @@
 <template>
   <div class="relative h-full w-full">
-    <div class="flex flex-row h-full w-full">
+    <div class="flex h-full w-full flex-row">
       <ProjectionDeckGLComponent
         :time_type="props.time_type"
         :is-showing-comparison="isShowingComparisonMap"
@@ -21,33 +21,35 @@
     />
     <ElementSelector
       v-if="store.currentStep == 'Analyze'"
-      class="absolute bottom-0 w-full z-[4] mb-4"
+      class="absolute bottom-0 z-[4] mb-4 w-full"
       :time_type="props.time_type"
       @comparison-mode-changed="(newMode) => comparisonModeChanged(newMode)"
     />
     <div
-      class="absolute top-0 left-0 z-[4] m-4 overflow-auto min-w-0 w-fit gap-2 h-full pr-4"
+      class="absolute left-0 top-0 z-[4] m-4 h-full w-fit min-w-0 gap-2 overflow-auto"
     >
       <div
         v-show="isSidePanelOpen"
-        class="flex flex-col gap-2 transition-all duration-300 max-w-[400px] h-full"
+        class="relative flex h-full max-w-[400px] flex-col gap-2"
       >
         <!-- <ModelInfoViewer :time_type="props.time_type" /> -->
-        <ChatbotInterface class="max-h-[50%] overflow-auto" />
+        <ChatbotInterface
+          class="z-[2] max-h-[50%] overflow-auto"
+          :time_type="props.time_type"
+        />
         <!-- <ProjectionSettings v-if="store.currentStep == 'Analyze'" /> -->
         <SOMNodeViewer
-          class="max-h-[50%]"
+          class="max-h-[50%] overflow-hidden"
           :time_type="props.time_type"
           :nodeClickedID="store.nodeClickedID"
         />
       </div>
-      <!-- <button
-        class="w-fit px-4 py-2 text-white bg-gray-500 rounded-md hover:bg-gray-600 focus:outline-none"
-        @click="isSidePanelOpen = !isSidePanelOpen"
-      >
-        {{ isSidePanelOpen ? "Collapse" : "Expand" }}
-      </button> -->
     </div>
+    <Button
+      :icon="isSidePanelOpen ? 'pi pi-minus' : 'pi pi-plus'"
+      class="absolute left-0 top-0 z-[10] m-2 aspect-square bg-slate-300 shadow-sm"
+      @click="isSidePanelOpen = !isSidePanelOpen"
+    />
   </div>
 </template>
 

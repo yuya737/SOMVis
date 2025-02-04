@@ -1,25 +1,22 @@
 <template>
   <div
     v-if="props.characteristic.transition == null"
-    class="grid grid-cols-2 gap-4 place-items-center"
+    class="grid grid-cols-2 place-items-center gap-4"
   >
-    <div class="flex flex-row justify-between items-center gap-4 w-full">
+    <div class="flex w-full flex-row items-center justify-between gap-4">
       <span class="font-medium text-gray-600">{{
         props.characteristic.index == -1
           ? "Rest"
           : store.mapAnnotation.features[props.characteristic.index].properties
               ?.name
       }}</span>
-      <span
-        v-html="
-          makeAnnotationGlyphWithBG({
-            indexToHighlight: props.characteristic.index,
-            width: 70,
-          })
-        "
+      <MapGlyph
+        :index-to-highlight="props.characteristic.index"
+        :width="70"
+        :time_type="props.time_type"
       />
     </div>
-    <span class="text-blue-600 font-semibold">
+    <span class="font-semibold text-blue-600">
       {{
         Math.round(
           (props.characteristic.count / props.characteristic.total) * 100
@@ -29,26 +26,23 @@
   </div>
   <div
     v-else
-    class="grid grid-cols-[1fr_auto_1fr] w-full gap-4 place-items-center"
+    class="grid w-full grid-cols-[1fr_auto_1fr] place-items-center gap-4"
   >
-    <div class="flex flex-row justify-between items-center w-full gap-4">
-      <div class="flex flex-row justify-between items-center gap-4 w-full">
+    <div class="flex w-full flex-row items-center justify-between gap-4">
+      <div class="flex w-full flex-row items-center justify-between gap-4">
         <span class="font-medium text-gray-600">{{
           props.characteristic.index == -1
             ? "Rest"
             : store.mapAnnotation.features[props.characteristic.index]
                 .properties?.name
         }}</span>
-        <span
-          v-html="
-            makeAnnotationGlyphWithBG({
-              indexToHighlight: props.characteristic.index,
-              width: 70,
-            })
-          "
+        <MapGlyph
+          :index-to-highlight="props.characteristic.index"
+          :width="70"
+          :time_type="props.time_type"
         />
       </div>
-      <span class="text-blue-600 font-semibold">
+      <span class="font-semibold text-blue-600">
         {{
           Math.round(
             (props.characteristic.count / props.characteristic.total) * 100
@@ -60,29 +54,26 @@
       <i class="pi pi-angle-double-right text-xl" />
     </div>
 
-    <div class="flex flex-col gap-4 justify-between items-center w-full">
+    <div class="flex w-full flex-col items-center justify-between gap-4">
       <div
         v-for="t in props.characteristic.transition"
         :key="t.index"
         class="flex justify-between gap-2"
       >
-        <!-- <span class="font-medium text-gray-600 whitespace-nowrap w-fit">{{
+        <!-- <span class="w-fit whitespace-nowrap font-medium text-gray-600">{{
           store.mapAnnotation.features[t.index].properties?.name
         }}</span> -->
-        <div class="flex flex-row justify-between items-center gap-4 w-full">
+        <div class="flex w-full flex-row items-center justify-between gap-4">
           <span class="font-medium text-gray-600">{{
             store.mapAnnotation.features[t.index].properties?.name
           }}</span>
-          <span
-            v-html="
-              makeAnnotationGlyphWithBG({
-                indexToHighlight: t.index,
-                width: 40,
-              })
-            "
+          <MapGlyph
+            :index-to-highlight="t.index"
+            :width="40"
+            :time_type="props.time_type"
           />
         </div>
-        <span class="text-blue-600 font-semibold w-fit">
+        <span class="w-fit font-semibold text-blue-600">
           {{ Math.round(t.percentage * 100) }}%
         </span>
       </div>
@@ -94,6 +85,7 @@
 import { ref } from "vue";
 import { useStore } from "@/store/main";
 import { makeAnnotationGlyph, timeType } from "../utils/utils";
+import MapGlyph from "./MapGlyph.vue";
 const props = defineProps<{
   characteristic: {
     index: number;
@@ -104,44 +96,4 @@ const props = defineProps<{
   time_type: timeType;
 }>();
 const store = useStore();
-
-function makeAnnotationGlyphWithBG({ indexToHighlight, width }) {
-  if (indexToHighlight == -1) {
-    return;
-  }
-  let svg = makeAnnotationGlyph(
-    store.mapAnnotation,
-    store.nodeMap[props.time_type],
-    indexToHighlight,
-    width
-  );
-  const scaledCanvas = document.createElement("canvas");
-  const scaleFactor = width / store.nodeMapCanvas.width;
-
-  scaledCanvas.width = store.nodeMapCanvas.width * scaleFactor;
-  scaledCanvas.height = store.nodeMapCanvas.height * scaleFactor;
-
-  const ctx = scaledCanvas.getContext("2d");
-  ctx.scale(scaleFactor, scaleFactor); // Apply scaling transformation
-  ctx.drawImage(store.nodeMapCanvas, 0, 0); // Draw the original canvas content
-  const img = document.createElementNS(svg, "image");
-  img.setAttribute("href", scaledCanvas.toDataURL());
-  img.setAttribute("width", scaledCanvas.width);
-  img.setAttribute("height", scaledCanvas.height);
-
-  const svgNode = svg.node();
-  const firstChild = svgNode.firstChild; // Get the first child of the SVG
-  svgNode.insertBefore(img, firstChild);
-
-  return svgNode.outerHTML;
-}
-
-// let characteristicGlyph = makeAnnotationGlyph(
-//   store.mapAnnotation,
-//   store.nodeMap[props.time_type],
-//   props.characteristic.index,
-//   70
-// );
-// svgContent.value = characteristicGlyph.outerHTML;
-// console.log("DEBUG GET CHARACTERISTIC GLYPH", characteristicGlyph);
 </script>

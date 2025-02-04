@@ -3,6 +3,8 @@ import { watch, ComputedRef, Ref } from "vue";
 import { AbstractLayerGenerator } from "./AbstractLayerGenerator";
 
 import { timeType } from "./utils";
+import anchorSVG from "@/assets/anchor.svg?raw";
+import cancelSVG from "@/assets/cancel.svg?raw";
 
 import distance from "@turf/distance";
 import bearing from "@turf/bearing";
@@ -124,9 +126,15 @@ export class NodeLayer extends AbstractLayerGenerator {
             }
           },
           onDragStart: () => {
+            if (this.currentStep.value != "Anchor")
+              // Only active in the Anchor stage
+              return;
             this.deck.setProps({ controller: { dragPan: false } });
           },
           onDrag: (info) => {
+            if (this.currentStep.value != "Anchor")
+              // Only active in the Anchor stage
+              return;
             let lngLat = info.coordinate;
             const d = distance([0, 0], lngLat, {
               units: "meters",
@@ -137,6 +145,9 @@ export class NodeLayer extends AbstractLayerGenerator {
             this.map[info.layer.props.index].coords = [x, y];
           },
           onDragEnd: (info) => {
+            if (this.currentStep.value != "Anchor")
+              // Only active in the Anchor stage
+              return;
             let lngLat = info.coordinate;
             const d = distance([0, 0], lngLat, {
               units: "meters",
@@ -156,12 +167,6 @@ export class NodeLayer extends AbstractLayerGenerator {
             }
             console.log("DEBUG DRAG END", lngLat, d, x, y);
             this.deck.setProps({ controller: { dragPan: true } });
-          },
-          // updateTriggers: {
-          //   bounds: this.map,
-          // },
-          transitions: {
-            bounds: 300,
           },
         }),
       ];
@@ -216,7 +221,7 @@ export class NodeLayer extends AbstractLayerGenerator {
         new IconLayer({
           id: "selected-node-icon-layer",
           data: [
-            [this.map[id].coords[0] + size, this.map[id].coords[1] + size],
+            [this.map[id].coords[0] - size, this.map[id].coords[1] + size],
           ],
           getPosition: (d) => d,
           iconAtlas: new URL("/magnifying-glass.svg", import.meta.url).href,
@@ -250,6 +255,9 @@ export class NodeLayer extends AbstractLayerGenerator {
         id: id,
       });
     }
+    function svgToDataURL(svg) {
+      return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+    }
     ret = [
       ...ret,
       new PathLayer({
@@ -265,15 +273,27 @@ export class NodeLayer extends AbstractLayerGenerator {
         id: "selected-anchor-icon-layer",
         data: data,
         getPosition: (d) => d.position[2],
-        iconAtlas: new URL("/anchor.jpg", import.meta.url).href,
+        // iconAtlas: new URL("/anchor.jpg", import.meta.url).href,
+        iconAtlas: svgToDataURL(anchorSVG),
+        // iconAtlas: anchorSVG,
+        // iconAtlas: temp,
+        // iconAtlas: new URL("")
         getIcon: (d) => "marker",
         getSize: 40,
+        sizeScale: 1,
+        loadOptions: {
+          imagebitmap: {
+            resizeWidth: 256,
+            resizeHeight: 256,
+            resizeQuality: "high",
+          },
+        },
         iconMapping: {
           marker: {
             x: 0,
             y: 0,
-            width: 360,
-            height: 360,
+            width: 256,
+            height: 256,
             // mask: true,
           },
         },
@@ -283,15 +303,22 @@ export class NodeLayer extends AbstractLayerGenerator {
         id: "selected-anchor-cancel-icon-layer",
         data: data,
         getPosition: (d) => d.position[1],
-        iconAtlas: new URL("/cancel.png", import.meta.url).href,
+        iconAtlas: svgToDataURL(cancelSVG),
         getIcon: (d) => "marker",
         getSize: 20,
+        loadOptions: {
+          imagebitmap: {
+            resizeWidth: 256,
+            resizeHeight: 256,
+            resizeQuality: "high",
+          },
+        },
         iconMapping: {
           marker: {
             x: 0,
             y: 0,
-            width: 225,
-            height: 225,
+            width: 256,
+            height: 256,
             // mask: true,
           },
         },

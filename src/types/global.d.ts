@@ -6,7 +6,7 @@ declare type SOMNode = {
 };
 
 // Represents metadata for the Best Matching Unit (BMU) in the SOM.
-// The 'month' property indicates the month.
+// The 'month' property indicates the month.,w
 declare type BMUData = {
   name: string; // Name of the BMU
   month: number; // Month associated with the BMU
@@ -29,7 +29,7 @@ declare type EnsembleMemberTemporal = EnsembleMember & {
 
 declare type EnsembleMemberTemporalClustered = EnsembleMemberTemporal & {
   clustering: number; // clustering
-};
+};,w
 
 declare type PartialRecord<K extends keyof any, T> = {
   [P in K]?: T;
@@ -38,8 +38,13 @@ declare type PartialRecord<K extends keyof any, T> = {
 declare type MapMode = "Explore" | "Annotate";
 
 declare type LLMQueryResult = {
-  query: string;
-  result: number[];
+  type: "forward" | "backward";
+  query?: string;
+  result?: number[];
+
+  idsContained?: number[];
+  zoneID?: number[],
+
   description: string;
 };
 

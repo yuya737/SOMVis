@@ -52,7 +52,7 @@ export const useStore = defineStore("main", {
       mapMode: "Explore" as MapMode,
       mapAnnotation: {
         type: "FeatureCollection",
-        features: [],
+        features: [] as { properties: {}; geometry: [] }[],
       },
       showMapAnnotationPopup: false,
       mapAnnotationPopup: {
@@ -61,12 +61,19 @@ export const useStore = defineStore("main", {
       },
       highlightedNodes: [],
       LLMQueries: [] as LLMQueryResult[],
+      chatBotHistory: [] as {
+        type: string;
+        typeDetail?: string;
+        zoneID?: number;
+        text: string | Promise<string>;
+      }[],
       contourLevels: [0.25, 0.5, 0.75] as number[],
       nodeClickedID: -1 as number,
       currentStep: "Anchor" as step,
 
       recalculateMDEFlag: false,
       isHidingDistribution: false,
+      isHidingAnnotations: false,
 
       nodeMapCanvas: null,
 

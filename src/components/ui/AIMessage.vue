@@ -1,8 +1,8 @@
 <template>
   <!-- Chat Message AI -->
-  <div class="flex gap-3 px-1 py-2 text-gray-600 text-sm flex-1 rounded-lg">
-    <span class="relative flex shrink-0 overflow-hidden rounded-full w-8 h-8">
-      <div class="rounded-full bg-gray-100 border p-1">
+  <div class="flex flex-1 gap-3 rounded-lg px-1 py-2 text-sm text-gray-600">
+    <span class="relative flex h-8 w-8 shrink-0 overflow-hidden rounded-full">
+      <div class="rounded-full border bg-white p-1 shadow-sm">
         <svg
           stroke="none"
           fill="black"
@@ -21,66 +21,178 @@
         </svg>
       </div>
     </span>
-    <div class="leading-relaxed flex flex-col justify-start w-full">
-      <span class="font-bold text-gray-700 w-fit">AI </span>
+    <div class="flex w-full flex-col justify-start leading-relaxed">
+      <span class="w-fit font-bold text-gray-700">AI </span>
       <span v-if="isLoading" class="w-fit"
         >Loading<span class="dots">{{ dots }}</span></span
       >
+      <span v-else-if="isError" class="w-fit">
+        Error in generating query. Try again.
+      </span>
       <div v-else>
-        <!-- <span class="text-left">{{ resolvedMessage }}</span> -->
-        <div class="w-fit">
-          Given the query, we resolved regions to the below known counties and
-          queried the SOM node space.
+        <div v-if="props.payload.typeDetail == 'forward'">
+          <div class="w-fit text-left">
+            Given the query, we resolved regions to the below known counties and
+            queried the SOM node space.
+          </div>
+          <table class="w-full">
+            <thead>
+              <tr>
+                <th>Region</th>
+                <th>Resolved Counties</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="(value, key) in resolvedMessage" :key="key">
+                <td>{{ key }}</td>
+                <td>{{ value.join(", ") }}</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
-        <table class="w-full">
-          <thead>
-            <tr>
-              <th>Region</th>
-              <th>Resolved Counties</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="(value, key) in resolvedMessage" :key="key">
-              <td>{{ key }}</td>
-              <td>{{ value.join(", ") }}</td>
-            </tr>
-          </tbody>
-        </table>
+        <div v-else class="text-left">
+          {{ resolvedMessage }}
+        </div>
       </div>
     </div>
   </div>
 </template>
 <script setup lang="ts">
-import { ref, watch, onMounted, computed } from "vue";
+import { ref, watch, watchEffect, onMounted, computed } from "vue";
+import API from "@/API/api";
 import { useStore } from "@/store/main";
 
 const isLoading = ref(true);
 const resolvedMessage = ref("");
 const store = useStore();
 const dots = ref("");
+const isError = ref(false);
 
 const props = defineProps<{
-  message: Promise<string>;
+  payload: { message: string; typeDetail: string };
   messageIndex: number;
 }>();
 
-// Watch the message prop for changes and handle the promise
+const promiseState = ref(props.payload.message);
+
 watch(
-  () => props.message,
-  async (newMessage) => {
-    isLoading.value = true;
-    try {
-      const res = await newMessage;
-      resolvedMessage.value = res["description"];
-    } catch (error) {
-      console.error("Error resolving message:", error);
-      resolvedMessage.value = "Error loading message";
-    } finally {
-      isLoading.value = false;
+  promiseState,
+  async (promise) => {
+    if (props.payload.typeDetail == "forward") {
+      try {
+        // Wait for the promise to resolve
+        const res = await promise;
+        // result.value = res.description; // Assuming the response has a description field
+        isLoading.value = true;
+        isError.value = false;
+
+        try {
+          resolvedMessage.value = res["description"];
+          // llm_generated_query.then(async (res) => {
+          const { result } = await API.fetchData("/run_sqlquery", true, {
+            sqlquery: res["SQLQuery"],
+          });
+          console.log("DEBUG CHATBOT result", result);
+          store.highlightedNodes = result;
+          store.LLMQueries.push({
+            type: "forward",
+            query: res["SQLQuery"],
+            description: res["description"],
+            result: result,
+          });
+          store.LLMQueriedRegionIndex = props.messageIndex;
+
+          // });
+        } catch (error) {
+          console.error("Error resolving message:", error);
+          store.LLMQueries.push({
+            type: "forward",
+            query: res["SQLQuery"],
+            description: "ERROR",
+            result: [-1],
+          });
+          isError.value = true;
+        } finally {
+          isLoading.value = false;
+        }
+      } catch (error) {
+        // Handle error if promise is rejected
+        console.error("Error in LLM Payload forwards:", error);
+        store.LLMQueries.push({
+          type: "forward",
+          query: "ERROR",
+          description: "ERROR",
+          result: [-1],
+        });
+        isError.value = true;
+      } finally {
+        // Set loading to false after the fetch is complete
+        isLoading.value = false;
+      }
+    } else {
+      try {
+        const res = await promise;
+        isLoading.value = true;
+        isError.value = false;
+        resolvedMessage.value = res["llm_generated_summary"];
+        store.LLMQueries.push({
+          type: "backward",
+          idsContained: res["idsContained"],
+          description: res["llm_generated_summary"],
+        });
+      } catch (error) {
+        console.error("Error in LLM Payload backwards", error);
+        store.LLMQueries.push({
+          type: "backward",
+          idsContained: [-1],
+          description: "ERROR",
+        });
+      } finally {
+        isLoading.value = false;
+      }
     }
   },
   { immediate: true }
 );
+watchEffect(async () => {});
+
+// // Watch the message prop for changes and handle the promise
+// watch(
+//   () => props.message,
+//   async (newMessage) => {
+//     isLoading.value = true;
+//     isError.value = false;
+//     try {
+//       const res = await newMessage;
+//       try {
+//         resolvedMessage.value = res["description"];
+//         // llm_generated_query.then(async (res) => {
+//         const { result } = await API.fetchData("/run_sqlquery", true, {
+//           sqlquery: res["SQLQuery"],
+//         });
+//         console.log("DEBUG CHATBOT result", result);
+//         store.highlightedNodes = result;
+//         store.LLMQueries.push({
+//           query: res["SQLQuery"],
+//           description: res["description"],
+//           result: result,
+//         });
+//         store.LLMQueriedRegionIndex = props.messageIndex;
+
+//         // });
+//       } catch (error) {
+//         console.error("Error resolving message:", error);
+//         isError.value = true;
+//       } finally {
+//         isLoading.value = false;
+//       }
+//     } catch (error) {
+//       console.log("Error in resolving message", error);
+//       isError.value = true;
+//     }
+//   },
+//   { immediate: true }
+// );
 onMounted(() => {
   setInterval(() => {
     if (isLoading.value) {

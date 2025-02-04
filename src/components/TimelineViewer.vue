@@ -9,7 +9,7 @@
   />
   <div id="timelineContainer" class="relative h-full w-full">
     <div
-      class="absolute left-0 top-0 w-fit z-[2] h-fit text-black text-lg flex flex-row justify-normal items-center"
+      class="absolute left-0 top-0 z-[2] flex h-fit w-fit flex-row items-center justify-normal text-lg text-black"
     >
       >
        Ensemble Model clustering per month - GCM:SSP pairs are clustered per month based on their behavior
@@ -24,7 +24,7 @@
       <Button
         @click="selectedModel = null"
         icon="pi pi-times"
-        class="m-2 p-2 bg-red-200 aspect-square w-fit h-fit flex flex-row justify-normal items-center"
+        class="m-2 flex aspect-square h-fit w-fit flex-row items-center justify-normal bg-red-200 p-2"
       />
 
       <Dropdown
@@ -37,7 +37,7 @@
       <Button
         @click="selectedType = null"
         icon="pi pi-times"
-        class="m-2 p-2 bg-red-200 aspect-square w-fit h-fit flex flex-row justify-normal items-center"
+        class="m-2 flex aspect-square h-fit w-fit flex-row items-center justify-normal bg-red-200 p-2"
       />
       <ToggleButton
         v-model="isShowingClusterMean"
@@ -57,14 +57,14 @@
       :members="selectedTimelineCluster"
       :month="selectedTimelineClusterMonth"
       @close-card="showTooltip = false"
-      class="absolute bg-white border border-gray-300 shadow-lg rounded-lg text-black bottom-0 right-0"
+      class="absolute bottom-0 right-0 rounded-lg border border-gray-300 bg-white text-black shadow-lg"
     /> -->
-    <div id="timelineSVG" class="w-full h-full text-black flex justify-around">
+    <div id="timelineSVG" class="flex h-full w-full justify-around text-black">
       <div
         id="tag1"
         v-show="isShowingTag1"
         @click="isShowingTag1 = false"
-        class="absolute bg-white border border-gray-300 rounded-lg p-1 text-black"
+        class="absolute rounded-lg border border-gray-300 bg-white p-1 text-black"
       >
         {{ tag1Text }}
       </div>
@@ -73,7 +73,7 @@
         id="tag2"
         v-show="isShowingTag2"
         @click="isShowingTag2 = false"
-        class="absolute bg-white border border-gray-300 rounded-lg p-1 text-black"
+        class="absolute rounded-lg border border-gray-300 bg-white p-1 text-black"
       >
         {{ tag2Text }}
       </div>
@@ -86,7 +86,7 @@
     id="tooltipText"
     v-show="showTooltipText"
     @click="showTooltipText = false"
-    class="absolute bg-white border border-gray-300 shadow-lg rounded-lg p-2 text-black"
+    class="absolute rounded-lg border border-gray-300 bg-white p-2 text-black shadow-lg"
   >
     {{ tooltipData }}
   </div>

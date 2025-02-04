@@ -11,7 +11,7 @@
       }"
     />
     <div
-      class="flex flex-col justify-start items-end absolute top-0 right-0 z-[4] m-4 overflow-auto w-fit gap-2 h-fit max-h-[100%]"
+      class="absolute right-0 top-0 z-[4] m-4 flex h-fit max-h-[100%] w-fit flex-col items-end justify-start gap-2 overflow-auto"
     >
       <CharacteristicViewer
         v-if="store.currentStep == 'Analyze'"
@@ -29,7 +29,7 @@
     </div>
     <!-- <NodeInspector
       v-if="imgSrc != ''"
-      class="absolute top-0 left-0 z-[2]"
+      class="absolute left-0 top-0 z-[2]"
       :img-src="imgSrc"
       @close-node-inspector="imgSrc = ''"
     /> -->
@@ -166,6 +166,7 @@ onMounted(() => {
       store.currentStep,
       store.LLMQueriedRegionIndex,
       store.isShowingLLMQueriedRegion,
+      store.isHidingAnnotations,
     ],
     async () => {
       console.log("DEBUG PROJECTIONDECKGL REDRAW");
@@ -205,6 +206,7 @@ async function initializeLayers() {
     currentStep,
     LLMQueriedRegionIndex,
     isShowingLLMQueriedRegion,
+    isHidingAnnotations,
   } = storeToRefs(store);
   let nodeLayerGenerator = new NodeLayer({
     dataset_type: dataset_name,
@@ -271,6 +273,7 @@ async function initializeLayers() {
 
   let spaceAnnotationLayerGenerator = new SpaceAnnotationLayer({
     currentStep: currentStep,
+    isHidingAnnotationsGetter: isHidingAnnotations,
   });
 
   let llmRegionLayerGenerator = new LLMRegionLayer({
@@ -514,14 +517,20 @@ function cropCanvas() {
 }
 
 watch(
-  () => store.currentStep,
-  (newVal) => {
-    if (newVal == "Analyze")
+  () => [store.currentStep, store.nodeMap[props.time_type]],
+  ([newVal, _]) => {
+    store.isHidingDistribution = true;
+    store.isShowingLLMQueriedRegion = false;
+    store.isHidingAnnotations = true;
+    nextTick(() => {
       requestAnimationFrame(() => {
         console.log("DEBUG: Saving nodemap to canvas");
         const croppedCanvas = cropCanvas();
         store.nodeMapCanvas = croppedCanvas;
+        store.isHidingAnnotations = false;
       });
-  }
+    });
+  },
+  { deep: true, immediate: true }
 );
 </script>

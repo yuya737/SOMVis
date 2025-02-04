@@ -1,22 +1,27 @@
 <template>
-  <div class="flex flex-col items-center text-md w-fit relative">
+  <div class="text-md relative flex w-fit flex-col items-center">
     <!-- <Button
       :icon="isOpened ? 'pi pi-minus' : 'pi pi-plus'"
       @click="toggleIsOpened"
-      class="absolute top-0 right-0 m-2"
+      class="absolute right-0 top-0 m-2"
     /> -->
     <!-- <h1 class="text-xl font-bold text-gray-800">Step</h1> -->
     <div v-if="isOpened" class="flex flex-row items-center gap-4">
       <div class="relative z-[5]">
-        <Steps class="w-fit" :activeStep="currentIndex" :model="items"> </Steps>
-        <div
-          class="absolute top-0 right-0 transform -translate-x-1 -translate-y-1 group z-[4]"
+        <Steps
+          class="w-fit rounded-lg border-2 border-gray-300 bg-white p-3 shadow-sm"
+          :activeStep="currentIndex"
+          :model="items"
         >
-          <i class="pi pi-question-circle text-xl cursor-pointer"></i>
+        </Steps>
+        <div
+          class="group absolute right-0 top-0 z-[4] -translate-x-1 -translate-y-1 transform"
+        >
+          <i class="pi pi-question-circle cursor-pointer text-xl"></i>
 
           <div
-            v-html="instructions[store.currentStep]"
-            class="absolute top-0 left-0 min-w-[250px] hidden p-2 bg-gray-100 text-grey-800 rounded-md group-hover:block"
+            v-html="helpText"
+            class="text-grey-800 absolute left-0 top-0 hidden min-w-[250px] rounded-md bg-gray-100 p-2 font-thin group-hover:block"
           />
         </div>
       </div>
@@ -25,7 +30,7 @@
       </div> -->
       <Button
         v-if="currentIndex < items.length - 1"
-        class="bg-blue-500 text-white hover:bg-blue-600 px-2 py-1 rounded"
+        class="rounded bg-blue-500 px-2 py-1 text-white hover:bg-blue-600"
         @click="nextStep"
         label="Next Step"
         :icon="'pi pi-arrow-right'"
@@ -44,6 +49,10 @@ const toggleIsOpened = () => (isOpened.value = !isOpened.value);
 const store = useStore();
 const currentIndex = computed(() =>
   items.value.map((d) => d.label).indexOf(store.currentStep)
+);
+const helpText = computed(
+  () =>
+    `<strong>Step ${store.currentStep}:</strong> <br> ${instructions[store.currentStep]}`
 );
 
 const nextStep = () => {
@@ -78,14 +87,14 @@ const instructions = {
   Annotate:
     "Annotate specific regions of the SOM node space by drawing polygon over the map and assigning a label to them. These will be the basis for the <kbd>Analyze</kbd> step to follow.",
   Analyze:
-    "Analyze the ensemble! Analyze, compare between and cluster GCMs, SSP (<kbd>Historical</kbd> and <kbd>SSP</kdb>) across different months",
+    "Analyze the ensemble! Analyze, compare between and cluster GCMs, SSP (<kbd>Historical</kbd> and <kbd>SSP</kbd>) across different months",
 };
 </script>
 
 <style>
 .p-menuitem-link {
   --tw-bg-opacity: 1;
-  background-color: rgb(243 244 246 / var(--tw-bg-opacity, 1)) /* #f3f4f6 */;
+  background-color: white;
   flex-direction: row;
   justify-content: center;
   align-items: center;

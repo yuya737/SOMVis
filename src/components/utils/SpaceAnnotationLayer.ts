@@ -15,19 +15,22 @@ export class SpaceAnnotationLayer extends AbstractLayerGenerator {
   readonly store;
 
   currentStep: Ref<step>;
+  isHidingAnnotationsGetter: Ref<boolean>;
 
   featureCollection: any;
 
-  constructor({ currentStep }) {
+  constructor({ currentStep, isHidingAnnotationsGetter }) {
     super();
     this.store = useStore();
     this.currentStep = currentStep;
+    this.isHidingAnnotationsGetter = isHidingAnnotationsGetter;
 
     watch(
       () => [
         this.store.mapAnnotation.features,
         this.store.mapMode,
         this.currentStep.value,
+        this.isHidingAnnotationsGetter.value,
       ],
       () => {
         console.log("DEBUG: WATCHING MAP ANNOTATION FEATURES");
@@ -75,8 +78,9 @@ export class SpaceAnnotationLayer extends AbstractLayerGenerator {
       getSize: 24,
       getText: (d) => d.properties.name,
       visible:
-        this.currentStep.value == "Analyze" ||
-        this.currentStep.value == "Annotate",
+        (this.currentStep.value == "Analyze" ||
+          this.currentStep.value == "Annotate") &&
+        !this.isHidingAnnotationsGetter.value,
     });
     let layer = new EditableGeoJsonLayer({
       id: "nebula",
@@ -110,8 +114,8 @@ export class SpaceAnnotationLayer extends AbstractLayerGenerator {
           this.store.showMapAnnotationPopup = true;
           console.log("DEBUG: SHOWING MAP ANNOTATION POPUP", event);
           this.store.mapAnnotationPopup.coords = [
-            event.center.x,
-            event.center.y,
+            event.offsetCenter.x,
+            event.offsetCenter.y,
           ];
           this.store.mapMode = "Explore";
         }
@@ -125,8 +129,9 @@ export class SpaceAnnotationLayer extends AbstractLayerGenerator {
         }
       },
       visible:
-        this.currentStep.value == "Analyze" ||
-        this.currentStep.value == "Annotate",
+        (this.currentStep.value == "Analyze" ||
+          this.currentStep.value == "Annotate") &&
+        !this.isHidingAnnotationsGetter.value,
     });
     this.layerList = [layer, textLayer];
     this.needsToRedraw = false;

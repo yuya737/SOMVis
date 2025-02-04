@@ -6,58 +6,61 @@
         0 0 #0000,
         0 1px 2px 0 rgb(0 0 0 / 0.05);
     "
-    class="bg-gray-100 p-4 rounded-lg border border-[#e5e7eb] w-full h-fit relative"
+    class="relative z-[5] h-auto w-full rounded-lg border bg-gray-100 px-4"
   >
-    <Button
-      :icon="isOpened ? 'pi pi-minus' : 'pi pi-plus'"
-      class="absolute top-0 right-0 m-2"
-      @click="toggleIsOpened"
-    />
     <!-- Heading -->
-    <div class="flex flex-col space-y-1.5">
+    <div class="sticky top-0 z-[2] flex flex-col space-y-1.5 bg-gray-100 py-4">
       <h1 class="text-xl font-bold text-gray-800">LLM Exploration History</h1>
 
-      <!-- <h2 class="font-semibold text-lg tracking-tight">Chatbot</h2> -->
-      <p class="text-sm text-[#6b7280] leading-3">
+      <!-- <h2 class="text-lg font-semibold tracking-tight">Chatbot</h2> -->
+      <!-- <p class="text-sm leading-3 text-[#6b7280]">
         Given a query, the LLM will first resolve any queried region to a list
         of counties.
-      </p>
+      </p> -->
     </div>
 
     <!-- Chat Container -->
-    <div v-show="isOpened" class="h-fit w-full mt-4">
+    <div class="z-[1] mt-4 h-fit w-full pb-2">
       <component
-        :is="message['type'] == 'User' ? UserMessage : AIMessage"
-        v-for="(message, index) in messages"
+        :is="chat['type'] == 'User' ? UserMessage : AIMessage"
+        v-for="(chat, index) in store.chatBotHistory"
         :key="index"
-        :message="message.text"
+        :payload="{
+          message: chat['text'],
+          typeDetail: chat?.['typeDetail'],
+          zoneID: chat?.['zoneID'],
+        }"
+        :time_type="props.time_type"
         :messageIndex="Math.floor(index / 2)"
       />
 
       <!-- Input box  -->
-      <div class="flex items-center pt-0">
-        <form class="flex items-center justify-center w-full space-x-2">
-          <!-- <input
-          class="flex h-10 w-full rounded-md border border-[#e5e7eb] px-3 py-2 text-sm placeholder-[#6b7280] focus:outline-none focus:ring-2 focus:ring-[#9ca3af] disabled:cursor-not-allowed disabled:opacity-50 text-[#030712] focus-visible:ring-offset-2"
+      <form class="flex w-full items-center justify-center gap-2">
+        <!-- <input
+          class="flex h-10 w-full rounded-md border border-[#e5e7eb] px-3 py-2 text-sm text-[#030712] placeholder-[#6b7280] focus:outline-none focus:ring-2 focus:ring-[#9ca3af] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
           placeholder="Show me the nodes such that..."
           value=""
         /> -->
-          <!-- <InputText -->
-          <Textarea
-            class="flex h-10 w-full rounded-md border border-[#e5e7eb] px-3 py-2 text-sm placeholder-[#6b7280] focus:outline-none focus:ring-2 focus:ring-[#9ca3af] disabled:cursor-not-allowed disabled:opacity-50 text-[#030712] focus-visible:ring-offset-2"
-            type="text"
-            placeholder="Show me the nodes such that..."
-            v-model="query"
-          />
-          <button
+        <!-- <InputText -->
+        <Textarea
+          class="h-10 flex-grow rounded-md border border-[#e5e7eb] px-3 py-2 text-sm text-[#030712] placeholder-[#6b7280] focus:outline-none focus:ring-2 focus:ring-[#9ca3af] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+          type="text"
+          placeholder="Show me the nodes such that..."
+          v-model="currentQuery"
+        />
+        <!-- <button
             type="button"
-            class="inline-flex items-center justify-center rounded-md text-sm font-medium bg-blue-500 text-white hover:bg-blue-600 focus:outline-none h-10 px-4 py-2"
+            class="inline-flex h-10 items-center justify-center rounded-md bg-blue-500 px-4 py-2 text-sm font-medium text-white hover:bg-blue-600 focus:outline-none"
             @click="sendQuery"
           >
             Send
-          </button>
-        </form>
-      </div>
+          </button> -->
+        <Button
+          class="w-fit rounded bg-blue-500 px-1 py-2 text-white hover:bg-blue-600"
+          @click="sendQuery"
+          label="Send"
+        />
+      </form>
     </div>
   </div>
 </template>
@@ -70,38 +73,39 @@ import InputText from "primevue/inputtext";
 import AIMessage from "./AIMessage.vue";
 import UserMessage from "./UserMessage.vue";
 import Textarea from "primevue/textarea";
+import { timeType } from "../utils/utils";
 
 const store = useStore();
+const props = defineProps<{
+  time_type: timeType;
+}>();
 
-const isOpened = ref(true);
-const toggleIsOpened = () => (isOpened.value = !isOpened.value);
-
-const messages = ref([]);
-
-const query = ref("");
+const currentQuery = ref("");
 
 async function sendQuery() {
-  messages.value.push({ text: query.value, type: "User" });
+  // const query = query.value
+  store.chatBotHistory.push({ text: currentQuery.value, type: "User" });
 
   const llm_generated_query = API.fetchData("/get_LLM_query", true, {
     // { SQLQuery: str, description: str }
-    query: query.value,
+    query: currentQuery.value,
   });
 
-  messages.value.push({ text: llm_generated_query, type: "AI" });
-
-  llm_generated_query.then(async (res) => {
-    const { result } = await API.fetchData("/run_sqlquery", true, {
-      sqlquery: res["SQLQuery"],
-    });
-    console.log("DEBUG CHATBOT result", result);
-    store.highlightedNodes = result;
-    store.LLMQueries.push({
-      query: query.value,
-      description: res["description"],
-      result: result,
-    });
-    store.LLMQueriedRegionIndex = Math.floor(messages.value.length / 2) - 1;
+  store.chatBotHistory.push({
+    // text: new Promise((resolve) => {
+    //   setTimeout(() => {
+    //     resolve({
+    //       SQLQuery:
+    //         "SELECT grid_id FROM spatial_data GROUP BY grid_id HAVING AVG(value) > 0;",
+    //       description: {
+    //         NA: ["No specific region in query - queried the whole region."],
+    //       },
+    //     });
+    //   }, 3000); // 3000 ms = 3 seconds
+    // }),
+    text: llm_generated_query,
+    type: "AI",
+    typeDetail: "forward",
   });
 }
 </script>

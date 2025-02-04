@@ -1,24 +1,13 @@
 <template>
-  <div class="w-full h-full">
+  <div class="h-full w-full">
     <div
-      class="flex flex-col items-center py-4 bg-gray-100 rounded-lg shadow-md text-md w-full relative h-full"
+      class="text-md flex h-full w-full flex-col items-center rounded-lg bg-gray-100 py-4 shadow-md"
     >
-      <h1 class="text-xl font-bold text-gray-800">SOM Node Viewer</h1>
-      <div class="text-xs text-gray-600 my-2">
-        SOM Nodes contain <textit>standardized</textit> precipitation values per
-        month. -1 indicates 1 standard deviation below the mean and 1 indicates
-        1 standard deviation above the mean, where the standard deviation is
-        calculated as the standard deviation of all values for a given month
-        (i.e. across all spatial locations, time, and models).
-      </div>
-      <div
-        id="somNodeViewerLegend"
-        class="flex flex-row justify-evenly items-center my-2 w-full"
-      />
-      <div v-if="isOpened" class="relative w-full h-full mt-4">
+      <h1 class="relative text-xl font-bold text-gray-800">SOM Node Viewer</h1>
+      <div v-if="isOpened" class="relative mt-4 h-full w-full">
         <canvas id="som-node-viewer" class="h-full" />
         <MapboxMap
-          class="w-full h-full"
+          class="h-full w-full"
           :access-token="token"
           map-style="mapbox://styles/yuya737/clsttugte000c01pwc8fs7k9m"
           :center="computedMapCenter"
@@ -26,6 +15,35 @@
           :bearing="bearing"
           :pitch="pitch"
         />
+        <div
+          class="group absolute left-0 top-0 z-[5] translate-x-1/2 translate-y-1/2 transform"
+        >
+          <i class="pi pi-question-circle cursor-pointer text-xl"></i>
+
+          <div
+            class="text-grey-800 absolute left-0 top-0 hidden h-fit min-w-[250px] flex-col items-center justify-center rounded-md bg-gray-100 p-2 text-sm font-thin group-hover:block"
+          >
+            <span>
+              Click on a SOM Node and the SOM Node highlighted by
+              <span
+                id="iconSpan"
+                v-html="magnifyingGlassSVGIcon"
+                class="inline-flex h-[1rem] w-[1rem] align-middle"
+              ></span>
+              icon is displayed.<br />
+              SOM Nodes contain <it>standardized</it> precipitation values per
+              month. -1 indicates 1 standard deviation below the mean and 1
+              indicates 1 standard deviation above the mean, where the standard
+              deviation is calculated as the standard deviation of all values
+              for a given month (i.e. across all spatial locations, time, and
+              models).
+            </span>
+            <div
+              id="somNodeViewerLegend"
+              class="my-2 flex w-full flex-col items-center justify-evenly font-normal"
+            />
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -33,6 +51,7 @@
 
 <script setup lang="ts">
 import SomNodeViewerDeckGLComponent from "./SomNodeViewerDeckGLComponent.vue";
+import magnifyingGlassSVG from "@/assets/magnifying-glass.svg?raw";
 import { Deck } from "@deck.gl/core/typed";
 import * as d3 from "d3";
 import API from "@/API/api";
@@ -51,6 +70,7 @@ const zoom = ref(1);
 const bearing = ref(1);
 const pitch = ref(1);
 
+const magnifyingGlassSVGIcon = ref(magnifyingGlassSVG);
 const isOpened = ref(true);
 const toggleIsOpened = () => (isOpened.value = !isOpened.value);
 
@@ -171,7 +191,7 @@ async function fetchMapDimensions() {
 function drawLegend({ min, max, color }) {
   const numBoxes = 7;
   const legendData = Array.from({ length: numBoxes }, (_, i) => {
-    return color((i / numBoxes) * (max - min) + min);
+    return color(max - (i / numBoxes) * (max - min));
   });
 
   // Check if the legend already exists
@@ -202,10 +222,24 @@ function drawLegend({ min, max, color }) {
     .style("font-size", "0.8rem")
     .attr("text-anchor", "middle") // Align text properly
     .text((d, i) => {
-      let ret = ((i / (numBoxes - 1)) * (max - min) + min).toFixed(2);
-      if (i == 0) return `< ${ret}`;
-      else if (i == numBoxes - 1) return `> ${ret}`;
+      let ret = (max - (i / (numBoxes - 1)) * (max - min)).toFixed(2);
+      if (i == 0) return `> ${ret}`;
+      else if (i == numBoxes - 1) return `< ${ret}`;
       else return ret;
     });
 }
 </script>
+<style>
+.legend-item {
+  width: 50%;
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+}
+#iconSpan svg {
+  width: 100%;
+  height: 100%;
+  object-fit: contain; /* Optional if you need to control the scaling */
+}
+</style>

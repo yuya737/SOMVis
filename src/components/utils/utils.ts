@@ -283,7 +283,6 @@ export const orthoView = new OrthographicView({
 });
 export const miniorthoView = new OrthographicView({
   id: "minimap",
-  // zoom: 3.5,
   x: 20,
   y: 20,
   width: "25%",
@@ -310,7 +309,7 @@ export const DECKGL_SETTINGS = {
   initialViewState: {
     target: [0, 0, 0],
     rotationX: 90,
-    zoom: 20,
+    zoom: 19,
     latitude: 0,
     longitude: 0,
     maxZoom: 25,
@@ -527,22 +526,18 @@ export const historicalLabelsSfbay = [
   "CMIP6_pr_historical_sfbay_S3L0.1_20x20_TaiESM1_historical_r1i1p1f1_pr_sfbay.nc",
 ];
 
-export function makeAnnotationGlyph(mapAnnotation, nodeMap, index, WIDTH) {
+export function makeAnnotationGlyph(
+  mapAnnotation,
+  nodeMap,
+  index,
+  onlyIndex,
+  WIDTH
+) {
   const minX = Math.min(...nodeMap.map((d) => d.coords[0] / 10));
   const maxX = Math.max(...nodeMap.map((d) => d.coords[0] / 10));
   const minY = Math.min(...nodeMap.map((d) => d.coords[1] / 10));
   const maxY = Math.max(...nodeMap.map((d) => d.coords[1] / 10));
   const zones = constructZones(mapAnnotation);
-
-  console.log(
-    "DEBUG1 makeAnnotationGlyph",
-    minX,
-    maxX,
-    minY,
-    maxY,
-    index,
-    WIDTH
-  );
 
   const HEIGHT = WIDTH * ((maxY - minY) / (maxX - minX));
 
@@ -568,14 +563,16 @@ export function makeAnnotationGlyph(mapAnnotation, nodeMap, index, WIDTH) {
 
   svg
     .selectAll("polygon")
-    .data(zones)
+    .data(onlyIndex ? [zones[index]] : zones)
     .join("polygon")
     .attr("points", (d) =>
       d.geometry.coordinates[0]
         .map((d) => [xScale(d[0]), yScale(d[1])].join(","))
         .join(" ")
     )
-    .style("fill", (d, i) => (i == index ? "#787878" : "#F5F5F5"))
+    .style("fill", (d, i) =>
+      onlyIndex ? "#787878" : i == index ? "#787878" : "#F5F5F5"
+    )
     .style("fill-opacity", 0.5)
     .style("stroke", "black");
   return svg;
