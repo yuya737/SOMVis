@@ -3,12 +3,13 @@
     <canvas :id="deckglCanvas" class="z-[2] h-full w-full" />
     <MapAnnotationEditor
       v-if="store.showMapAnnotationPopup"
-      class="absolute z-[4]"
+      class="absolute z-[4] cursor-grab active:cursor-grabbing"
       :annotation-props="store.mapAnnotationPopup"
       :style="{
-        top: `${store.mapAnnotationPopup.coords[1]}px`,
-        left: `${store.mapAnnotationPopup.coords[0]}px`,
+        top: `${store.mapAnnotationPopup.coords[1] + position.y}px`,
+        left: `${store.mapAnnotationPopup.coords[0] + position.x}px`,
       }"
+      @mousedown="startDrag"
     />
     <div
       class="absolute right-0 top-0 z-[4] m-4 flex h-fit max-h-[100%] w-fit flex-col items-end justify-start gap-2 overflow-auto"
@@ -74,11 +75,36 @@ import {
   dataset_name,
   timeType,
 } from "@/components/utils/utils";
-import TooltipView from "../TooltipView.vue";
 import MemberViewer from "../MemberViewer.vue";
 
-import distance from "@turf/distance";
-import bearing from "@turf/bearing";
+let isDragging = false;
+const position = ref({ x: 0, y: 0 });
+let offset = { x: 0, y: 0 };
+
+const startDrag = (event) => {
+  isDragging = true;
+  offset = {
+    x: event.clientX - position.value.x,
+    y: event.clientY - position.value.y,
+  };
+
+  document.addEventListener("mousemove", onDrag);
+  document.addEventListener("mouseup", stopDrag);
+};
+
+const onDrag = (event) => {
+  if (isDragging) {
+    console.log(position);
+    position.value.x = event.clientX - offset.x;
+    position.value.y = event.clientY - offset.y;
+  }
+};
+
+const stopDrag = () => {
+  isDragging = false;
+  document.removeEventListener("mousemove", onDrag);
+  document.removeEventListener("mouseup", stopDrag);
+};
 
 const props = defineProps({
   time_type: timeType,
@@ -88,7 +114,6 @@ const props = defineProps({
 });
 
 let layerList: LayersList = [];
-let settings = {};
 
 let layerGenerators: AbstractLayerGenerator[] = [];
 
@@ -97,7 +122,6 @@ let deck: any = null;
 
 const deckglCanvas = `deck-canvas-projection-viewer-${Math.random()}`;
 
-const mode = ref("Explore");
 const isHiding3D = ref(false);
 const isRecalculatingMDE = ref(false);
 
@@ -519,6 +543,7 @@ function cropCanvas() {
 watch(
   () => [store.currentStep, store.nodeMap[props.time_type]],
   ([newVal, _]) => {
+    if (newVal == "Analyze") return;
     store.isHidingDistribution = true;
     store.isShowingLLMQueriedRegion = false;
     store.isHidingAnnotations = true;
@@ -528,6 +553,7 @@ watch(
         const croppedCanvas = cropCanvas();
         store.nodeMapCanvas = croppedCanvas;
         store.isHidingAnnotations = false;
+        store.isHidingDistribution = false;
       });
     });
   },

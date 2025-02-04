@@ -16,12 +16,12 @@
           :pitch="pitch"
         />
         <div
-          class="group absolute left-0 top-0 z-[5] translate-x-1/2 translate-y-1/2 transform"
+          class="group absolute right-0 top-0 z-[5] -translate-x-1/2 translate-y-1/2 transform"
         >
           <i class="pi pi-question-circle cursor-pointer text-xl"></i>
 
           <div
-            class="text-grey-800 absolute left-0 top-0 hidden h-fit min-w-[250px] flex-col items-center justify-center rounded-md bg-gray-100 p-2 text-sm font-thin group-hover:block"
+            class="help-text absolute right-0 top-0 hidden h-fit min-w-[250px] flex-col items-center justify-center group-hover:block"
           >
             <span>
               Click on a SOM Node and the SOM Node highlighted by

@@ -8,6 +8,29 @@
     "
     class="relative z-[5] h-auto w-full rounded-lg border bg-gray-100 px-4"
   >
+    <div
+      class="group absolute right-0 top-0 z-[5] -translate-x-1/2 translate-y-1/2 transform"
+    >
+      <i class="pi pi-question-circle cursor-pointer text-xl"></i>
+
+      <div
+        class="help-text absolute right-0 top-0 hidden h-fit min-w-[250px] flex-col items-center justify-center rounded-md p-2 group-hover:block"
+      >
+        <span>
+          Your interactions with the LLM (large language models) will be tracked
+          here. <br />
+          If you ask a question about the SOM Node space, the LLM will query the
+          SOM Node space and highlight the region for which the query is true.
+          <br />
+          Asking the LLM to summarize a SOM Node region will generate an
+          explanation.
+        </span>
+        <div
+          id="somNodeViewerLegend"
+          class="my-2 flex w-full flex-col items-center justify-evenly font-normal"
+        />
+      </div>
+    </div>
     <!-- Heading -->
     <div class="sticky top-0 z-[2] flex flex-col space-y-1.5 bg-gray-100 py-4">
       <h1 class="text-xl font-bold text-gray-800">LLM Exploration History</h1>

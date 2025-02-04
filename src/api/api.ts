@@ -26,18 +26,44 @@ class API {
         body: JSON.stringify(params),
       };
     }
+    try {
+      // Make the network request
+      const resp = await fetch(URL, init);
 
-    let resp = await fetch(URL, init);
+      // Check if the response is not OK (status outside of the range 200-299)
+      if (!resp.ok) {
+        const errorText = await resp.text(); // Extract error message from response
+        throw new Error(
+          `HTTP error: ${resp.status} - ${errorText || "No additional details"}`
+        );
+      }
 
-    if (!resp.ok) {
-      throw new Error(`HTTP error:${resp.status}`);
+      // Parse the JSON response if needed
+      if (isjson) {
+        return await resp.json();
+      }
+
+      // Return response for non-JSON cases
+      return resp;
+    } catch (error) {
+      // Catch network errors or any other unexpected errors
+      console.error("Fetch error:", error);
+
+      // Optionally, you can re-throw the error to handle it in the calling code
+      throw new Error(`Failed to fetch data from ${URL}: ${error}`);
     }
 
-    if (isjson) {
-      resp = await resp.json();
-    }
+    // let resp = await fetch(URL, init);
 
-    return resp;
+    // if (!resp.ok) {
+    //   throw new Error(`HTTP error:${resp.status}`);
+    // }
+
+    // if (isjson) {
+    //   resp = await resp.json();
+    // }
+
+    // return resp;
   }
 }
 

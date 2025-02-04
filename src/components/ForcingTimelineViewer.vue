@@ -1,10 +1,10 @@
 <template>
   <div id="timelineContainer" class="relative h-full w-full">
     <div
-      class="absolute left-0 top-0 w-full z-[2] h-fit text-black text-lg flex flex-row justify-normal items-center"
+      class="absolute left-0 top-0 z-[2] flex h-fit w-full flex-row items-center justify-normal text-lg text-black"
     >
       <div
-        class="text-sm bg-gray-100 text-gray-800 m-2 p-2 rounded-lg max-w-[33%]"
+        class="m-2 max-w-[33%] rounded-lg bg-gray-100 p-2 text-sm text-gray-800"
       >
         Forcing clustering per month - GCMs are clustering based on its forcing
         from <kbd>historical</kbd> to <kbd>{{ selectedType }}</kbd
@@ -19,7 +19,7 @@
       <Button
         @click="selectedType = null"
         icon="pi pi-times"
-        class="m-2 p-2 bg-red-200 aspect-square w-fit h-fit flex flex-row justify-normal items-center"
+        class="m-2 flex aspect-square h-fit w-fit flex-row items-center justify-normal bg-red-200 p-2"
       />
 
       <Dropdown
@@ -32,7 +32,7 @@
       <Button
         @click="selectedModel = null"
         icon="pi pi-times"
-        class="m-2 p-2 bg-red-200 aspect-square w-fit h-fit flex flex-row justify-normal items-center"
+        class="m-2 flex aspect-square h-fit w-fit flex-row items-center justify-normal bg-red-200 p-2"
       />
 
       <!-- <ToggleButton
@@ -53,14 +53,14 @@
       :members="selectedTimelineCluster"
       :month="selectedTimelineClusterMonth"
       @close-card="showTooltip = false"
-      class="absolute bg-white border border-gray-300 shadow-lg rounded-lg text-black bottom-0 right-0"
+      class="absolute bottom-0 right-0 rounded-lg border border-gray-300 bg-white text-black shadow-lg"
     /> -->
-    <div id="timelineSVG" class="w-full h-full text-black flex justify-around">
+    <div id="timelineSVG" class="flex h-full w-full justify-around text-black">
       <div
         id="tag1"
         v-show="isShowingTag1"
         @click="isShowingTag1 = false"
-        class="absolute bg-white border border-gray-300 rounded-lg p-1 text-black"
+        class="absolute rounded-lg border border-gray-300 bg-white p-1 text-black"
       >
         {{ tag1Text }}
       </div>
@@ -69,7 +69,7 @@
         id="tag2"
         v-show="isShowingTag2"
         @click="isShowingTag2 = false"
-        class="absolute bg-white border border-gray-300 rounded-lg p-1 text-black"
+        class="absolute rounded-lg border border-gray-300 bg-white p-1 text-black"
       >
         {{ tag2Text }}
       </div>
@@ -82,7 +82,7 @@
     id="tooltipText"
     v-show="showTooltipText"
     @click="showTooltipText = false"
-    class="absolute bg-white border border-gray-300 shadow-lg rounded-lg p-2 text-black"
+    class="absolute rounded-lg border border-gray-300 bg-white p-2 text-black shadow-lg"
   >
     {{ tooltipData }}
   </div>
@@ -1120,7 +1120,7 @@ async function getData() {
 
     const { clustering } = await API.fetchData("run_clustering", true, {
       distance_matrix: forcing_distances,
-      n_neighbors: 3, // For UMAP
+      n_neighbors: 5, // For UMAP
       min_cluster_size: 2, // For HDBSCAN
       keep_noise: false, // For HDBSCAN
     });

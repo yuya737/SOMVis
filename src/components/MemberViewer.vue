@@ -1,9 +1,9 @@
 <template>
-  <div class="w-fit relative p-6 bg-gray-100 shadow-md rounded-lg">
+  <div class="relative w-fit rounded-lg bg-gray-100 p-6">
     <Button
       :icon="isOpened ? 'pi pi-minus' : 'pi pi-plus'"
       @click="toggleIsOpened"
-      class="absolute top-0 right-0 m-2"
+      class="absolute right-0 top-0 m-2"
     />
     <h1 class="text-xl font-bold text-gray-800">Member Viewer</h1>
     <div v-if="isOpened" :class="gridClass">

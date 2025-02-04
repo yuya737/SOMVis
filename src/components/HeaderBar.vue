@@ -27,7 +27,7 @@
           <i class="pi pi-question-circle cursor-pointer text-xl"></i>
 
           <div
-            class="text-grey-800 absolute right-0 top-0 hidden min-w-[150px] rounded-md bg-gray-100 p-2 text-sm font-thin group-hover:block"
+            class="help-text absolute right-0 top-0 hidden min-w-[150px] group-hover:block"
           >
             Toggle LLM queried region. Click on the LLM history to select
             regions.
@@ -52,7 +52,7 @@
           <i class="pi pi-question-circle cursor-pointer text-xl"></i>
 
           <div
-            class="text-grey-800 absolute right-0 top-0 hidden min-w-[150px] rounded-md bg-gray-100 p-2 text-sm font-thin group-hover:block"
+            class="help-text absolute right-0 top-0 hidden min-w-[150px] group-hover:block"
           >
             Reflect Anchors in the SOM Node space and recalculate the mapping.
             Anchors will stay in place whist the other nodes will adjust to the
@@ -77,7 +77,7 @@
           <i class="pi pi-question-circle cursor-pointer text-xl"></i>
 
           <div
-            class="text-grey-800 absolute right-0 top-0 hidden min-w-[150px] rounded-md bg-gray-100 p-2 text-sm font-thin group-hover:block"
+            class="help-text absolute right-0 top-0 hidden min-w-[150px] group-hover:block"
           >
             Toggle the annotations on the map
           </div>
@@ -100,7 +100,7 @@
           <i class="pi pi-question-circle cursor-pointer text-xl"></i>
 
           <div
-            class="text-grey-800 absolute right-0 top-0 hidden min-w-[150px] rounded-md bg-gray-100 p-2 text-sm font-thin group-hover:block"
+            class="help-text absolute right-0 top-0 hidden min-w-[150px] group-hover:block"
           >
             Toggle the distribution shown in the SOM Node space as polygons
           </div>
@@ -118,7 +118,7 @@
           <i class="pi pi-question-circle cursor-pointer text-xl"></i>
 
           <div
-            class="text-grey-800 absolute right-0 top-0 hidden min-w-[150px] rounded-md bg-gray-100 p-2 text-sm font-thin group-hover:block"
+            class="help-text absolute right-0 top-0 hidden min-w-[150px] group-hover:block"
           >
             The map mode is either <kbd>Explore</kbd> or <kbd>Annotate</kbd>. In
             Annotate, clicking on the space will trigger the annotation UI.

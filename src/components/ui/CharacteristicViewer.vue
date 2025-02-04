@@ -1,16 +1,16 @@
 <template>
   <div
-    class="flex flex-col items-center p-6 bg-gray-100 rounded-lg shadow-md relative w-fit"
+    class="relative flex w-fit flex-col items-center rounded-lg bg-gray-100 p-6"
   >
     <Button
       :icon="isOpened ? 'pi pi-minus' : 'pi pi-plus'"
-      class="absolute top-0 right-0 m-2"
+      class="absolute right-0 top-0 m-2"
       @click="toggleIsOpened"
     />
     <h1 id="temp" class="text-xl font-bold text-gray-800">Characteristics</h1>
     <div v-if="isOpened" class="mt-4 w-fit">
       <div v-if="characteristic.length == 0" class="font-medium text-gray-600">
-        Must define regions to see their Characteristics
+        Must define regions and select members
       </div>
       <div
         v-if="characteristic.length > 0 && characteristic[0].transition != null"
@@ -19,12 +19,12 @@
       </div>
       <div
         v-if="characteristic.length > 0 && characteristic[0].transition != null"
-        class="flex flex-row justify-evenly w-full"
+        class="flex w-full flex-row justify-evenly"
       >
-        <span class="text-lg font-bold bg-gray-100 px-4 py-2 rounded-lg"
+        <span class="rounded-lg bg-gray-100 px-4 py-2 text-lg font-bold"
           >Selection 1</span
         >
-        <span class="text-lg font-bold bg-gray-100 px-4 py-2 rounded-lg"
+        <span class="rounded-lg bg-gray-100 px-4 py-2 text-lg font-bold"
           >Selection 2</span
         >
       </div>
@@ -33,7 +33,7 @@
         <div
           v-for="c in characteristic"
           :key="c.index"
-          class="bg-white p-3 mb-2 rounded-lg shadow-sm border border-gray-200 transition-transform duration-300 w-full"
+          class="mb-2 w-full rounded-lg border border-gray-200 bg-white p-3 shadow-sm transition-transform duration-300"
           :class="{
             'scale-105': animateChange.includes(c.index),
             'bg-green-50': direction[c.index] === 'increase',
@@ -129,8 +129,9 @@ async function getCharacteristic() {
     : store.getFiles[0];
   const selectedMonth = store.getMonthsSelected;
   const zones = constructZones(store.mapAnnotation);
-  if (zones.length === 0) {
+  if (zones.length === 0 || selectedFiles.length == 0) {
     // No zones defined
+    isLoading.value = false;
     return;
   }
   console.log("DEBUG GET CHARACTERISTIC", selectedFiles, props.isComparison);

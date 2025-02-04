@@ -15,13 +15,13 @@
         >
         </Steps>
         <div
-          class="group absolute right-0 top-0 z-[4] -translate-x-1 -translate-y-1 transform"
+          class="group absolute right-0 top-0 z-[4] -translate-y-1 translate-x-2 transform"
         >
           <i class="pi pi-question-circle cursor-pointer text-xl"></i>
 
           <div
             v-html="helpText"
-            class="text-grey-800 absolute left-0 top-0 hidden min-w-[250px] rounded-md bg-gray-100 p-2 font-thin group-hover:block"
+            class="help-text absolute left-0 top-0 hidden min-w-[250px] rounded-md p-2 group-hover:block"
           />
         </div>
       </div>
