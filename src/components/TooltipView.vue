@@ -1,58 +1,72 @@
+<!-- class="group absolute right-0 top-0 z-[4] hidden -translate-y-3 translate-x-3 transform" -->
 <template>
-  <!-- <div
-    id="memberViewerLegend"
-    class="flex flex-row justify-evenly items-center my-2"
-  ></div> -->
-  <DataTable
-    :value="membersWithMean"
-    scrollable
-    scrollHeight="400px"
-    showGridlines
-    class="w-fit"
+  <div class="relative">
+    <DataTable
+      :value="membersWithMean"
+      scrollable
+      scrollHeight="400px"
+      showGridlines
+      class="w-fit"
+    >
+      <Column field="model_name" sortable header="Model Name"></Column>
+      <!-- <Column field="variant" sortable header="Variant"></Column> -->
+      <Column field="ssp" sortable header="SSP Type">
+        <template #body="slotProps">
+          <Tag
+            :value="slotProps.data.ssp"
+            :style="{
+              backgroundColor: setSSPColors(slotProps.data),
+              color: '#fff',
+            }"
+          />
+        </template>
+      </Column>
+      <Column field="mean" sortable header="Mean(Δhistorical)" class="w-fit">
+        <template #body="slotProps">
+          <span class="inline-flex w-full items-center justify-between">
+            {{ formatScientificNotation(slotProps.data) }}
+            <svg width="20" height="20" style="margin-right: 8px">
+              <rect
+                width="20"
+                height="20"
+                :style="computeBoxColor(slotProps.data.mean)"
+              />
+            </svg>
+          </span>
+        </template>
+      </Column>
+    </DataTable>
+  </div>
+  <div
+    class="group absolute right-0 top-0 z-[4] w-fit -translate-x-2 translate-y-2 transform"
   >
-    <Column field="model_name" sortable header="Model Name"></Column>
-    <!-- <Column field="variant" sortable header="Variant"></Column> -->
-    <Column field="ssp" sortable header="SSP Type">
-      <template #body="slotProps">
-        <Tag
-          :value="slotProps.data.ssp"
-          :style="{
-            backgroundColor: setSSPColors(slotProps.data),
-            color: '#fff',
-          }"
-        />
-      </template>
-    </Column>
-    <!-- <Column field="mean" sortable header="Mean(Δhistorical)" class="w-fit">
-      <template #body="slotProps">
-        <span class="inline-flex items-center justify-between w-full">
-          {{ formatScientificNotation(slotProps.data) }}
-          <svg width="20" height="20" style="margin-right: 8px">
-            <rect
-              width="20"
-              height="20"
-              :style="computeBoxColor(slotProps.data.mean)"
-            />
-          </svg>
-        </span>
-      </template>
-    </Column> -->
-  </DataTable>
+    <i class="pi pi-question-circle cursor-pointer text-xl"></i>
+    <div class="help-text hidden group-hover:block">
+      <span class="font-bold">
+        Color mapping for Mean(Δhistorical) in kg/m^2/s</span
+      >
+      <div
+        :id="memberViewerLegend"
+        class="my-2 flex min-w-[400px] flex-row items-center justify-evenly"
+      ></div>
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
 import DataTable from "primevue/datatable";
-import Button from "primevue/button";
 import Tag from "primevue/tag";
 import Column from "primevue/column";
+import { useStore } from "@/store/main";
 
 import { computed, onMounted, ref, watch } from "vue";
 import API from "@/api/api";
 import { computedAsync } from "@vueuse/core";
-import { dataset_name, sspAllLabels } from "./utils/utils";
+import { sspAllLabels } from "./utils/utils";
 import * as d3 from "d3";
 
-// Emit the close event to the parent component
+const store = useStore();
+const memberViewerLegend = `memberViewer-${Math.round(Math.random() * 1000)}`;
 
 let monthlyMeanMin = Infinity;
 let monthlyMeanMax = -Infinity;
@@ -111,7 +125,7 @@ const membersWithMean = computedAsync(async () => {
   let ret = [];
   let promises = props.members.map(async (member) => {
     const { means } = await API.fetchData("get_all_means", true, {
-      dataset_type: dataset_name,
+      dataset_type: store.currentDatasetType,
       members: [member],
       // members: sspAllLabels,
       months: [props.month],
@@ -124,23 +138,8 @@ const membersWithMean = computedAsync(async () => {
     });
   });
 
-  let perMemberMeans = sspAllLabels.map(async (member) => {
-    const { means } = await API.fetchData("get_all_means", true, {
-      dataset_type: dataset_name,
-      members: [member],
-      // members: sspAllLabels,
-      months: [props.month],
-      years: [-1],
-    });
-    console.log("DEBUG MEAN", member, means);
-    if (means !== null && means !== undefined) {
-      monthlyMeanMin = Math.min(monthlyMeanMin, means);
-      monthlyMeanMax = Math.max(monthlyMeanMax, means);
-    }
-  });
-  await Promise.all([...promises, ...perMemberMeans]);
+  await Promise.all([...promises]);
   console.log("Members with mean", ret);
-  // drawLegend();
   return ret.sort((a, b) => a.model_name.localeCompare(b.model_name));
 });
 
@@ -150,60 +149,82 @@ watch(
     console.log("Members with mean updated", val);
   }
 );
-// function drawLegend() {
-//   const numBoxes = 7;
-//   let color = d3
-//     .scaleDiverging(d3.interpolateBrBG)
-//     .domain([monthlyMeanMin, 0, monthlyMeanMax]);
-//   const legendData = Array.from({ length: numBoxes }, (_, i) => {
-//     console.log(
-//       (i / numBoxes) * (monthlyMeanMax - monthlyMeanMin) + monthlyMeanMin,
-//       monthlyMeanMax,
-//       monthlyMeanMin
-//     );
-//     return color(
-//       (i / numBoxes) * (monthlyMeanMax - monthlyMeanMin) + monthlyMeanMin
-//     );
-//   });
-//   console.log("DEBUG: LGEND", legendData);
+onMounted(async () => {
+  watch(
+    () => props.month,
+    () => {
+      console.log("DEBUG: MONTH CHANGED");
+      drawLegend();
+    },
+    { immediate: true }
+  );
+});
 
-//   // Check if the legend already exists
-//   if (document.getElementById("memberViewerLegend")) {
-//     document.getElementById("memberViewerLegend").innerHTML = "";
-//   }
+async function drawLegend() {
+  monthlyMeanMin = Infinity;
+  monthlyMeanMax = -Infinity;
+  // Check if the legend already exists
+  if (document.getElementById(memberViewerLegend)) {
+    document.getElementById(memberViewerLegend).innerHTML = "";
+  }
+  let perMemberMeans = sspAllLabels.map(async (member) => {
+    const { means } = await API.fetchData("get_all_means", true, {
+      dataset_type: store.currentDatasetType,
+      members: [member],
+      // members: sspAllLabels,
+      months: [props.month],
+      years: [-1],
+    });
+    if (means !== null && means !== undefined) {
+      monthlyMeanMin = Math.min(monthlyMeanMin, means);
+      monthlyMeanMax = Math.max(monthlyMeanMax, means);
+    }
+  });
+  await Promise.all([...perMemberMeans]);
+  console.log("SDFSDFDFSDFSDSDF", monthlyMeanMin, monthlyMeanMax);
+  const numBoxes = 7;
+  let color = d3
+    .scaleDiverging(d3.interpolateBrBG)
+    .domain([monthlyMeanMin, 0, monthlyMeanMax]);
+  const legendData = Array.from({ length: numBoxes }, (_, i) => {
+    return color(
+      (i / (numBoxes - 1)) * (monthlyMeanMax - monthlyMeanMin) + monthlyMeanMin
+    );
+  });
 
-//   const legendItems = d3
-//     .select("#memberViewerLegend")
-//     .selectAll(".legend-item")
-//     .data(legendData)
-//     .join("div")
-//     .attr("class", "legend-item");
+  const legendItems = d3
+    .select(`#${memberViewerLegend}`)
+    .selectAll(".legend-item")
+    .data(legendData)
+    .join("div")
+    .attr("class", "legend-item");
 
-//   // Add colored boxes
-//   legendItems
-//     .append("svg")
-//     .attr("width", 20)
-//     .attr("height", 20)
-//     .append("rect")
-//     .attr("width", 20)
-//     .attr("height", 20)
-//     .style("fill", (d) => d);
+  // Add colored boxes
+  legendItems
+    .append("svg")
+    .attr("width", 20)
+    .attr("height", 20)
+    .append("rect")
+    .attr("width", 20)
+    .attr("height", 20)
+    .style("fill", (d) => d);
 
-//   // Add labels
-//   legendItems
-//     .append("text")
-//     .style("font-size", "0.8rem")
-//     .attr("text-anchor", "end") // Align text properly
-//     .text((d, i) =>
-//       (
-//         (i / numBoxes) * (monthlyMeanMax - monthlyMeanMin) +
-//         monthlyMeanMin
-//       ).toExponential(1)
-//     );
-// }
+  // Add labels
+  legendItems
+    .append("text")
+    .style("font-size", "0.8rem")
+    .attr("text-anchor", "end") // Align text properly
+    .text((d, i) =>
+      (
+        (i / (numBoxes - 1)) * (monthlyMeanMax - monthlyMeanMin) +
+        monthlyMeanMin
+      ).toExponential(1)
+    );
+}
 
-// // Add a title to the legend
-// svg.append("text")
+// Add a title to the legend
+// svg
+//   .append("text")
 //   .attr("x", legendWidth / 2)
 //   .attr("y", 20)
 //   .attr("text-anchor", "middle")
@@ -214,6 +235,11 @@ watch(
 /* Remove padding from DataTable cells */
 .p-datatable-tbody > tr > td {
   padding: 0.25rem 0.25rem;
+}
+.legend-item {
+  display: flex;
+  width: fit-content;
+  flex-direction: column;
 }
 
 /* Optionally, remove padding from header and footer cells */

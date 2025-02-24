@@ -3,7 +3,7 @@
     <Button
       :icon="isOpened ? 'pi pi-minus' : 'pi pi-plus'"
       @click="toggleIsOpened"
-      class="absolute right-0 top-0 m-2"
+      class="topt -0 absolute right-0 m-2"
     />
     <h1 class="text-xl font-bold text-gray-800">Member Viewer</h1>
     <div v-if="isOpened" :class="gridClass">

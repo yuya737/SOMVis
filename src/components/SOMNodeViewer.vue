@@ -31,7 +31,8 @@
                 class="inline-flex h-[1rem] w-[1rem] align-middle"
               ></span>
               icon is displayed.<br />
-              SOM Nodes contain <it>standardized</it> precipitation values per
+              SOM Nodes contain
+              <span class="italic">standardized</span> precipitation values per
               month. -1 indicates 1 standard deviation below the mean and 1
               indicates 1 standard deviation above the mean, where the standard
               deviation is calculated as the standard deviation of all values
@@ -50,7 +51,6 @@
 </template>
 
 <script setup lang="ts">
-import SomNodeViewerDeckGLComponent from "./SomNodeViewerDeckGLComponent.vue";
 import magnifyingGlassSVG from "@/assets/magnifying-glass.svg?raw";
 import { Deck } from "@deck.gl/core/typed";
 import * as d3 from "d3";
@@ -59,7 +59,8 @@ import { MapboxMap } from "@studiometa/vue-mapbox-gl";
 import { ScatterplotLayer } from "@deck.gl/layers/typed";
 import { MapView, MapViewport } from "@deck.gl/core";
 import { onMounted, reactive, ref, computed, Ref, watch } from "vue";
-import { dataset_name, timeType, approx } from "./utils/utils";
+import { timeType, approx } from "./utils/utils";
+import { useStore } from "@/store/main";
 
 const token: string =
   "pk.eyJ1IjoieXV5YTczNyIsImEiOiJjbGY0ZmMzbG4wcjNvM3hxbTVqaWpqaDQ3In0.wkIMGbAn6HaRVqPs2CJSnA";
@@ -69,6 +70,7 @@ const computedMapCenter = computed(() => [mapCenter[0], mapCenter[1]]);
 const zoom = ref(1);
 const bearing = ref(1);
 const pitch = ref(1);
+const store = useStore();
 
 const magnifyingGlassSVGIcon = ref(magnifyingGlassSVG);
 const isOpened = ref(true);
@@ -92,7 +94,7 @@ onMounted(() => {
       // California
       latitude: 36.7783,
       longitude: -119.4179,
-      zoom: 4,
+      zoom: 3.5,
     },
     canvas: "som-node-viewer",
     views: new MapView(),
@@ -121,7 +123,7 @@ async function fetchMapData() {
   }
   console.log("DEBUG fetchMapData", props.nodeClickedID);
   const data = await API.fetchData(`get_som_node`, true, {
-    dataset_type: dataset_name,
+    dataset_type: store.currentDatasetType,
     time_type: props.time_type,
     id: props.nodeClickedID,
   });
@@ -139,7 +141,7 @@ async function fetchMapData() {
     .filter((d) => d.val != null);
 
   let { min, max } = await API.fetchData("get_extents", true, {
-    dataset_type: dataset_name,
+    dataset_type: store.currentDatasetType,
     time_type: props.time_type,
   });
 
@@ -165,7 +167,7 @@ async function fetchMapData() {
     // getRadius: (d: any) => 70000,
     // radiusMinPixels: 2,
     // radiusScale: 100,
-    getRadius: 2500,
+    getRadius: store.currentDatasetType == "California" ? 2500 : 5000,
     radiusScale: 1,
     getFillColor: (d) => {
       return colorScale(d.val)
@@ -182,10 +184,12 @@ async function fetchMapData() {
 
 async function fetchMapDimensions() {
   console.log("Fetching map dimensions");
-  const mapDimensions = await API.fetchData("spatial_grid", true, null);
+  const mapDimensions = await API.fetchData("spatial_grid", true, {
+    dataset_type: store.currentDatasetType,
+  });
   console.log(mapDimensions);
   latitudes = mapDimensions.lat;
-  longitudes = mapDimensions.lon;
+  longitudes = mapDimensions.lon.map((d) => ((d + 180) % 360) - 180);
 }
 
 function drawLegend({ min, max, color }) {

@@ -75,7 +75,7 @@
       </div>
     </div>
     <div v-if="isRecalculatingTimeline" class="overlay">
-      <div class="overlay-text">Recalculating Timeline...</div>
+      <div class="overlay-text">Loading Model Forcing Clustering...</div>
     </div>
   </div>
   <div
@@ -215,7 +215,7 @@ onMounted(() => {
     // remove the svg
     const element = document.getElementById("timelineSVG");
     if (element) {
-      element.innerHTML = "";
+      d3.select(element).select("svg").remove();
       drawTimeline();
     }
   });
@@ -227,7 +227,7 @@ function draw() {
     nextTick(() => {
       const element = document.getElementById("timelineSVG");
       if (element) {
-        element.innerHTML = "";
+        d3.select(element).select("svg").remove();
         drawTimeline();
       }
     });

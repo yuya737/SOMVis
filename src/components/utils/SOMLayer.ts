@@ -191,7 +191,6 @@ export class SOMLayer extends AbstractLayerGenerator {
       });
 
       const labelsPromise = BMUPolygon.then((BMUPolygon) => {
-        console.log("BMUPolygon", BMUPolygon);
         const locations = BMUPolygon.map((d) => d[0]);
         return locations;
       });

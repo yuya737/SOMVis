@@ -11,8 +11,11 @@
     <div
       class="absolute left-0 top-0 z-[2] flex h-fit w-fit flex-row items-center justify-normal text-lg text-black"
     >
+      <div
+        class="m-2 max-w-[33%] rounded-lg bg-gray-100 p-2 text-sm text-gray-800"
       >
-       Ensemble Model clustering per month - GCM:SSP pairs are clustered per month based on their behavior
+        Ensemble Model clustering per month - GCM:SSP pairs are clustered per
+        month based on their behavior
       </div>
       <Dropdown
         v-model="selectedModel"
@@ -48,7 +51,7 @@
       <Button
         @click="clearClusterSelection"
         label="Reset Cluster Selection(s)"
-        class="m-2 p-2"
+        class="m-2 hidden p-2"
       />
     </div>
     <!-- <TooltipView
@@ -79,7 +82,7 @@
       </div>
     </div>
     <div v-if="isRecalculatingTimeline" class="overlay">
-      <div class="overlay-text">Recalculating Timeline...</div>
+      <div class="overlay-text">Loading GCM:SSP Clustering...</div>
     </div>
   </div>
   <div
@@ -99,7 +102,7 @@ import { onMounted, ref, inject, reactive, watch, nextTick } from "vue";
 import Dropdown from "primevue/dropdown";
 import Button from "primevue/button";
 import PopupView from "./ui/PopupView.vue";
-import { dataset_name, timeType, argmin, argmax } from "./utils/utils";
+import { timeType, argmin, argmax } from "./utils/utils";
 
 import ToggleButton from "primevue/togglebutton";
 
@@ -251,7 +254,7 @@ onMounted(() => {
     // remove the svg
     const element = document.getElementById("timelineSVG");
     if (element) {
-      element.innerHTML = "";
+      d3.select(element).select("svg").remove();
       drawTimeline();
     }
   });
@@ -263,6 +266,7 @@ function draw() {
     nextTick(() => {
       const element = document.getElementById("timelineSVG");
       if (element) {
+        d3.select(element).select("svg").remove();
         drawTimeline();
       }
     });
@@ -290,7 +294,7 @@ const dataT = reactive({}); // dataT[i][j] is the clustering for ensemble i, mon
 let monthlyMDS = reactive({}); // monthlyMDS[i] is the MDS for month i
 
 let perTimeStepClusterCounts = {};
-let maxClusterSize;
+let maxClusterSize = null;
 // console.log(data[0]);
 const counts = (d) =>
   d.reduce((acc, value) => {
@@ -322,7 +326,7 @@ async function calculateClusterBoxes({
       //   .map((d) => d.slice(prefix.length));
 
       const { means } = await API.fetchData("get_all_means", true, {
-        dataset_type: dataset_name,
+        dataset_type: store.currentDatasetType,
         members: memberFileNames,
         months: [month],
         years: [-1],
@@ -587,7 +591,7 @@ async function checkFlipMDS({ yScale, HEIGHT, MARGIN, minMDS, maxMDS }) {
     const highestMDSCluster = argmax(monthlyMDS[month]);
 
     const lowestMDSMean = await API.fetchData("get_all_means", true, {
-      dataset_type: dataset_name,
+      dataset_type: store.currentDatasetType,
       members: sspAllLabels
         .map((member, i) => (data[month][i] == lowestMDSCluster ? member : -1))
         .filter((d) => d != -1),
@@ -596,7 +600,7 @@ async function checkFlipMDS({ yScale, HEIGHT, MARGIN, minMDS, maxMDS }) {
     });
 
     const highestMDSMean = await API.fetchData("get_all_means", true, {
-      dataset_type: dataset_name,
+      dataset_type: store.currentDatasetType,
       members: sspAllLabels
         .map((member, i) => (data[month][i] == highestMDSCluster ? member : -1))
         .filter((d) => d != -1),
@@ -615,7 +619,8 @@ async function drawTimeline() {
   const HEIGHT = document.getElementById("timelineSVG").clientHeight;
 
   const clusterHeightMax = HEIGHT / 10;
-  const MARGIN = 40;
+  const VMARGIN = 100;
+  const HMARGIN = 40;
 
   const svg = d3
     .select("#timelineSVG")
@@ -661,10 +666,10 @@ async function drawTimeline() {
     .domain(monthList)
     // .domain(d3.range(1, 13))
     // .range([MARGIN, WIDTH - MARGIN]);
-    .range([MARGIN, WIDTH - MARGIN]);
+    .range([HMARGIN, WIDTH - HMARGIN]);
   svg
     .append("g")
-    .attr("transform", `translate(0, ${HEIGHT - MARGIN})`)
+    .attr("transform", `translate(0, ${HEIGHT - HMARGIN})`)
     .call(d3.axisBottom(xScale).tickFormat((d) => `${months[d - 1]}`))
     .style("font-size", "large");
   svg
@@ -691,8 +696,8 @@ async function drawTimeline() {
         .range([
           // MARGIN + (HEIGHT - 2 * MARGIN) * 0.2,
           // HEIGHT - MARGIN - (HEIGHT - 2 * MARGIN) * 0.2,
-          MARGIN * 2,
-          HEIGHT - MARGIN * 2,
+          VMARGIN * 2,
+          HEIGHT - VMARGIN * 2,
         ])(monthlyMDS[month][clusterId]);
   };
 
@@ -706,7 +711,7 @@ async function drawTimeline() {
     yScale: yScale,
     clusterHeightScale: clusterHeightScale,
     height: HEIGHT,
-    margin: MARGIN * 2,
+    margin: VMARGIN * 2,
     minMDS: minMDS,
     maxMDS: maxMDS,
   });
@@ -736,7 +741,7 @@ async function drawTimeline() {
   await checkFlipMDS({
     yScale: yScale,
     HEIGHT: HEIGHT,
-    MARGIN: MARGIN,
+    MARGIN: VMARGIN,
     minMDS: minMDS,
     maxMDS: maxMDS,
   });
@@ -1025,7 +1030,7 @@ async function drawTimeline() {
 
   const pathLegendGroup = svg
     .append("g")
-    .attr("transform", `translate(${WIDTH - MARGIN * 2 - 200}, 50)`);
+    .attr("transform", `translate(${WIDTH - HMARGIN * 2 - 100}, 50)`);
   pathLegendGroup
     .append("text")
     .text("Path style")
@@ -1068,9 +1073,15 @@ async function drawTimeline() {
     };
   });
 
+  // const rectLegend = arrToI(7).map((i) => {
+  //   return {
+  //     name: 0,
+  //     color: "black",
+  //   };
+  // });
   const rectLegendGroup = svg
     .append("g")
-    .attr("transform", `translate(${WIDTH - MARGIN * 2 - 500}, 50)`);
+    .attr("transform", `translate(${WIDTH - HMARGIN * 2 - 500}, 50)`);
 
   rectLegendGroup
     .append("text")
@@ -1087,17 +1098,19 @@ async function drawTimeline() {
 
   rectLegendItems
     .append("rect")
-    .attr("x", 0)
-    .attr("y", (d, i) => i * 20 + 30)
+    .attr("y", 10)
+    .attr("x", (d, i) => i * 60)
     .attr("width", 20)
     .attr("height", 20)
     .attr("fill", (d) => d.color);
 
   rectLegendItems
     .append("text")
-    .attr("x", 30)
-    .attr("y", (d, i) => i * 20 + 30 + 15)
-    .text((d) => d.name);
+    .attr("y", 50)
+    .attr("x", (d, i) => i * 60 + 30)
+    .text((d) => d.name)
+    .style("font-size", "0.75rem")
+    .style("text-anchor", "end");
   // .attr("alignment-baseline", "before-edge");
 }
 
@@ -1120,10 +1133,12 @@ watch(
   }
 );
 async function getData() {
+  if (maxClusterSize != null) return;
+
   for (let i = 0; i < monthList.length; i += 1) {
     let month = monthList[i];
     const { distances } = await API.fetchData("distance_matrix", true, {
-      dataset_type: dataset_name,
+      dataset_type: store.currentDatasetType,
       // time_type: (month <= 3 || month >=10) timeType.All,
       // time_type: month <= 5 || month >= 10 ? timeType.OctMay : timeType.AprSep,
       time_type: props.time_type,
@@ -1220,6 +1235,7 @@ function handleTags(action, coords, addAsCMP: boolean) {
 
     tag1Text.value = "Showing";
     isShowingTag1.value = true;
+    isShowingTag2.value = false;
   } else {
     document.getElementById("tag2")?.style.setProperty("top", `${coords.y}px`);
     document.getElementById("tag2")?.style.setProperty("left", `${coords.x}px`);

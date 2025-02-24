@@ -8,32 +8,36 @@
     "
     class="relative z-[5] h-auto w-full rounded-lg border bg-gray-100 px-4"
   >
-    <div
-      class="group absolute right-0 top-0 z-[5] -translate-x-1/2 translate-y-1/2 transform"
-    >
-      <i class="pi pi-question-circle cursor-pointer text-xl"></i>
-
-      <div
-        class="help-text absolute right-0 top-0 hidden h-fit min-w-[250px] flex-col items-center justify-center rounded-md p-2 group-hover:block"
-      >
-        <span>
-          Your interactions with the LLM (large language models) will be tracked
-          here. <br />
-          If you ask a question about the SOM Node space, the LLM will query the
-          SOM Node space and highlight the region for which the query is true.
-          <br />
-          Asking the LLM to summarize a SOM Node region will generate an
-          explanation.
-        </span>
-        <div
-          id="somNodeViewerLegend"
-          class="my-2 flex w-full flex-col items-center justify-evenly font-normal"
-        />
-      </div>
-    </div>
     <!-- Heading -->
     <div class="sticky top-0 z-[2] flex flex-col space-y-1.5 bg-gray-100 py-4">
-      <h1 class="text-xl font-bold text-gray-800">LLM Exploration History</h1>
+      <h1 class="relative text-xl font-bold text-gray-800">
+        LLM Exploration History
+      </h1>
+      <div class="group absolute right-0 top-0 z-[5] translate-y-1/2 transform">
+        <i class="pi pi-question-circle cursor-pointer text-xl"></i>
+
+        <div
+          class="help-text absolute right-0 top-0 hidden h-fit min-w-[250px] flex-col items-center justify-center space-x-1 rounded-md p-2 group-hover:block"
+        >
+          <p class="mb-2 block">
+            Your interactions with the LLM will be tracked and displayed here
+            for your reference. The LLM supports two direction to help add
+            context to the SOM Node Space.
+          </p>
+          <p class="mb-2 block">
+            <span class="font-bold">Forward Direction: </span>
+            If you want to see a set of SOM Nodes that satisfy some quality
+            (e.g. Above average precipitation over Southern California), the LLM
+            will query the SOM Node space and highlight SOM Node region for
+            which the query is true.
+          </p>
+          <p class="block">
+            <span class="font-bold">Backward Direction: </span>
+            Asking the LLM to summarize a SOM Node region will generate an
+            explanation using the LLM.
+          </p>
+        </div>
+      </div>
 
       <!-- <h2 class="text-lg font-semibold tracking-tight">Chatbot</h2> -->
       <!-- <p class="text-sm leading-3 text-[#6b7280]">
@@ -41,7 +45,6 @@
         of counties.
       </p> -->
     </div>
-
     <!-- Chat Container -->
     <div class="z-[1] mt-4 h-fit w-full pb-2">
       <component

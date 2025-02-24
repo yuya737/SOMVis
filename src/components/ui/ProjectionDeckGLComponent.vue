@@ -5,6 +5,7 @@
       v-if="store.showMapAnnotationPopup"
       class="absolute z-[4] cursor-grab active:cursor-grabbing"
       :annotation-props="store.mapAnnotationPopup"
+      :time_type="props.time_type"
       :style="{
         top: `${store.mapAnnotationPopup.coords[1] + position.y}px`,
         left: `${store.mapAnnotationPopup.coords[0] + position.x}px`,
@@ -69,12 +70,7 @@ import { SpaceAnnotationLayer } from "@/components/utils/SpaceAnnotationLayer";
 import { SOMLayer } from "@/components/utils/SOMLayer";
 import { LLMRegionLayer } from "@/components/utils/LLMRegionLayer";
 
-import {
-  mapView,
-  DECKGL_SETTINGS,
-  dataset_name,
-  timeType,
-} from "@/components/utils/utils";
+import { mapView, DECKGL_SETTINGS, timeType } from "@/components/utils/utils";
 import MemberViewer from "../MemberViewer.vue";
 
 let isDragging = false;
@@ -82,6 +78,8 @@ const position = ref({ x: 0, y: 0 });
 let offset = { x: 0, y: 0 };
 
 const startDrag = (event) => {
+  console.log(event.target);
+  if (event.target.closest(".no-drag")) return;
   isDragging = true;
   offset = {
     x: event.clientX - position.value.x,
@@ -233,11 +231,11 @@ async function initializeLayers() {
     isHidingAnnotations,
   } = storeToRefs(store);
   let nodeLayerGenerator = new NodeLayer({
-    dataset_type: dataset_name,
+    dataset_type: store.currentDatasetType,
     time_type: props.time_type,
     nodeMapGetter: getNodeMap,
     highlightedNodeGetter: getHighlightedNodes,
-    drawEveryN: 7,
+    drawEveryN: 3,
     dims: 30,
     deck: deck,
     anchors: anchors,
@@ -541,8 +539,9 @@ function cropCanvas() {
 }
 
 watch(
-  () => [store.currentStep, store.nodeMap[props.time_type]],
-  ([newVal, _]) => {
+  // () => [store.currentStep, store.nodeMap[props.time_type]],
+  () => store.currentStep,
+  (newVal) => {
     if (newVal == "Analyze") return;
     store.isHidingDistribution = true;
     store.isShowingLLMQueriedRegion = false;

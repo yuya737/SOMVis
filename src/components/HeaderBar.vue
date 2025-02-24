@@ -1,12 +1,33 @@
 <template>
   <header
-    class="flex items-center justify-between bg-gray-100 px-6 py-4 text-gray-800 shadow-lg"
+    class="z-[999] flex items-center justify-between bg-gray-100 px-6 py-4 text-gray-800"
   >
     <!-- Logo -->
     <div class="flex flex-row items-center justify-center gap-8">
       <span class="text-xl font-bold tracking-wide text-gray-800"
         >&lt;TENTATIVE&gt; ClimateSOM</span
       >
+      <div
+        class="relative flex max-w-xs flex-col items-center justify-start gap-2"
+      >
+        <!-- <label class="text-sm text-gray-600">Toggle LLM queried region</label> -->
+        <Dropdown
+          v-model="store.currentDatasetType"
+          :options="['California', 'NorthWest']"
+          @change="(newValue) => changeDataset(newValue)"
+        />
+        <div
+          class="group absolute right-0 top-0 z-[4] -translate-y-3 translate-x-3 transform"
+        >
+          <i class="pi pi-question-circle cursor-pointer text-xl"></i>
+
+          <div
+            class="help-text absolute right-0 top-0 hidden min-w-[150px] group-hover:block"
+          >
+            Choose the region to inspect
+          </div>
+        </div>
+      </div>
       <StepProgress class="w-fit flex-grow" />
     </div>
 
@@ -108,6 +129,32 @@
       </div>
 
       <div
+        v-if="store.currentStep == 'Analyze'"
+        class="relative flex max-w-xs flex-col items-center justify-center gap-2"
+      >
+        <!-- <label class="text-sm text-gray-600">Toggle Distribution</label> -->
+        <ToggleButton
+          v-model="store.isShowingForcingClustering"
+          on-label="Show Model Clustering"
+          off-label="Show Forcing Clustering"
+        />
+        <div
+          class="group absolute right-0 top-0 z-[4] -translate-y-3 translate-x-3 transform"
+        >
+          <i class="pi pi-question-circle cursor-pointer text-xl"></i>
+
+          <div
+            class="help-text absolute right-0 top-0 hidden min-w-[150px] group-hover:block"
+          >
+            Toggle the clustering shown. <kbd>Model clustering</kbd>Model
+            clustering clusters GCM:SSP pairs by its behavior () while
+            <kbd>Forcing clustering</kbd> clusters models by its forcing from
+            <kbd>historical</kbd> to another SSP.
+          </div>
+        </div>
+      </div>
+
+      <div
         v-if="store.currentStep == 'Annotate'"
         class="relative flex max-w-xs flex-col items-center justify-center gap-2"
       >
@@ -134,10 +181,50 @@ import StepProgress from "./ui/StepProgress.vue";
 import ToggleButton from "primevue/togglebutton";
 
 import { useStore } from "@/store/main";
+import { getNodeData, getPaths } from "@/store/storeHelper";
+import { nextTick } from "vue";
 const store = useStore();
 
 const modeOptions = ["Explore", "Annotate"];
 const setLLMHighlightOff = () => {
   if (store.isShowingLLMQueriedRegion) store.LLMQueriedRegionIndex = -1;
 };
+
+function changeDataset({ value }) {
+  store.pathData = null;
+  store.nodeMap = null;
+  nextTick(() => {
+    getNodeData({ dataset_name: value }).then((data) => {
+      const {
+        nodeMap,
+        classifyData,
+        hotspotPolygons,
+        contourData,
+        interpolatedSurfaceData,
+        vectorFieldData,
+      } = data;
+      store.nodeMap = nodeMap;
+      store.classifyData = classifyData;
+      store.hotspotPolygons = hotspotPolygons;
+      store.contourData = contourData;
+      store.interpolatedSurfaceData = interpolatedSurfaceData;
+      store.vectorFieldData = vectorFieldData;
+      store.explainablityPoints = [
+        [5, 5],
+        [-5, -5],
+      ];
+    });
+    getPaths(value).then((pathData) => {
+      store.pathData = pathData;
+    });
+    store.currentDatasetType = value;
+    store.showMapAnnotationPopup = false;
+    store.LLMQueries = [];
+    store.chatBotHistory = [];
+    store.nodeClickedID = -1;
+    store.nodeMapCanvas = null;
+    store.LLMQueriedRegionIndex = -1;
+    store.currentStep = "Anchor";
+  });
+}
 </script>

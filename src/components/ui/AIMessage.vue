@@ -22,7 +22,7 @@
       </div>
     </span>
     <div class="flex w-full flex-col justify-start leading-relaxed">
-      <span class="w-fit font-bold text-gray-700">AI </span>
+      <span class="w-fit font-bold text-gray-700">LLM </span>
       <span v-if="isLoading" class="w-fit"
         >Loading<span class="dots">{{ dots }}</span></span
       >
@@ -87,10 +87,15 @@ watch(
         isError.value = false;
 
         try {
+          // debugger;
+          // resolvedMessage.value = res["description"].map(
+          //   (d) => `${d.name},${d.state}`
+          // );
           resolvedMessage.value = res["description"];
           // llm_generated_query.then(async (res) => {
           const { result } = await API.fetchData("/run_sqlquery", true, {
             sqlquery: res["SQLQuery"],
+            dataset_type: store.currentDatasetType,
           });
           console.log("DEBUG CHATBOT result", result);
           store.highlightedNodes = result;
@@ -101,7 +106,7 @@ watch(
             result: result,
           });
           store.LLMQueriedRegionIndex = props.messageIndex;
-
+          store.isShowingLLMQueriedRegion = true;
           // });
         } catch (error) {
           console.error("Error resolving message:", error);

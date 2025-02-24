@@ -33,7 +33,7 @@
         <div
           v-for="c in characteristic"
           :key="c.index"
-          class="mb-2 w-full rounded-lg border border-gray-200 bg-white p-3 shadow-sm transition-transform duration-300"
+          class="mb-2 w-full rounded-lg border border-gray-200 bg-white p-1 shadow-sm transition-transform duration-300"
           :class="{
             'scale-105': animateChange.includes(c.index),
             'bg-green-50': direction[c.index] === 'increase',
@@ -53,12 +53,7 @@
 <script setup lang="ts">
 import { ref, watch, Ref, onMounted } from "vue";
 import { useStore } from "@/store/main";
-import {
-  timeType,
-  dataset_name,
-  constructZones,
-  makeAnnotationGlyph,
-} from "../utils/utils";
+import { timeType, constructZones, makeAnnotationGlyph } from "../utils/utils";
 import API from "@/api/api";
 
 import CharacteristicViewerRow from "./CharacteristicViewerRow.vue";
@@ -74,7 +69,6 @@ const direction = ref({});
 const isLoading = ref(false);
 
 const store = useStore();
-const msg = ref("");
 
 const isOpened = ref(true);
 const toggleIsOpened = () => (isOpened.value = !isOpened.value);
@@ -139,7 +133,7 @@ async function getCharacteristic() {
     "/get_characteristic",
     true,
     {
-      dataset_type: dataset_name,
+      dataset_type: store.currentDatasetType,
       time_type: props.time_type,
       members: selectedFiles,
       months: selectedMonth,

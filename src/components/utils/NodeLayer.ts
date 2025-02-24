@@ -89,87 +89,102 @@ export class NodeLayer extends AbstractLayerGenerator {
 
     this.map = this.nodeMapGetter.value(this.time_type);
 
-    const size = 4;
-    for (let i = 0; i < this.dims * this.dims; i += this.drawEveryN) {
-      ret = [
-        ...ret,
-        new BitmapLayer({
-          id: `image-layer-${i}`,
-          image: `http://localhost:5002/node_images/${this.dataset_type}/${this.time_type}/${i}.png`,
-          pickable: true,
-          bounds: [
-            this.map[i].coords[0] - size,
-            this.map[i].coords[1] + size,
-            this.map[i].coords[0] + size,
-            this.map[i].coords[1] - size,
+    let WIDTH = 4;
+    // const HEIGHT = 2.5;
+    let HEIGHT = 5;
 
-            // this.mappingData[i].coords[0] - 2,
-            // -this.mappingData[i].coords[1] + 2,
-            // this.mappingData[i].coords[0] + 2,
-            // -this.mappingData[i].coords[1] - 2,
-          ],
-          index: i,
-          loadOptions: {
-            imagebitmap: {
-              // Flip the image vertically
-              imageOrientation: "flipY",
+    if (this.dataset_type == "NorthWest") {
+      WIDTH = 4.5;
+      HEIGHT = 2.25;
+    }
+
+    for (let i = 0; i < this.dims; i += this.drawEveryN) {
+      for (
+        let j = Math.floor(this.drawEveryN / 2);
+        j < this.dims;
+        j += this.drawEveryN
+      ) {
+        let index = i * this.dims + j;
+        ret = [
+          ...ret,
+          new BitmapLayer({
+            id: `image-layer-${index}`,
+            image: `http://localhost:5002/node_images/${this.dataset_type}/${this.time_type}/${index}.png`,
+            pickable: true,
+            bounds: [
+              this.map[index].coords[0] - WIDTH,
+              this.map[index].coords[1] + HEIGHT,
+              this.map[index].coords[0] + WIDTH,
+              this.map[index].coords[1] - HEIGHT,
+
+              // this.mappingData[i].coords[0] - 2,
+              // -this.mappingData[i].coords[1] + 2,
+              // this.mappingData[i].coords[0] + 2,
+              // -this.mappingData[i].coords[1] - 2,
+            ],
+            index: index,
+            loadOptions: {
+              imagebitmap: {
+                // Flip the image vertically
+                imageOrientation: "flipY",
+              },
             },
-          },
-          // pickable: true,
-          onClick: (info) => {
-            if (info.layer.props.index == this.indexClicked) {
-              this.indexClicked = -1;
-              this.nodeClickedID.value = -1;
-            } else {
-              this.indexClicked = info.layer.props.index;
-              this.nodeClickedID.value = info.layer.props.index;
-            }
-          },
-          onDragStart: () => {
-            if (this.currentStep.value != "Anchor")
-              // Only active in the Anchor stage
-              return;
-            this.deck.setProps({ controller: { dragPan: false } });
-          },
-          onDrag: (info) => {
-            if (this.currentStep.value != "Anchor")
-              // Only active in the Anchor stage
-              return;
-            let lngLat = info.coordinate;
-            const d = distance([0, 0], lngLat, {
-              units: "meters",
-            });
-            const a = bearing([0, 0], lngLat);
-            const x = d * Math.sin((a * Math.PI) / 180);
-            const y = d * Math.cos((a * Math.PI) / 180);
-            this.map[info.layer.props.index].coords = [x, y];
-          },
-          onDragEnd: (info) => {
-            if (this.currentStep.value != "Anchor")
-              // Only active in the Anchor stage
-              return;
-            let lngLat = info.coordinate;
-            const d = distance([0, 0], lngLat, {
-              units: "meters",
-            });
-            const a = bearing([0, 0], lngLat);
-            const x = d * Math.sin((a * Math.PI) / 180);
-            const y = d * Math.cos((a * Math.PI) / 180);
-            this.map[info.layer.props.index].coords = [x, y];
-            if (!this.anchors.value["ids"].includes(info.layer.props.index)) {
-              this.anchors.value["ids"].push(info.layer.props.index);
-              this.anchors.value["coords"].push([x, y]);
-            } else {
-              const index = this.anchors.value["ids"].indexOf(
-                info.layer.props.index
-              );
-              this.anchors.value["coords"][index] = [x, y];
-            }
-            console.log("DEBUG DRAG END", lngLat, d, x, y);
-            this.deck.setProps({ controller: { dragPan: true } });
-          },
-        }),
-      ];
+            // pickable: true,
+            onClick: (info) => {
+              if (info.layer.props.index == this.indexClicked) {
+                this.indexClicked = -1;
+                this.nodeClickedID.value = -1;
+              } else {
+                this.indexClicked = info.layer.props.index;
+                this.nodeClickedID.value = info.layer.props.index;
+              }
+            },
+            onDragStart: () => {
+              if (this.currentStep.value != "Anchor")
+                // Only active in the Anchor stage
+                return;
+              this.deck.setProps({ controller: { dragPan: false } });
+            },
+            onDrag: (info) => {
+              if (this.currentStep.value != "Anchor")
+                // Only active in the Anchor stage
+                return;
+              let lngLat = info.coordinate;
+              const d = distance([0, 0], lngLat, {
+                units: "meters",
+              });
+              const a = bearing([0, 0], lngLat);
+              const x = d * Math.sin((a * Math.PI) / 180);
+              const y = d * Math.cos((a * Math.PI) / 180);
+              this.map[info.layer.props.index].coords = [x, y];
+            },
+            onDragEnd: (info) => {
+              if (this.currentStep.value != "Anchor")
+                // Only active in the Anchor stage
+                return;
+              let lngLat = info.coordinate;
+              const d = distance([0, 0], lngLat, {
+                units: "meters",
+              });
+              const a = bearing([0, 0], lngLat);
+              const x = d * Math.sin((a * Math.PI) / 180);
+              const y = d * Math.cos((a * Math.PI) / 180);
+              this.map[info.layer.props.index].coords = [x, y];
+              if (!this.anchors.value["ids"].includes(info.layer.props.index)) {
+                this.anchors.value["ids"].push(info.layer.props.index);
+                this.anchors.value["coords"].push([x, y]);
+              } else {
+                const index = this.anchors.value["ids"].indexOf(
+                  info.layer.props.index
+                );
+                this.anchors.value["coords"][index] = [x, y];
+              }
+              console.log("DEBUG DRAG END", lngLat, d, x, y);
+              this.deck.setProps({ controller: { dragPan: true } });
+            },
+          }),
+        ];
+      }
     }
 
     // const highlightedNodes = this.highlightedNodeGetter.value;
@@ -210,18 +225,18 @@ export class NodeLayer extends AbstractLayerGenerator {
           getWidth: 0.1,
           data: [
             [
-              [this.map[id].coords[0] - size, this.map[id].coords[1] - size], // Bottom-left corner
-              [this.map[id].coords[0] + size, this.map[id].coords[1] - size], // Bottom-right corner
-              [this.map[id].coords[0] + size, this.map[id].coords[1] + size], // Top-right corner
-              [this.map[id].coords[0] - size, this.map[id].coords[1] + size], // Top-left corner
-              [this.map[id].coords[0] - size, this.map[id].coords[1] - size], // Closing the rectangle
+              [this.map[id].coords[0] - WIDTH, this.map[id].coords[1] - HEIGHT], // Bottom-left corner
+              [this.map[id].coords[0] + WIDTH, this.map[id].coords[1] - HEIGHT], // Bottom-right corner
+              [this.map[id].coords[0] + WIDTH, this.map[id].coords[1] + HEIGHT], // Top-right corner
+              [this.map[id].coords[0] - WIDTH, this.map[id].coords[1] + HEIGHT], // Top-left corner
+              [this.map[id].coords[0] - WIDTH, this.map[id].coords[1] - HEIGHT], // Closing the rectangle
             ],
           ],
         }),
         new IconLayer({
           id: "selected-node-icon-layer",
           data: [
-            [this.map[id].coords[0] - size, this.map[id].coords[1] + size],
+            [this.map[id].coords[0] - WIDTH, this.map[id].coords[1] + HEIGHT],
           ],
           getPosition: (d) => d,
           iconAtlas: new URL("/magnifying-glass.svg", import.meta.url).href,
@@ -246,11 +261,11 @@ export class NodeLayer extends AbstractLayerGenerator {
       const id = this.anchors.value["ids"][i];
       data.push({
         position: [
-          [this.map[id].coords[0] - size, this.map[id].coords[1] - size], // Bottom-left corner
-          [this.map[id].coords[0] + size, this.map[id].coords[1] - size], // Bottom-right corner
-          [this.map[id].coords[0] + size, this.map[id].coords[1] + size], // Top-right corner
-          [this.map[id].coords[0] - size, this.map[id].coords[1] + size], // Top-left corner
-          [this.map[id].coords[0] - size, this.map[id].coords[1] - size], // Closing the rectangle
+          [this.map[id].coords[0] - WIDTH, this.map[id].coords[1] - HEIGHT], // Bottom-left corner
+          [this.map[id].coords[0] + WIDTH, this.map[id].coords[1] - HEIGHT], // Bottom-right corner
+          [this.map[id].coords[0] + WIDTH, this.map[id].coords[1] + HEIGHT], // Top-right corner
+          [this.map[id].coords[0] - WIDTH, this.map[id].coords[1] + HEIGHT], // Top-left corner
+          [this.map[id].coords[0] - WIDTH, this.map[id].coords[1] - HEIGHT], // Closing the rectangle
         ],
         id: id,
       });

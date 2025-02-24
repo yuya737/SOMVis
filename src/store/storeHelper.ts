@@ -1,6 +1,5 @@
 import API from "@/api/api";
 import {
-  dataset_name,
   sspAllLabels,
   subsetType,
   timeType,
@@ -9,7 +8,7 @@ import {
 
 const timeTypes = [timeType.OctMay];
 
-async function getPaths() {
+async function getPaths(dataset_name) {
   let pathData: PartialRecord<timeType, Record<string, BMUData[]>> = {};
 
   let paths = {} as PartialRecord<string, BMUData[]>;
@@ -61,7 +60,7 @@ async function getPaths() {
   return pathData;
 }
 
-async function getNodeData(anchors = null) {
+async function getNodeData({ dataset_name, anchors = null }) {
   let mappingData: PartialRecord<timeType, SOMNode[]> = {};
   let classifyData: PartialRecord<timeType, { value: number }> = {};
   let contourData: PartialRecord<timeType, any> = {};

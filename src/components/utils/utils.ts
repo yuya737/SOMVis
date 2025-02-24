@@ -436,8 +436,8 @@ export const ssp585Labels = [
   "MRI-ESM2-0_ssp585_r1i1p1f1_pr.nc",
 ];
 
-// export const dataset_name = "NorthWest";
-export const dataset_name = "California";
+export const dataset_name = "NorthWest";
+// export const dataset_name = "California";
 
 export const sspAllLabels: EnsembleMember[] = [
   ...historicalLabels,

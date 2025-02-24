@@ -21,7 +21,7 @@
     />
     <ElementSelector
       v-if="store.currentStep == 'Analyze'"
-      class="absolute bottom-0 z-[4] mb-4 w-full"
+      class="absolute bottom-0 z-[4] w-full bg-white pb-4"
       :time_type="props.time_type"
       @comparison-mode-changed="(newMode) => comparisonModeChanged(newMode)"
     />
@@ -67,7 +67,7 @@ import SOMNodeViewer from "./SOMNodeViewer.vue";
 import ProjectionDeckGLComponent from "./ui/ProjectionDeckGLComponent.vue";
 import ProjectionSettings from "./ui/ProjectionSettings.vue";
 
-import { dataset_name, timeType, constructZones } from "./utils/utils";
+import { timeType, constructZones } from "./utils/utils";
 
 const props = defineProps<{
   isHistorical: Boolean;
@@ -116,7 +116,7 @@ async function getComparisonVectorField() {
   if (store.files[0].length == 0 || store.files[1].length === 0) return; // Only fire if both comparisons are set
 
   await store.updateVectorFieldSetting({
-    dataset_type: dataset_name,
+    dataset_type: store.currentDatasetType,
     time_type: props.time_type,
     group1: store.files[0],
     group2: store.files[1],
@@ -127,9 +127,3 @@ async function getComparisonVectorField() {
   store.redrawFlag = !store.redrawFlag;
 }
 </script>
-
-<style scoped>
-.slider {
-  --slider-tooltip-font-size: 1.5rem;
-}
-</style>

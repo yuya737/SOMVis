@@ -1,5 +1,5 @@
 <template>
-  <div class="h-full w-full flex flex-col">
+  <div class="flex h-full w-full flex-col">
     <HeaderBar />
 
     <Splitter
@@ -8,73 +8,28 @@
       @resizeend="splitterResized"
     >
       <SplitterPanel style="height: 100%">
-        <!-- <ProjectionViewer class="h-full" v-if="store.isDataReady" /> -->
         <ProjectionViewer
           v-if="store.isDataReady"
           class="h-full"
           :time_type="timeType.OctMay"
         />
-        <!-- <Splitter
-        class="h-full w-full"
-        layout="horizontal"
-        v-if="store.isDataReady"
-        @resizeend="splitterResized"
-      >
-        <SplitterPanel class="h-full">
-          <ProjectionViewer
-            v-if="store.isDataReady"
-            class="h-full"
-            :time_type="timeType.OctMay"
-          />
-        </SplitterPanel>
-        <SplitterPanel style="height: 100%" :size="50">
-          <ProjectionViewer
-            v-if="store.isDataReady"
-            class="h-full"
-            :time_type="timeType.OctMay"
-          />
-        </SplitterPanel>
-      </Splitter> -->
       </SplitterPanel>
 
       <SplitterPanel
-        v-if="store.currentStep == 'Analyze'"
+        v-show="store.currentStep == 'Analyze'"
         class="h-full w-full"
         :size="30"
       >
-        <!-- <TimelineViewer
-        v-if="store.isDataReady"
-        class="h-full"
-        :time_type="timeType.OctMay"
-      /> -->
         <ForcingTimelineViewer
-          v-if="store.isDataReady"
+          v-if="store.isDataReady && store.isShowingForcingClustering"
           class="h-full"
           :time_type="timeType.OctMay"
         />
-        <!-- <Splitter
-        class="h-full w-full"
-        layout="horizontal"
-        @resizeend="splitterResized"
-      >
-        <SplitterPanel class="h-full">
-          <MapViewer class="h-full" />
-          <TimelineViewer
-            v-if="store.isDataReady"
-            class="h-full"
-            :time_type="timeType.OctMay"
-          />
-          <TimelineViewerTemporal class="h-full" />
-          <ForceGraph class="h-full" />
-        </SplitterPanel>
-        <SplitterPanel style="height: 100%" :size="40">
-          <HeatmapViewer
-            v-if="store.isDataReady"
-            class="h-full"
-            :time_type="timeType.OctMay"
-          />
-        </SplitterPanel>
-      </Splitter> -->
+        <TimelineViewer
+          v-if="store.isDataReady && !store.isShowingForcingClustering"
+          class="h-full"
+          :time_type="timeType.OctMay"
+        />
       </SplitterPanel>
     </Splitter>
   </div>
