@@ -669,13 +669,13 @@ async function drawTimeline() {
     .range([HMARGIN, WIDTH - HMARGIN]);
   svg
     .append("g")
-    .attr("transform", `translate(0, ${HEIGHT - HMARGIN})`)
+    .attr("transform", `translate(0, ${HEIGHT - VMARGIN})`)
     .call(d3.axisBottom(xScale).tickFormat((d) => `${months[d - 1]}`))
     .style("font-size", "large");
   svg
     .append("text")
     .attr("x", WIDTH / 2)
-    .attr("y", HEIGHT - 10)
+    .attr("y", HEIGHT - VMARGIN / 2)
     .style("font-size", "large")
     .attr("text-anchor", "middle")
     .text("Months");

@@ -21,7 +21,7 @@
           />
         </template>
       </Column>
-      <Column field="mean" sortable header="Mean(Δhistorical)" class="w-fit">
+      <Column field="mean" sortable header="Mean anomaly" class="w-fit">
         <template #body="slotProps">
           <span class="inline-flex w-full items-center justify-between">
             {{ formatScientificNotation(slotProps.data) }}
@@ -41,9 +41,10 @@
     class="group absolute right-0 top-0 z-[4] w-fit -translate-x-2 translate-y-2 transform"
   >
     <i class="pi pi-question-circle cursor-pointer text-xl"></i>
-    <div class="help-text hidden group-hover:block">
-      <span class="font-bold">
-        Color mapping for Mean(Δhistorical) in kg/m^2/s</span
+    <div class="help-text hidden w-fit group-hover:block">
+      <span class="">
+        Color mapping for Mean(Δhistorical) in kg/m^2/s <br />
+        - the mean anomaly temporally and spatially</span
       >
       <div
         :id="memberViewerLegend"
@@ -181,7 +182,6 @@ async function drawLegend() {
     }
   });
   await Promise.all([...perMemberMeans]);
-  console.log("SDFSDFDFSDFSDSDF", monthlyMeanMin, monthlyMeanMax);
   const numBoxes = 7;
   let color = d3
     .scaleDiverging(d3.interpolateBrBG)

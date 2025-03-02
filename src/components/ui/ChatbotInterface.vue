@@ -133,5 +133,6 @@ async function sendQuery() {
     type: "AI",
     typeDetail: "forward",
   });
+  currentQuery.value = "";
 }
 </script>

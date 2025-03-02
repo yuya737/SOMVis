@@ -30,7 +30,7 @@
     >
       <div
         v-show="isSidePanelOpen"
-        class="relative flex h-full max-w-[400px] flex-col gap-2"
+        class="relative flex h-full max-w-[500px] flex-col gap-2"
       >
         <!-- <ModelInfoViewer :time_type="props.time_type" /> -->
         <ChatbotInterface

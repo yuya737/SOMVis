@@ -9,6 +9,7 @@ import cancelSVG from "@/assets/cancel.svg?raw";
 import distance from "@turf/distance";
 import bearing from "@turf/bearing";
 import { IconLayer } from "deck.gl/typed";
+const API_URL = "http://infovis.cs.ucdavis.edu/climatesom/api";
 
 export class NodeLayer extends AbstractLayerGenerator {
   readonly nodeMapGetter: ComputedRef<() => any>;
@@ -109,7 +110,7 @@ export class NodeLayer extends AbstractLayerGenerator {
           ...ret,
           new BitmapLayer({
             id: `image-layer-${index}`,
-            image: `http://localhost:5002/node_images/${this.dataset_type}/${this.time_type}/${index}.png`,
+            image: `${API_URL}/node_images/${this.dataset_type}/${this.time_type}/${index}/`,
             pickable: true,
             bounds: [
               this.map[index].coords[0] - WIDTH,

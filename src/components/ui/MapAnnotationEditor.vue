@@ -36,7 +36,7 @@
               </svg>
             </div>
           </span>
-          LLM-generated summary
+          LLM-generated Summary
         </div>
         <div v-if="!isLLMSummaryLoading" class="text-sm">
           {{ LLMGeneratedDescription }}
@@ -46,7 +46,7 @@
       <div
         class="flex w-3/4 flex-row items-center justify-center gap-4 font-semibold"
       >
-        <span>Region Name: </span>
+        <span>SOM Region Name: </span>
         <input
           type="text"
           id="small-input"

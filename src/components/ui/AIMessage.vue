@@ -39,13 +39,37 @@
             <thead>
               <tr>
                 <th>Region</th>
+                <th>LLM Generated Boundary</th>
                 <th>Resolved Counties</th>
               </tr>
             </thead>
             <tbody>
               <tr v-for="(value, key) in resolvedMessage" :key="key">
                 <td>{{ key }}</td>
-                <td>{{ value.join(", ") }}</td>
+                <td>
+                  <a
+                    v-if="value['boundary']"
+                    class="text-gray-700 underline decoration-gray-400 underline-offset-2 transition hover:text-black hover:decoration-black"
+                    :href="formatLink(value['boundary'])"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    View</a
+                  >
+                  <span v-else>N/A</span>
+                </td>
+                <ul class="max-h-[70px] list-disc overflow-auto">
+                  <li
+                    v-for="(item, index) in value['list']"
+                    :key="index"
+                    class=""
+                  >
+                    • {{ item }}
+                  </li>
+                </ul>
+                <!-- <div class="max-h-[70px] overflow-auto">
+                  {{ value["list"].join(", ") }}
+                </div> -->
               </tr>
             </tbody>
           </table>
@@ -61,6 +85,7 @@
 import { ref, watch, watchEffect, onMounted, computed } from "vue";
 import API from "@/API/api";
 import { useStore } from "@/store/main";
+import { wktToGeoJSON } from "@terraformer/wkt";
 
 const isLoading = ref(true);
 const resolvedMessage = ref("");
@@ -74,6 +99,11 @@ const props = defineProps<{
 }>();
 
 const promiseState = ref(props.payload.message);
+
+function formatLink(bounary) {
+  const end = encodeURIComponent(JSON.stringify(wktToGeoJSON(bounary)));
+  return `http://geojson.io/#data=data:application/json,${end}`;
+}
 
 watch(
   promiseState,

@@ -70,8 +70,8 @@ export const useStore = defineStore("main", {
       contourLevels: [0.25, 0.5, 0.75] as number[],
       nodeClickedID: -1 as number,
       currentStep: "Anchor" as step,
-      currentDatasetType: "California" as datasetType,
-      // currentDatasetType: "NorthWest" as datasetType,
+      // currentDatasetType: "California" as datasetType,
+      currentDatasetType: "NorthWest" as datasetType,
 
       recalculateMDEFlag: false,
       isHidingDistribution: false,

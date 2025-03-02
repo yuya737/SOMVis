@@ -25,7 +25,7 @@
           :max="maxValue"
           :dot-size="10"
           :process="false"
-          interval="0.2"
+          :interval="(maxValue - minValue) / 50"
           :tooltip-formatter="
             (value) => Math.round(roundToNearest0_2(value) * 100) / 100
           "
@@ -33,9 +33,7 @@
         <div id="LLMSettingBarSVG" />
       </div>
     </div>
-    <span class="text-sm font-medium"
-      >Computed Intervals for LLM Summarization</span
-    >
+    <span class="text-sm font-medium">Intervals for LLM Summarization</span>
     <div class="w-1/2">
       <div class="w-full text-sm">
         <div
