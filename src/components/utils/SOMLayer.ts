@@ -4,7 +4,7 @@ import { subsetType, timeType } from "./utils";
 
 import { AbstractLayerGenerator } from "./AbstractLayerGenerator";
 import { ComputedRef, watch, Ref } from "vue";
-import API from "@/api/api";
+import API from "@/API/api";
 
 export class SOMLayer extends AbstractLayerGenerator {
   // readonly coords: any;

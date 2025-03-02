@@ -1,22 +1,22 @@
 <template>
   <div
-    class="flex flex-col items-center py-4 bg-gray-100 rounded-lg shadow-md text-md w-full relative"
+    class="text-md relative flex w-full flex-col items-center rounded-lg bg-gray-100 py-4 shadow-md"
   >
     <Button
       :icon="isOpened ? 'pi pi-minus' : 'pi pi-plus'"
       @click="toggleIsOpened"
-      class="absolute top-0 right-0 m-2"
+      class="absolute right-0 top-0 m-2"
     />
     <h1 class="text-xl font-bold text-gray-800">Model Info</h1>
     <div v-show="isOpened" class="mt-4">
       <div
         v-for="(value, key) in model_info"
         :key="key"
-        class="flex justify-between w-full max-w-sm bg-white p-3 mb-2 rounded-lg shadow-sm border border-gray-200"
+        class="mb-2 flex w-full max-w-sm justify-between rounded-lg border border-gray-200 bg-white p-3 shadow-sm"
       >
         <span class="font-medium text-gray-600">{{ key }}</span>
         <span
-          class="text-blue-600 font-semibold break-words"
+          class="break-words font-semibold text-blue-600"
           :class="{ 'code-font': key === 'file' }"
           >{{ value }}</span
         >
@@ -29,7 +29,7 @@
 import { ref, Ref, onMounted } from "vue";
 import { useStore } from "@/store/main";
 import { timeType, dataset_name } from "../utils/utils";
-import API from "@/api/api";
+import API from "@/API/api";
 
 const props = defineProps<{
   time_type: timeType;

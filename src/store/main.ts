@@ -1,5 +1,5 @@
 import { defineStore } from "pinia";
-import API from "@/api/api";
+import API from "@/API/api";
 import {
   dataset_name,
   sspAllLabels,

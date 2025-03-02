@@ -61,7 +61,7 @@ import Column from "primevue/column";
 import { useStore } from "@/store/main";
 
 import { computed, onMounted, ref, watch } from "vue";
-import API from "@/api/api";
+import API from "@/API/api";
 import { computedAsync } from "@vueuse/core";
 import { sspAllLabels } from "./utils/utils";
 import * as d3 from "d3";

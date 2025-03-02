@@ -11,12 +11,12 @@
       :pitch="pitch"
     />
     <div
-      class="absolute bottom-0 h-32 items-center justify-around px-32 w-full flex flex-col"
+      class="absolute bottom-0 flex h-32 w-full flex-col items-center justify-around px-32"
     >
       <div
-        class="flex flex-row items-center justify-evenly bg-gray-200 p-2 rounded-lg text-center"
+        class="flex flex-row items-center justify-evenly rounded-lg bg-gray-200 p-2 text-center"
       >
-        <span class="flex items-center font-bold px-5 whitespace-pre">
+        <span class="flex items-center whitespace-pre px-5 font-bold">
           Group 1:
         </span>
         <MultiSelect
@@ -27,13 +27,13 @@
           optionLabel="name"
           optionValue="value"
           :maxSelectedLabels="3"
-          class="w-full z-[4] md:w-14rem"
+          class="md:w-14rem z-[4] w-full"
         />
         <div
-          class="flex flex-cols items-center"
+          class="flex-cols flex items-center"
           v-show="selectedMode == 'Difference'"
         >
-          <span class="flex items-center font-bold px-5 whitespace-pre">
+          <span class="flex items-center whitespace-pre px-5 font-bold">
             Group 2:
           </span>
           <MultiSelect
@@ -46,12 +46,12 @@
             optionLabel="name"
             optionValue="value"
             :maxSelectedLabels="3"
-            class="w-full z-[4] md:w-14rem"
+            class="md:w-14rem z-[4] w-full"
           />
         </div>
       </div>
       <div
-        class="flex flex-row items-center bg-gray-200 justify-evenly p-2 rounded-lg text-center w-fit"
+        class="flex w-fit flex-row items-center justify-evenly rounded-lg bg-gray-200 p-2 text-center"
       >
         <SelectButton
           v-model="selectedMode"
@@ -80,7 +80,7 @@ import { reactive, ref, watch, onMounted, computed, nextTick } from "vue";
 import { scaleLinear, interpolateRdBu, scaleTime } from "d3";
 import InfoPanel from "./ui/TheInfoPanel.vue";
 import InfoPanelSettings from "@/store/InfoPanelSettingsNode.json";
-import API from "@/api/api";
+import API from "@/API/api";
 import {
   getModelType,
   stripSOMprefix,

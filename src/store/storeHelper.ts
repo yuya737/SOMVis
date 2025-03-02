@@ -1,4 +1,4 @@
-import API from "@/api/api";
+import API from "@/API/api";
 import {
   sspAllLabels,
   subsetType,

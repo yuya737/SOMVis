@@ -1,7 +1,7 @@
 import { Deck, IconLayer, TextLayer, LayersList } from "deck.gl/typed";
 import { AbstractLayerGenerator } from "./AbstractLayerGenerator";
 import { watch, Ref } from "vue";
-import API from "@/api/api";
+import API from "@/API/api";
 import { timeType } from "./utils";
 import distance from "@turf/distance";
 import bearing from "@turf/bearing";

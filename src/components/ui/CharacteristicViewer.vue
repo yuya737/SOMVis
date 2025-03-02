@@ -54,7 +54,7 @@
 import { ref, watch, Ref, onMounted } from "vue";
 import { useStore } from "@/store/main";
 import { timeType, constructZones, makeAnnotationGlyph } from "../utils/utils";
-import API from "@/api/api";
+import API from "@/API/api";
 
 import CharacteristicViewerRow from "./CharacteristicViewerRow.vue";
 

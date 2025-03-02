@@ -97,7 +97,7 @@
 
 <script setup lang="ts">
 import * as d3 from "d3";
-import API from "@/api/api";
+import API from "@/API/api";
 import { onMounted, ref, inject, reactive, watch, nextTick } from "vue";
 import Dropdown from "primevue/dropdown";
 import Button from "primevue/button";

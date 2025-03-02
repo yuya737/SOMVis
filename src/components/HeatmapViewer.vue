@@ -5,10 +5,10 @@
       :options="months"
       optionLabel="name"
       placeholder="Select a Month"
-      class="absolute left-0 top-0 w-fit z-[2] bg-gray-200 m-4 text-black text-lg"
+      class="absolute left-0 top-0 z-[2] m-4 w-fit bg-gray-200 text-lg text-black"
     />
     <!-- <Button
-      class="absolute left-0 top-0 z-[2] w-fit transform rounded-md bg-gray-200 p-2 m-4 text-lg text-black"
+      class="absolute left-0 top-0 z-[2] m-4 w-fit transform rounded-md bg-gray-200 p-2 text-lg text-black"
       label="Clear"
       icon="pi pi-times"
       @click="clearSelections"
@@ -20,14 +20,14 @@
       v-model="clusterSelection"
       @click="clusterSelectionChanged"
     />
-    <div id="my_dataviz" class="h-full w-full flex justify-around" />
+    <div id="my_dataviz" class="flex h-full w-full justify-around" />
   </div>
 </template>
 
 <script setup lang="ts">
 import { onMounted, watch, ref } from "vue";
 import { useStore } from "@/store/main";
-import API from "@/api/api";
+import API from "@/API/api";
 import * as d3 from "d3";
 
 import {
