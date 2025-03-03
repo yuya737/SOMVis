@@ -146,7 +146,7 @@ const props = defineProps({
 });
 
 function toggleIsShowingClusterMean() {
-  d3.selectAll("rect")
+  d3.selectAll("#timelineSVG rect")
     .filter(function () {
       return (
         d3.select(this)?.attr("id") &&
@@ -157,7 +157,7 @@ function toggleIsShowingClusterMean() {
 }
 
 function clearClusterSelection() {
-  d3.selectAll("rect")
+  d3.selectAll("#timelineSVG rect")
     .filter(function () {
       return (
         d3.select(this)?.attr("id") &&
@@ -171,7 +171,7 @@ function clearClusterSelection() {
 
 watch(selectedModel, (value) => {
   if (value == null) {
-    d3.selectAll("path")
+    d3.selectAll("#timelineSVG path")
       .filter(function () {
         return (
           d3.select(this)?.attr("id") &&
@@ -183,7 +183,7 @@ watch(selectedModel, (value) => {
     return;
   }
 
-  d3.selectAll("path")
+  d3.selectAll("#timelineSVG path")
     .filter(function () {
       return (
         d3.select(this)?.attr("id") &&
@@ -192,7 +192,7 @@ watch(selectedModel, (value) => {
     })
     .classed("not-selected", true)
     .classed("selected", false);
-  d3.selectAll("path")
+  d3.selectAll("#timelineSVG path")
     // Filter elements based on the stroke-width attribute
     .filter(function () {
       return (
@@ -207,7 +207,7 @@ watch(selectedModel, (value) => {
 
 watch(selectedType, (value) => {
   if (value == null) {
-    d3.selectAll("path")
+    d3.selectAll("#timelineSVG path")
       .filter(function () {
         return (
           d3.select(this)?.attr("id") &&
@@ -219,7 +219,7 @@ watch(selectedType, (value) => {
     return;
   }
 
-  d3.selectAll("path")
+  d3.selectAll("#timelineSVG path")
     .filter(function () {
       return (
         d3.select(this)?.attr("id") &&
@@ -228,7 +228,7 @@ watch(selectedType, (value) => {
     })
     .classed("not-selected", true)
     .classed("selected", false);
-  d3.selectAll("path")
+  d3.selectAll("#timelineSVG path")
     // Filter elements based on the stroke-width attribute
     .filter(function () {
       return (
@@ -250,14 +250,18 @@ onMounted(() => {
     },
     { immediate: true }
   );
-  watch(splitterResized, () => {
-    // remove the svg
-    const element = document.getElementById("timelineSVG");
-    if (element) {
-      d3.select(element).select("svg").remove();
-      drawTimeline();
-    }
-  });
+  watch(
+    splitterResized,
+    () => {
+      // remove the svg
+      const element = document.getElementById("timelineSVG");
+      if (element) {
+        d3.select(element).select("svg").remove();
+        drawTimeline();
+      }
+    },
+    { immediate: true }
+  );
 });
 
 function draw() {
@@ -895,7 +899,7 @@ async function drawTimeline() {
       .each((d) => (d.clicked = false))
       .on("mouseover", function (event, d) {
         d3.select(this).classed("selected-rect", true);
-        d3.selectAll("path")
+        d3.selectAll("#timelineSVG path")
           .filter(function () {
             return (
               d3.select(this)?.attr("id") &&
@@ -904,7 +908,7 @@ async function drawTimeline() {
           })
           .classed("path-not-highlighted", true)
           .classed("path-highlighted", false);
-        d3.selectAll("path")
+        d3.selectAll("#timelineSVG path")
           // Filter elements based on the stroke-width attribute
           .filter(function () {
             return (
@@ -919,7 +923,7 @@ async function drawTimeline() {
       })
       .on("mouseout", function (event, d) {
         d3.select(this).classed("selected-rect", false);
-        d3.selectAll("path")
+        d3.selectAll("#timelineSVG path")
           .filter(function () {
             return (
               d3.select(this)?.attr("id") &&
@@ -942,7 +946,7 @@ async function drawTimeline() {
           // Set all other clusterRect as not clicked
           const clickedID = d3.select(this).attr("id");
           console.log("DEBUG IN CLUSTER RECT CLICK ", clickedID);
-          d3.selectAll("rect")
+          d3.selectAll("#timelineSVG rect")
             .filter(function () {
               return (
                 d3.select(this)?.attr("id") &&

@@ -126,7 +126,11 @@ const props = defineProps<{
 }>();
 const store = useStore();
 const hasTransition = computed(() => props.characteristic?.transition);
-watch(hasTransition, () => nextTick(() => makeSankey()));
+watch(hasTransition, (val) => {
+  if (!val) return;
+  console.log("CharacteristicViewerRow", val);
+  nextTick(() => makeSankey());
+});
 
 function makeSankey() {
   if (props.characteristic.transition == undefined) return;

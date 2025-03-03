@@ -211,14 +211,18 @@ onMounted(() => {
     },
     { immediate: true }
   );
-  watch(splitterResized, () => {
-    // remove the svg
-    const element = document.getElementById("timelineSVG");
-    if (element) {
-      d3.select(element).select("svg").remove();
-      drawTimeline();
-    }
-  });
+  watch(
+    splitterResized,
+    () => {
+      // remove the svg
+      const element = document.getElementById("timelineSVG");
+      if (element) {
+        d3.select(element).select("svg").remove();
+        drawTimeline();
+      }
+    },
+    { immediate: true }
+  );
 });
 
 function draw() {

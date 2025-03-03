@@ -13,7 +13,7 @@
       @mousedown="startDrag"
     />
     <div
-      class="absolute right-0 top-0 z-[4] m-4 flex h-fit max-h-[100%] w-fit flex-col items-end justify-start gap-2 overflow-auto"
+      class="projection-deckgl-sidebar absolute right-0 top-0 z-[4] m-4 flex h-fit w-fit flex-col items-end justify-start gap-2 overflow-auto"
     >
       <CharacteristicViewer
         v-if="store.currentStep == 'Analyze'"
@@ -122,6 +122,20 @@ const deckglCanvas = `deck-canvas-projection-viewer-${Math.random()}`;
 
 const isHiding3D = ref(false);
 const isRecalculatingMDE = ref(false);
+
+watch(
+  () => store.currentStep,
+  (newVal) => {
+    if (newVal == "Analyze") {
+      const elementSelectorHeight =
+        document.getElementById("element-selector").offsetHeight;
+      document.documentElement.style.setProperty(
+        "--footer-height",
+        `${elementSelectorHeight}px`
+      );
+    }
+  }
+);
 
 onMounted(() => {
   deck = new Deck({

@@ -16,6 +16,8 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  --footer-height: 100px;
 }
 
 a {
@@ -111,4 +113,8 @@ button:focus-visible {
   padding: 0.5rem;
   border-radius: 0.375rem /* 6px */;
   z-index: 999;
+}
+.projection-deckgl-sidebar {
+  max-height: calc(100% - var(--footer-height));
+  overflow-y: auto; /* Ensure scrollability if needed */
 }

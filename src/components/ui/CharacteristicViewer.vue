@@ -8,7 +8,7 @@
       @click="toggleIsOpened"
     />
     <h1 id="temp" class="text-xl font-bold text-gray-800">Characteristics</h1>
-    <div v-if="isOpened" class="mt-4 w-fit">
+    <div v-show="isOpened" class="mt-4 w-fit">
       <div v-if="characteristic.length == 0" class="font-medium text-gray-600">
         Must define regions and select members
       </div>
@@ -83,6 +83,30 @@ const characteristic: Ref<
     transition?: { name: string; percentage: number }[];
   }[]
 > = ref([]);
+
+let debounceTimer = null;
+onMounted(() => {
+  watch(
+    () => [
+      store.getFiles,
+      store.monthsSelected,
+      props.isComparison,
+      props.isShowingVectorField,
+    ],
+    () => {
+      if (debounceTimer) {
+        clearTimeout(debounceTimer);
+      }
+
+      debounceTimer = setTimeout(async () => {
+        console.log("DEBUG FIRING GET CHARACTERISTIC NO CHANGE AFTER 3s");
+        // getComparisonVectorField();
+        getCharacteristic();
+      }, 3000);
+    }
+  );
+});
+
 // Watch the characteristic array for changes
 watch(
   characteristic,
@@ -128,7 +152,7 @@ async function getCharacteristic() {
     isLoading.value = false;
     return;
   }
-  console.log("DEBUG GET CHARACTERISTIC", selectedFiles, props.isComparison);
+  console.log("DEBUG FIRING GET CHARACTERISTIC", zones);
   const { zoneCounts, total } = await API.fetchData(
     "/get_characteristic",
     true,
@@ -142,7 +166,6 @@ async function getCharacteristic() {
   );
 
   characteristic.value = [];
-  console.log("DEBUG GET CHARACTERISTIC", zoneCounts, total);
   const sortedKeys = Object.keys(zoneCounts).sort(
     (a, b) => zoneCounts[b] - zoneCounts[a]
   );
@@ -221,21 +244,6 @@ async function getCharacteristic() {
   });
   isLoading.value = false;
 }
-
-onMounted(() => {
-  watch(
-    () => [
-      store.getFiles,
-      store.monthsSelected,
-      props.isComparison,
-      props.isShowingVectorField,
-    ],
-    () => {
-      getCharacteristic();
-    },
-    { immediate: true }
-  );
-});
 </script>
 <style>
 .fade-enter-active,

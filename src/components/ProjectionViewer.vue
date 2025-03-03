@@ -20,6 +20,7 @@
       style="display: none"
     />
     <ElementSelector
+      id="element-selector"
       v-if="store.currentStep == 'Analyze'"
       class="absolute bottom-0 z-[4] w-full bg-white pb-4"
       :time_type="props.time_type"
