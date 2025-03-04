@@ -16,7 +16,7 @@
       </SplitterPanel>
 
       <SplitterPanel
-        v-show="store.currentStep == 'Analyze'"
+        v-if="store.currentStep == 'Analyze'"
         class="h-full w-full"
         :size="30"
       >
