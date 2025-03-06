@@ -211,18 +211,14 @@ onMounted(() => {
     },
     { immediate: true }
   );
-  watch(
-    splitterResized,
-    () => {
-      // remove the svg
-      const element = document.getElementById("timelineSVG");
-      if (element) {
-        d3.select(element).select("svg").remove();
-        drawTimeline();
-      }
-    },
-    { immediate: true }
-  );
+  watch(splitterResized, () => {
+    // remove the svg
+    const element = document.getElementById("timelineSVG");
+    if (element) {
+      d3.select(element).select("svg").remove();
+      drawTimeline();
+    }
+  });
 });
 
 function draw() {
@@ -927,6 +923,20 @@ async function drawTimeline() {
           store.setFiles({ group1: [], group2: [] });
           handleTags("hide", null, null);
         } else {
+          // Set all other clusterRect as not clicked
+          const clickedID = d3.select(this).attr("id");
+          console.log("DEBUG IN CLUSTER RECT CLICK ", clickedID);
+
+          d3.selectAll("#timelineSVG rect")
+            .filter(function () {
+              return (
+                d3.select(this)?.attr("id") &&
+                d3.select(this).attr("id").startsWith("clusterRect") &&
+                d3.select(this).attr("id") !== clickedID
+              );
+            })
+            .each((d) => (d.clicked = false));
+
           // Set this clusterRect as clicked
           d.clicked = true;
 

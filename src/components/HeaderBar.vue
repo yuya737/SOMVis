@@ -225,6 +225,15 @@ function changeDataset({ value }) {
     store.nodeMapCanvas = null;
     store.LLMQueriedRegionIndex = -1;
     store.currentStep = "Anchor";
+
+    store.anchors = {
+      ids: [],
+      coords: [],
+    };
+    store.mapAnnotation = {
+      type: "FeatureCollection",
+      features: [],
+    };
   });
 }
 </script>

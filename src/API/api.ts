@@ -1,6 +1,6 @@
 /* eslint-disable class-methods-use-this */
-// const API_URL = "http://0.0.0.0:5002";
-const API_URL = "http://infovis.cs.ucdavis.edu/climatesom/api";
+const API_URL = "http://0.0.0.0:5002";
+// const API_URL = "http://infovis.cs.ucdavis.edu/climatesom/api";
 
 class API {
   requestData(header, params) {

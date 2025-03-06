@@ -69,7 +69,9 @@ export class NodeClassifyLayer extends AbstractLayerGenerator {
         positionFormat: "XY",
         getWidth: 0.5,
         // pickable: true,
-        getColor: (d) => colorPercentile(d.percentile),
+        getColor: (d) =>
+          d.percentile == 50 ? [160, 160, 160] : colorPercentile(d.percentile),
+        // colorPercentile(d.percentile),
       }),
       new TextLayer({
         id: "classify-text-layer",

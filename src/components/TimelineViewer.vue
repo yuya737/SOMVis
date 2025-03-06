@@ -250,18 +250,14 @@ onMounted(() => {
     },
     { immediate: true }
   );
-  watch(
-    splitterResized,
-    () => {
-      // remove the svg
-      const element = document.getElementById("timelineSVG");
-      if (element) {
-        d3.select(element).select("svg").remove();
-        drawTimeline();
-      }
-    },
-    { immediate: true }
-  );
+  watch(splitterResized, () => {
+    // remove the svg
+    const element = document.getElementById("timelineSVG");
+    if (element) {
+      d3.select(element).select("svg").remove();
+      drawTimeline();
+    }
+  });
 });
 
 function draw() {
@@ -719,29 +715,6 @@ async function drawTimeline() {
     minMDS: minMDS,
     maxMDS: maxMDS,
   });
-  // yScale = (month) => {
-  //   if (true) {
-  //     return (clusterId) =>
-  //       d3
-  //         .scaleLinear()
-  //         .domain([minMDS, maxMDS])
-  //         .range([
-  //           // MARGIN + (HEIGHT - 2 * MARGIN) * 0.2,
-  //           // HEIGHT - MARGIN - (HEIGHT - 2 * MARGIN) * 0.2,
-  //           MARGIN * 4,
-  //           HEIGHT - MARGIN * 4,
-  //         ])(monthlyMDS[month][clusterId]);
-  //   } else {
-  //     return d3
-  //       .scaleBand()
-  //       .domain(
-  //         d3.range(Object.keys(perTimeStepClusterCounts[month - 1]).length)
-  //       )
-  //       .range([MARGIN, HEIGHT - MARGIN])
-  //       .padding(0.1);
-  //   }
-  // };
-
   await checkFlipMDS({
     yScale: yScale,
     HEIGHT: HEIGHT,
@@ -841,24 +814,18 @@ async function drawTimeline() {
     .attr("id", (d) => `clusterPath${d.index}`)
     .attr("stroke", (d) => {
       if (members[d.index].ssp == "historical") {
-        return "forestgreen";
+        return d3.interpolatePlasma(0.8);
       }
       if (members[d.index].ssp == "ssp245") {
-        return "steelblue";
+        return d3.interpolatePlasma(0.6);
       }
       if (members[d.index].ssp == "ssp370") {
-        return "darkkhaki";
+        return d3.interpolatePlasma(0.4);
       }
       if (members[d.index].ssp == "ssp585") {
-        return "crimson";
+        return d3.interpolatePlasma(0.2);
       }
     })
-    // .attr("stroke-dasharray", (d) =>
-    //   members[d.index].ssp == "historical" ? "10,10" : "0"
-    // )
-    // .attr("stroke-width", (d) => {
-    //   return 1;
-    // })
     .attr("stroke-opacity", 1)
     .attr("transform", `translate(${xScale.bandwidth() / 2}, ${0})`)
     .attr("clusterHistory", (d) => d.clusterHistory)
@@ -1026,10 +993,10 @@ async function drawTimeline() {
   }
 
   const pathLegend = [
-    { name: "Historical", color: "steelblue", dash: "0" },
-    { name: "SSP245", color: "forestgreen", dash: "0" },
-    { name: "SSP370", color: "darkkhaki", dash: "0" },
-    { name: "SSP585", color: "crimson", dash: "0" },
+    { name: "Historical", color: d3.interpolatePlasma(0.8), dash: "0" },
+    { name: "SSP245", color: d3.interpolatePlasma(0.6), dash: "0" },
+    { name: "SSP370", color: d3.interpolatePlasma(0.4), dash: "0" },
+    { name: "SSP585", color: d3.interpolatePlasma(0.2), dash: "0" },
   ];
 
   const pathLegendGroup = svg
@@ -1053,6 +1020,7 @@ async function drawTimeline() {
     .attr("x2", 50)
     .attr("y1", (d, i) => i * 20 + 30)
     .attr("y2", (d, i) => i * 20 + 30)
+    .attr("stroke-width", 5)
     .attr("stroke", (d) => d.color)
     .attr("stroke-dasharray", (d) => d.dash);
 
@@ -1061,7 +1029,8 @@ async function drawTimeline() {
     .attr("x", 70)
     .attr("y", (d, i) => i * 20 + 30)
     .text((d) => d.name)
-    .attr("alignment-baseline", "central");
+    .attr("alignment-baseline", "central")
+    .attr("dominant-baseline", "middle");
 
   const rectLegend = arrToI(7).map((i) => {
     let adjustedI = i - 3;

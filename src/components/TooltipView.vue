@@ -16,7 +16,7 @@
             :value="slotProps.data.ssp"
             :style="{
               backgroundColor: setSSPColors(slotProps.data),
-              color: '#fff',
+              color: setSSPTextColors(slotProps.data),
             }"
           />
         </template>
@@ -74,16 +74,31 @@ let monthlyMeanMax = -Infinity;
 
 const setSSPColors = (member) => {
   if (member.ssp === "historical") {
-    return "forestgreen";
+    // return d3.interpolateMagma(1);
+    return d3.interpolatePlasma(0.8);
   } else if (member.ssp === "ssp245") {
-    return "steelblue";
+    // return d3.interpolateMagma(0.87);
+    return d3.interpolatePlasma(0.6);
   } else if (member.ssp === "ssp370") {
-    return "darkkhaki";
+    // return d3.interpolateMagma(0.74);
+    return d3.interpolatePlasma(0.4);
   } else if (member.ssp === "ssp585") {
-    return "crimson";
+    // return d3.interpolateMagma(0.6);
+    return d3.interpolatePlasma(0.2);
   }
 };
 
+const setSSPTextColors = (member) => {
+  if (member.ssp === "historical") {
+    return "black";
+  } else if (member.ssp === "ssp245") {
+    return "white";
+  } else if (member.ssp === "ssp370") {
+    return "white";
+  } else if (member.ssp === "ssp585") {
+    return "white";
+  }
+};
 const props = defineProps<{
   members: EnsembleMember[];
   month: number;

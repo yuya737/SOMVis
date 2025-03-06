@@ -64,61 +64,13 @@ export class ParticleAdvectionLayer extends AbstractLayerGenerator {
         ]);
       }
     }
-    // let data = Array.from(
-    //   { length: this.vectorField.u.flat().length },
-    //   (_, i) => {
-    //     let col = i % this.vectorField.x.length;
-    //     let row = Math.floor(i / this.vectorField.x.length);
-    //     let angle =
-    //       (Math.atan2(
-    //         this.vectorField.v[row][col],
-    //         this.vectorField.u[row][col]
-    //       ) *
-    //         180) /
-    //       Math.PI;
-    //     let length = Math.sqrt(
-    //       this.vectorField.u[row][col] ** 2 + this.vectorField.v[row][col] ** 2
-    //     );
-    //     // angle = angle + 180;
-    //     // angle = angle < 0 ? angle + 3 : angle;
-    //     return [
-    //       this.vectorField.x[row] * 3,
-    //       this.vectorField.y[col] * 3,
-    //       angle,
-    //       this.vectorField.u[row][col],
-    //       this.vectorField.v[row][col],
-    //       length,
-    //     ];
-    //   }
-    // );
-    console.log("DEBUG IN PARTICLE ADVECTION LAYER", data);
-    // data = data.filter((d) => d[2] != 0);
-    // let layer2 = new TextLayer({
-    //   id: "Wind_Arrows2",
-    //   data: data,
-    //   visible: false,
-    //   getSize: 18,
-    //   getPosition: (d) => [d[0], d[1]],
-    //   // getText: (d) => d[2].toFixed(2),
-    //   getText: (d) => [d[3].toFixed(2), d[4].toFixed(2)].join(", "),
-    //   // getOrientation: (d) => [0, -180 - d[2], 0],
-    //   // // getOrientation: (d) => [0, 0, 0],
-    //   // pickable: true,
-    //   // onHover: (d) => console.log(d)
-    // });
     let layer = new SimpleMeshLayer({
       id: "vector-field",
       data: data,
-      mesh: "https://raw.githubusercontent.com/yuya737/arrow_obj/main/Arrow5.obj",
+      mesh: "https://raw.githubusercontent.com/yuya737/arrow_obj/main/arrowV2.obj",
       loaders: [OBJLoader],
       getPosition: (d) => [d[0], d[1]],
-      getColor: (d) => [
-        120, 120, 120, 130,
-        // d3.scaleLinear().domain([0, 360]).range([0, 255])(d[2]),
-        // 0,
-        // 0,
-        // 105,
-      ],
+      getColor: (d) => [120, 120, 120, 130],
       // getOrientation: (d) => [0, -180 + d[2], 0],
       getScale: (d) => [d[5] / 3, d[5] / 3, d[5] / 3],
       getOrientation: (d) => [0, d[2], 0],

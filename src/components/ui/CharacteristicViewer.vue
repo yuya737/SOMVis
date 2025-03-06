@@ -10,7 +10,7 @@
     <h1 id="temp" class="text-xl font-bold text-gray-800">Characteristics</h1>
     <div v-show="isOpened" class="mt-4 w-fit">
       <div v-if="characteristic.length == 0" class="font-medium text-gray-600">
-        Must define regions and select members
+        Must define annotations and select members
       </div>
       <div
         v-if="characteristic.length > 0 && characteristic[0].transition != null"
