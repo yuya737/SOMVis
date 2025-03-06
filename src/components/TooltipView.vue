@@ -21,7 +21,13 @@
           />
         </template>
       </Column>
-      <Column field="mean" sortable header="Mean anomaly" class="w-fit">
+      <Column
+        v-if="computedMinMax"
+        field="mean"
+        sortable
+        header="Mean anomaly"
+        class="w-fit"
+      >
         <template #body="slotProps">
           <span class="inline-flex w-full items-center justify-between">
             {{ formatScientificNotation(slotProps.data) }}
@@ -60,7 +66,7 @@ import Tag from "primevue/tag";
 import Column from "primevue/column";
 import { useStore } from "@/store/main";
 
-import { computed, onMounted, ref, watch } from "vue";
+import { computed, nextTick, onMounted, ref, watch } from "vue";
 import API from "@/API/api";
 import { computedAsync } from "@vueuse/core";
 import { sspAllLabels } from "./utils/utils";
@@ -71,6 +77,7 @@ const memberViewerLegend = `memberViewer-${Math.round(Math.random() * 1000)}`;
 
 let monthlyMeanMin = Infinity;
 let monthlyMeanMax = -Infinity;
+let computedMinMax = ref(false);
 
 const setSSPColors = (member) => {
   if (member.ssp === "historical") {
@@ -99,21 +106,23 @@ const setSSPTextColors = (member) => {
     return "white";
   }
 };
+
+const boxColorStyle = (mean) => {
+  return {
+    fill: computeBoxColor(mean), // Ensure computeBoxColor returns a color string
+  };
+};
 const props = defineProps<{
   members: EnsembleMember[];
   month: number;
 }>();
 
 function computeBoxColor(mean) {
-  // console.log("DEBUG: ", monthlyMeanMax, monthlyMeanMin, mean);
   let color = d3
     .scaleDiverging(d3.interpolateBrBG)
     .domain([monthlyMeanMin, 0, monthlyMeanMax])(mean);
-  // .replace(/[^\d,]/g, "")
-  // .split(",")
-  // .map((d) => Number(d));
   let ret = `fill: ${color}`;
-  // console.log("DEBUG: ", ret);
+  console.log("Box color", ret);
   return ret;
 }
 
@@ -143,7 +152,6 @@ const membersWithMean = computedAsync(async () => {
     const { means } = await API.fetchData("get_all_means", true, {
       dataset_type: store.currentDatasetType,
       members: [member],
-      // members: sspAllLabels,
       months: [props.month],
       years: [-1],
     });
@@ -170,19 +178,20 @@ onMounted(async () => {
     () => props.month,
     () => {
       console.log("DEBUG: MONTH CHANGED");
+      computedMinMax.value = false;
       drawLegend();
     },
     { immediate: true }
   );
 });
 
-async function drawLegend() {
+async function getMonthlyMinMax() {
+  nextTick(() => {
+    if (computedMinMax.value) return;
+  });
   monthlyMeanMin = Infinity;
   monthlyMeanMax = -Infinity;
-  // Check if the legend already exists
-  if (document.getElementById(memberViewerLegend)) {
-    document.getElementById(memberViewerLegend).innerHTML = "";
-  }
+
   let perMemberMeans = sspAllLabels.map(async (member) => {
     const { means } = await API.fetchData("get_all_means", true, {
       dataset_type: store.currentDatasetType,
@@ -197,6 +206,15 @@ async function drawLegend() {
     }
   });
   await Promise.all([...perMemberMeans]);
+  computedMinMax.value = true;
+}
+
+async function drawLegend() {
+  // Check if the legend already exists
+  if (document.getElementById(memberViewerLegend)) {
+    document.getElementById(memberViewerLegend).innerHTML = "";
+  }
+  await getMonthlyMinMax();
   const numBoxes = 7;
   let color = d3
     .scaleDiverging(d3.interpolateBrBG)
