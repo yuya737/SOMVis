@@ -72,7 +72,7 @@ export class ParticleAdvectionLayer extends AbstractLayerGenerator {
       getPosition: (d) => [d[0], d[1]],
       getColor: (d) => [120, 120, 120, 130],
       // getOrientation: (d) => [0, -180 + d[2], 0],
-      getScale: (d) => [d[5] / 3, d[5] / 3, d[5] / 3],
+      getScale: (d) => [d[5] / 3.5, d[5] / 3.5, d[5] / 3.5],
       getOrientation: (d) => [0, d[2], 0],
       // getScale: [0.3, 0.3, 0.3],
       pickable: true,
