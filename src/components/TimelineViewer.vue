@@ -826,7 +826,7 @@ async function drawTimeline() {
         return d3.interpolatePlasma(0.2);
       }
     })
-    .attr("stroke-opacity", 1)
+    .attr("stroke-opacity", 0.5)
     .attr("transform", `translate(${xScale.bandwidth() / 2}, ${0})`)
     .attr("clusterHistory", (d) => d.clusterHistory)
     .on("mouseover", function (event, d) {
