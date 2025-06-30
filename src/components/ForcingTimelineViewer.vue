@@ -892,6 +892,8 @@ async function drawTimeline() {
           // Filter elements based on the stroke-width attribute
           .filter(function () {
             return (
+              d3.select(this)?.attr("id") &&
+              d3.select(this).attr("id").startsWith("clusterPath") &&
               d3.select(this).datum() &&
               d3.select(this).datum()["cluster"][d.month] === d.cluster
             );

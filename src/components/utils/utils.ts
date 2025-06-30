@@ -91,7 +91,7 @@ export function constructZones(mapAnnotation) {
         return [x / 10, y / 10];
       }),
     ];
-    console.log("DEBUG getCharacteristic lngLat", offsetGeometry.coordinates);
+    // console.log("DEBUG getCharacteristic lngLat", offsetGeometry.coordinates);
     return {
       name: d.properties.name,
       geometry: offsetGeometry,

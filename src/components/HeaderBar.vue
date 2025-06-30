@@ -4,8 +4,8 @@
   >
     <!-- Logo -->
     <div class="flex flex-row items-center justify-center gap-8">
-      <span class="text-xl font-bold tracking-wide text-gray-800"
-        >&lt;TENTATIVE&gt; ClimateSOM</span
+      <span class="text-xl font-bold tracking-wide text-gray-800">
+        ClimateSOM</span
       >
       <div
         class="relative flex max-w-xs flex-col items-center justify-start gap-2"
@@ -13,7 +13,7 @@
         <!-- <label class="text-sm text-gray-600">Toggle LLM queried region</label> -->
         <Dropdown
           v-model="store.currentDatasetType"
-          :options="['California', 'NorthWest']"
+          :options="['California', 'NorthWest', 'WestCoast']"
           @change="(newValue) => changeDataset(newValue)"
         />
         <div

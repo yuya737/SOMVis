@@ -52,6 +52,7 @@ import { Deck } from "@deck.gl/core/typed";
 import { LayersList } from "@deck.gl/core";
 import { COORDINATE_SYSTEM } from "@deck.gl/core";
 import { Layer } from "deck.gl/typed";
+import { CollisionFilterExtension } from "@deck.gl/extensions";
 
 // STORE IMPORT
 import { useStore } from "@/store/main";
@@ -72,6 +73,7 @@ import { LLMRegionLayer } from "@/components/utils/LLMRegionLayer";
 
 import { mapView, DECKGL_SETTINGS, timeType } from "@/components/utils/utils";
 import MemberViewer from "../MemberViewer.vue";
+import { get } from "@vueuse/core";
 
 let isDragging = false;
 const position = ref({ x: 0, y: 0 });
@@ -361,6 +363,7 @@ function drawAllLayers(afterMDE = false) {
               transitions: { bounds: afterMDE ? 1000 : 0 },
             });
           }
+          ret = addTextCollisionFilter(ret);
           return ret;
         });
       })
@@ -385,6 +388,33 @@ function handleButtons() {
     }
   });
   setLayerProps();
+}
+function addTextCollisionFilter(layer) {
+  const getCollisionPriority = (layer_id) => {
+    if (layer_id === "text-layer-SpaceAnnotationTextLayer") {
+      return 3; // Highest priority for space annotation text
+    }
+    if (layer_id.startsWith("text-layer-polygon-layer-label")) {
+      return 2;
+    }
+    if (layer_id === "text-layer-percentile") {
+      return 1;
+    }
+    console.log("SDF");
+    return 0;
+  };
+
+  // Test that layer is a TextLayer
+  if (layer.id.startsWith("text-layer")) {
+    return layer.clone({
+      extensions: [new CollisionFilterExtension()],
+      collisionTestProps: {
+        sizeScale: 4,
+      },
+      getCollisionPriority: getCollisionPriority(layer.id),
+    });
+  }
+  return layer;
 }
 
 function setLayerProps() {

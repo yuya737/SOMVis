@@ -74,15 +74,16 @@ export class NodeClassifyLayer extends AbstractLayerGenerator {
         // colorPercentile(d.percentile),
       }),
       new TextLayer({
-        id: "classify-text-layer",
+        id: "text-layer-percentile",
         data: contourData,
         getPosition: (d) => [
           d.contours[d.contours.length - 1][0],
           d.contours[d.contours.length - 1][1],
-          3,
+          2,
         ],
         getText: (d) => `${d.percentile}th Percentile`,
         getSize: 24,
+        // visible: false,
         fontFamily: "Arial",
       }),
     ];

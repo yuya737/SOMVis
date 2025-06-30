@@ -134,7 +134,7 @@ export class ExplainabilityLayer extends AbstractLayerGenerator {
       this.NLDescriptions.filter((d) => d != null)
     );
     const comparisonLayer = new TextLayer({
-      id: "explainability-comparison-text-layer",
+      id: "text-layer-explainability-comparison",
       data: [this.NLComparison],
       // data: [1],
       // getPosition: [0, 0],

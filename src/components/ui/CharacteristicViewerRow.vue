@@ -27,7 +27,7 @@
   </div>
   <div
     v-else
-    class="grid max-w-lg grid-cols-[1fr_1fr_1fr] place-items-center gap-4"
+    class="grid max-w-xl grid-cols-[1fr_1fr_1fr] place-items-center gap-4"
   >
     <div class="flex w-full flex-row items-center justify-between gap-4">
       <!-- <div class="flex w-full flex-row items-center justify-between gap-4">
@@ -158,7 +158,7 @@ function makeSankey() {
       value: d.percentage,
     };
   });
-  let width = 150;
+  let width = 200;
   let height = element.clientHeight;
   const padding = 10;
   console.log(

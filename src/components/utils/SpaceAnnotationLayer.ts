@@ -59,11 +59,10 @@ export class SpaceAnnotationLayer extends AbstractLayerGenerator {
       document.fonts.add(loadedFace);
     });
     let textLayer = new TextLayer({
-      id: "SpaceAnnotationTextLayer",
+      id: "text-layer-SpaceAnnotationTextLayer",
       data: this.store.mapAnnotation.features.filter(
         (d) => d.properties.name != undefined
       ),
-      fontFamily: "Test",
       getPosition: (d) => {
         const lngLat = centroid(d).geometry.coordinates;
         const dist = distance([0, 0], lngLat, {
@@ -72,7 +71,7 @@ export class SpaceAnnotationLayer extends AbstractLayerGenerator {
         const a = bearing([0, 0], lngLat);
         const x = dist * Math.sin((a * Math.PI) / 180);
         const y = dist * Math.cos((a * Math.PI) / 180);
-        return [x, y, 3];
+        return [x, y, 2];
       },
       // getPosition: [0, 0],
       getSize: 24,

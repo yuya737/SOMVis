@@ -9,8 +9,8 @@ import cancelSVG from "@/assets/cancel.svg?raw";
 import distance from "@turf/distance";
 import bearing from "@turf/bearing";
 import { IconLayer } from "deck.gl/typed";
-const API_URL = "http://infovis.cs.ucdavis.edu/climatesom/api";
-
+// const API_URL = "http://infovis.cs.ucdavis.edu/climatesom/api";
+const API_URL = "http://0.0.0.0:5003";
 export class NodeLayer extends AbstractLayerGenerator {
   readonly nodeMapGetter: ComputedRef<() => any>;
   readonly highlightedNodeGetter: ComputedRef<Array<number>>;

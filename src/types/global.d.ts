@@ -50,4 +50,4 @@ declare type LLMQueryResult = {
 
 declare type step = "Anchor" | "Annotate" | "Analyze";
 
-declare type datasetType = "California" | "NorthWest"
+declare type datasetType = "California" | "NorthWest" | "WestCoast"

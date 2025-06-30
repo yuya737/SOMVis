@@ -191,7 +191,7 @@ export class SOMLayer extends AbstractLayerGenerator {
       });
 
       const labelsPromise = BMUPolygon.then((BMUPolygon) => {
-        const locations = BMUPolygon.map((d) => d[0]);
+        const locations = BMUPolygon.map((d) => d[20]);
         return locations;
       });
 
@@ -200,11 +200,11 @@ export class SOMLayer extends AbstractLayerGenerator {
         data: BMUPolygon,
         getPolygon: (d) => d,
         stroked: false,
-        opacity: 0.1,
+        opacity: 0.06,
         visible: this.currentStep.value == "Analyze",
       });
       const polygonLabelLayer = new TextLayer({
-        id: `polygon-layer-label-${i}`,
+        id: `text-layer-polygon-layer-label-${i}`,
         data: labelsPromise,
         getPosition: (d) => [...d, 2],
         getText: () => `Top ${threshold * 100}%`,
