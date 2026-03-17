@@ -4,6 +4,7 @@ import { subsetType, timeType } from "./utils";
 
 import { AbstractLayerGenerator } from "./AbstractLayerGenerator";
 import { ComputedRef, watch, Ref } from "vue";
+import { useStore } from "@/store/main";
 import API from "@/API/api";
 
 export class SOMLayer extends AbstractLayerGenerator {
@@ -11,6 +12,7 @@ export class SOMLayer extends AbstractLayerGenerator {
   readonly nodeMapGetter: ComputedRef<(timeType: timeType) => any>;
   readonly pathDataGetter: ComputedRef<(timeType: timeType) => any>;
   readonly contourLevelGetter: ComputedRef<number[]>;
+  readonly diffFieldDataGetter: ComputedRef<() => any>;
 
   // readonly name: string;
   readonly selectedTimeRange: any;
@@ -18,12 +20,15 @@ export class SOMLayer extends AbstractLayerGenerator {
   // readonly selectedModel: ComputedRef<[EnsembleMember[], EnsembleMember[]]>;
   readonly selectedModel: ComputedRef<EnsembleMember[]>;
 
+  readonly SFBaySetting: any;
+
   readonly selectedSubsetType: any;
   readonly hoveredFile: any;
 
   readonly blockedCenterofMassData: any;
 
   readonly interpolatedSurface: any;
+  readonly store: any;
 
   // Need to have two ranges for the heatmap to account for Dec-Feb type queries that wrap around the year
   selectedMonthRangeList: any = [];
@@ -33,6 +38,7 @@ export class SOMLayer extends AbstractLayerGenerator {
   mode: string = "single"; // either single or compare
   time_type: timeType;
   BMUData: BMUData[];
+  SFBayBMUData: any[] = [];
 
   currentStep: Ref<step>;
 
@@ -69,18 +75,8 @@ export class SOMLayer extends AbstractLayerGenerator {
 
     this.selectedSubsetType = subsetType;
 
-    // this.BMUData = Object.entries(this.data)
-    //   .map(([model, BMUs]) =>
-    //     BMUs.map((d) => {
-    //       return {
-    //         name: model,
-    //         coords: d.coords,
-    //         month: d.month,
-    //         year: d.year,
-    //       };
-    //     })
-    //   )
-    //   .flat(2);
+    this.store = useStore();
+
     watch(
       () => this.nodeMapGetter.value(this.time_type),
       (nodeMap) => {
@@ -92,6 +88,7 @@ export class SOMLayer extends AbstractLayerGenerator {
                 coords: nodeMap[d.id]["coords"],
                 month: d.month,
                 year: d.year,
+                id: d.id,
               };
             })
           )
@@ -110,16 +107,20 @@ export class SOMLayer extends AbstractLayerGenerator {
         this.currentStep.value,
       ],
       () => {
-        // this.selectedModel.value[1].length > 0
-        //   ? (this.mode = "compare")
-        //   : (this.mode = "single");
+        // // Pre-fetch SF Bay data when settings change
+        // if (!this.SFBaySetting.value.ignore) {
+        //   this.fetchSFBayData().then(() => {
+        //     this.needsToRedraw = true;
+        //   });
+        // } else {
         this.needsToRedraw = true;
+        // }
       }
     );
   }
 
-  _subsetData(): BMUData[] {
-    const selectData = (files: EnsembleMember[]) => {
+  _subsetData(): any[] {
+    const selectData = (files: any[]) => {
       // Filter by name
       let fileStrings = files.map(
         (d) => `${d.model_name}:${d.ssp}:${d.variant}`
@@ -157,14 +158,7 @@ export class SOMLayer extends AbstractLayerGenerator {
     }
 
     curBMUData = selectData(this.selectedModel.value);
-    // if (this.mode === "single") {
-    // } else {
-    //   // compare mode
-    //   curBMUData = [
-    //     selectData(this.selectedModel.value[0]),
-    //     selectData(this.selectedModel.value[1]),
-    //   ];
-    // }
+
     return curBMUData;
   }
 

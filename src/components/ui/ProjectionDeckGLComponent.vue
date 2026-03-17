@@ -69,11 +69,11 @@ import { NodeClassifyLayer } from "@/components/utils/NodeClassifyLayer";
 import { ParticleAdvectionLayer } from "@/components/utils/ParticleAdvectionLayer";
 import { SpaceAnnotationLayer } from "@/components/utils/SpaceAnnotationLayer";
 import { SOMLayer } from "@/components/utils/SOMLayer";
+import { SFBaySOMLayer } from "../utils/SFBaySOMLayer";
 import { LLMRegionLayer } from "@/components/utils/LLMRegionLayer";
 
 import { mapView, DECKGL_SETTINGS, timeType } from "@/components/utils/utils";
 import MemberViewer from "../MemberViewer.vue";
-import { get } from "@vueuse/core";
 
 let isDragging = false;
 const position = ref({ x: 0, y: 0 });
@@ -111,6 +111,7 @@ const props = defineProps({
   isComparison: Boolean,
   isShowingComparison: Boolean,
   isShowingVectorField: Boolean,
+  isShowingDiffField: Boolean,
 });
 
 let layerList: LayersList = [];
@@ -165,8 +166,9 @@ onMounted(() => {
   let debounceTimer = null;
 
   watch(
-    () => props.isShowingVectorField,
+    () => [props.isShowingVectorField, props.isShowingDiffField],
     async (newVal) => {
+      console.log("DEBUG PROJECTION DECKGL WATCHING DIff field", newVal);
       if (newVal) {
         await nextTick();
         drawAllLayers();
@@ -236,6 +238,7 @@ async function initializeLayers() {
     getSubsetType,
     getHoveredFile,
     getVectorFieldData,
+    getDiffFieldData,
     getLLMQueryResult,
     getHighlightedNodes,
     getContourLevels,
@@ -245,7 +248,9 @@ async function initializeLayers() {
     LLMQueriedRegionIndex,
     isShowingLLMQueriedRegion,
     isHidingAnnotations,
+    getSFBaySetting,
   } = storeToRefs(store);
+
   let nodeLayerGenerator = new NodeLayer({
     dataset_type: store.currentDatasetType,
     time_type: props.time_type,
@@ -285,6 +290,10 @@ async function initializeLayers() {
     props.isComparison ? getFiles.value[1] : getFiles.value[0]
   );
 
+  const curSFBaySetting = computed(() =>
+    props.isComparison ? getSFBaySetting.value[1] : getSFBaySetting.value[0]
+  );
+
   let somLayerGenerator = new SOMLayer({
     nodeMapGetter: getNodeMap,
     pathDataGetter: getPathData,
@@ -301,6 +310,16 @@ async function initializeLayers() {
     interpolatedSurface: store.interpolatedSurfaceData[props.time_type],
     time_type: props.time_type,
     currentStep: currentStep,
+  });
+
+  let sfbaySomLayerGenerator = new SFBaySOMLayer({
+    time_type: props.time_type,
+    SFBaySetting: curSFBaySetting,
+    pathDataGetter: getPathData,
+    nodeMapGetter: getNodeMap,
+    diffFieldDataGetter: getDiffFieldData,
+    currentStep: currentStep,
+    isShowingDiffField: computed(() => props.isShowingDiffField),
   });
 
   let particleAdvectionLayerGenerator = new ParticleAdvectionLayer({
@@ -327,6 +346,7 @@ async function initializeLayers() {
     nodeclassifyLayerGenerator,
     particleAdvectionLayerGenerator,
     somLayerGenerator,
+    sfbaySomLayerGenerator,
     spaceAnnotationLayerGenerator,
     llmRegionLayerGenerator,
   ];

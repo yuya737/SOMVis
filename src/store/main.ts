@@ -8,7 +8,7 @@ import {
   timeTypeMonths,
 } from "@/components/utils/utils";
 import { reactive } from "vue";
-import { getVectorFieldData, getPaths, getNodeData } from "./storeHelper";
+import { getPaths, getNodeData } from "./storeHelper";
 
 // const timeTypes = [timeType.AprSep, timeType.OctMar];
 // const timeTypes = [timeType.OctMay];
@@ -44,6 +44,12 @@ export const useStore = defineStore("main", {
         [] as string[],
         [] as number[],
       ],
+
+      diffFieldData: {
+        hypothesis_test_results: [],
+        observed_diff: [],
+      },
+
       // [dataset_Type, model_type, time_type, data_type_cmp, month]
 
       redrawFlag: false,
@@ -71,8 +77,9 @@ export const useStore = defineStore("main", {
       nodeClickedID: -1 as number,
       currentStep: "Anchor" as step,
       // currentDatasetType: "California" as datasetType,
-      currentDatasetType: "NorthWest" as datasetType,
-      // currentDatasetType: "WestCoast" as datasetType,
+      // currentDatasetType: "NorthWest" as datasetType,
+      // currentDatasetType: "WestCoastPerPixel" as datasetType,
+      currentDatasetType: "WestCoastOverall" as datasetType,
 
       recalculateMDEFlag: false,
       isHidingDistribution: false,
@@ -86,6 +93,26 @@ export const useStore = defineStore("main", {
       isShowingForcingClustering: false,
 
       LLMSummaryIntervals: null,
+
+      // sfBaySetting: [1],
+      sfBaySetting: [
+        {
+          model: null,
+          ssp: null,
+          month: -1,
+          percentile: 0,
+          isGreaterThan: true, // true means greater than, false means less than
+          ignore: true,
+        }, // { model: string | "all", percentile: number, isWithinSSP: boolean, month: number }
+        {
+          model: null,
+          ssp: null,
+          month: -1,
+          percentile: 0,
+          isGreaterThan: true, // true means greater than, false means less than
+          ignore: true,
+        }, // { model: string | "all", percentile: number, isWithinSSP: boolean, month: number }
+      ],
     });
     getNodeData({ dataset_name: state.currentDatasetType }).then((data) => {
       const {
@@ -110,6 +137,38 @@ export const useStore = defineStore("main", {
     getPaths(state.currentDatasetType).then((pathData) => {
       state.pathData = pathData;
     });
+    // WestCoastOverall - no log
+    // state.anchors = {
+    //   ids: [811, 28, 271, 748],
+    //   coords: [
+    //     [72.88032881318833, 3.18195438771088],
+    //     [-68.80381470649641, 2.883646734003534],
+    //     [-1.0937082343545108, -53.79480779186398],
+    //     [-0.6462846048549566, 57.17564001747511],
+    //   ],
+    // };
+
+    // WestCoastOverall - with log
+    state.anchors = {
+      ids: [838, 1, 298, 811],
+      coords: [
+        [79.93058372696184, -3.6791216813682297],
+        [-70.23750915161857, -6.9605058904369645],
+        [4.622850940661657, -64.23557575179373],
+        [7.008838531905003, 46.43656442791505],
+      ],
+    };
+    // WestCoastPerPixel
+    // state.anchors = {
+    //   ids: [1, 811, 28, 838, 829],
+    //   coords: [
+    //     [86.64117377579282, 0.7954931368944008],
+    //     [1.0438695865115288, -56.62873053520105],
+    //     [4.771975185167475, 46.138256778459976],
+    //     [-62.48304954456937, 4.076877345959473],
+    //     [-52.7899750286122, -11.435120666128947],
+    //   ],
+    // };
 
     // Dan
 
@@ -233,100 +292,100 @@ export const useStore = defineStore("main", {
     //   ],
     // };
 
-    state.anchors = {
-      ids: [1, 838],
-      coords: [
-        [67.40414894026932, 8.552506707396066],
-        [-60.39531036300677, -3.232043559813041],
-      ],
-    };
-    state.mapAnnotation = {
-      type: "FeatureCollection",
-      features: [
-        {
-          type: "Feature",
-          properties: { name: "Dry Global" },
-          geometry: {
-            type: "Polygon",
-            coordinates: [
-              [
-                [0.00021582713149868445, -0.00041213860385368043],
-                [0.0007759756416733351, 0.00008921093715560252],
-                [0.0006647828201832102, 0.00012169776954600421],
-                [0.00022203661570317058, 0.0004383661123024598],
-                [0.00021582713149868445, -0.00041213860385368043],
-              ],
-            ],
-          },
-        },
-        {
-          type: "Feature",
-          properties: { name: "Wet Global" },
-          geometry: {
-            type: "Polygon",
-            coordinates: [
-              [
-                [-0.0006037275300954332, -0.000053379232934562235],
-                [-0.00013700916438129113, -0.00038074837657918334],
-                [-0.00015090912642480667, 0.00044514149779275615],
-                [-0.0005795038297581265, 0.00006564379200385872],
-                [-0.0006037275300954332, -0.000053379232934562235],
-              ],
-            ],
-          },
-        },
-        {
-          type: "Feature",
-          properties: { name: "Dry SW" },
-          geometry: {
-            type: "Polygon",
-            coordinates: [
-              [
-                [-0.00012558186366089615, -0.00038503018672916237],
-                [0.00021398311286413126, -0.00043656489413781074],
-                [0.00021385034475639687, -0.00012648334376992576],
-                [0.0000692276450137085, -0.00012913764041335083],
-                [-0.00013290203165569552, -0.00022075184224225686],
-                [-0.00012558186366089615, -0.00038503018672916237],
-              ],
-            ],
-          },
-        },
-        {
-          type: "Feature",
-          properties: { name: "Remainder" },
-          geometry: {
-            type: "Polygon",
-            coordinates: [
-              [
-                [-0.00013848954442322527, 0.0004450542173165207],
-                [-0.00012902554530037945, -0.00018820708877055105],
-                [0.00006374027781165634, -0.0001233606757434425],
-                [0.0002136235494526145, -0.0001196122687094272],
-                [0.00020383418200307652, 0.0004690240636538704],
-                [-0.00013848954442322527, 0.0004450542173165207],
-              ],
-            ],
-          },
-        },
-        {
-          type: "Feature",
-          properties: { name: "Wet NE" },
-          geometry: {
-            type: "Polygon",
-            coordinates: [
-              [
-                [-0.00011614499477126095, 0.00045537853009482073],
-                [0.00014152262467188496, 0.00046929511544732336],
-                [0.00008688063137880373, 0.000582236268202743],
-                [-0.00005002827922181731, 0.0005748468860074653],
-                [-0.00011614499477126095, 0.00045537853009482073],
-              ],
-            ],
-          },
-        },
-      ],
-    };
+    // state.anchors = {
+    //   ids: [1, 838],
+    //   coords: [
+    //     [67.40414894026932, 8.552506707396066],
+    //     [-60.39531036300677, -3.232043559813041],
+    //   ],
+    // };
+    // state.mapAnnotation = {
+    //   type: "FeatureCollection",
+    //   features: [
+    //     {
+    //       type: "Feature",
+    //       properties: { name: "Dry Global" },
+    //       geometry: {
+    //         type: "Polygon",
+    //         coordinates: [
+    //           [
+    //             [0.00021582713149868445, -0.00041213860385368043],
+    //             [0.0007759756416733351, 0.00008921093715560252],
+    //             [0.0006647828201832102, 0.00012169776954600421],
+    //             [0.00022203661570317058, 0.0004383661123024598],
+    //             [0.00021582713149868445, -0.00041213860385368043],
+    //           ],
+    //         ],
+    //       },
+    //     },
+    //     {
+    //       type: "Feature",
+    //       properties: { name: "Wet Global" },
+    //       geometry: {
+    //         type: "Polygon",
+    //         coordinates: [
+    //           [
+    //             [-0.0006037275300954332, -0.000053379232934562235],
+    //             [-0.00013700916438129113, -0.00038074837657918334],
+    //             [-0.00015090912642480667, 0.00044514149779275615],
+    //             [-0.0005795038297581265, 0.00006564379200385872],
+    //             [-0.0006037275300954332, -0.000053379232934562235],
+    //           ],
+    //         ],
+    //       },
+    //     },
+    //     {
+    //       type: "Feature",
+    //       properties: { name: "Dry SW" },
+    //       geometry: {
+    //         type: "Polygon",
+    //         coordinates: [
+    //           [
+    //             [-0.00012558186366089615, -0.00038503018672916237],
+    //             [0.00021398311286413126, -0.00043656489413781074],
+    //             [0.00021385034475639687, -0.00012648334376992576],
+    //             [0.0000692276450137085, -0.00012913764041335083],
+    //             [-0.00013290203165569552, -0.00022075184224225686],
+    //             [-0.00012558186366089615, -0.00038503018672916237],
+    //           ],
+    //         ],
+    //       },
+    //     },
+    //     {
+    //       type: "Feature",
+    //       properties: { name: "Remainder" },
+    //       geometry: {
+    //         type: "Polygon",
+    //         coordinates: [
+    //           [
+    //             [-0.00013848954442322527, 0.0004450542173165207],
+    //             [-0.00012902554530037945, -0.00018820708877055105],
+    //             [0.00006374027781165634, -0.0001233606757434425],
+    //             [0.0002136235494526145, -0.0001196122687094272],
+    //             [0.00020383418200307652, 0.0004690240636538704],
+    //             [-0.00013848954442322527, 0.0004450542173165207],
+    //           ],
+    //         ],
+    //       },
+    //     },
+    //     {
+    //       type: "Feature",
+    //       properties: { name: "Wet NE" },
+    //       geometry: {
+    //         type: "Polygon",
+    //         coordinates: [
+    //           [
+    //             [-0.00011614499477126095, 0.00045537853009482073],
+    //             [0.00014152262467188496, 0.00046929511544732336],
+    //             [0.00008688063137880373, 0.000582236268202743],
+    //             [-0.00005002827922181731, 0.0005748468860074653],
+    //             [-0.00011614499477126095, 0.00045537853009482073],
+    //           ],
+    //         ],
+    //       },
+    //     },
+    //   ],
+    // };
 
     // state.mapAnnotation = {
     //   type: "FeatureCollection",
@@ -599,6 +658,19 @@ export const useStore = defineStore("main", {
     // };
     // {"ids":[91,838,631,118,811,298,451,25,16,181,286],"coords":[[-64.50387053624989,7.309372037072896],[68.67755639590882,6.51304576299202],[-1.7757131826952528,52.96073171301561],[6.331669297853566,-56.13128815334802],[22.249768141985616,41.684123054978514],[22.117462188018056,-41.852197156217706],[-23.644043173635602,39.049433019758645],[-25.128929759424263,-43.33786981399507],[-41.732661788023144,-24.29424737284994],[-47.53721851646967,24.868012044435577],[-17.839486445414334,-14.704905549733025]]}
     // {"type":"FeatureCollection","features":[{"type":"Feature","properties":{"llmGeneratedSummary":"The observations indicate a predominance of neutral precipitation regions across Northern and Southern California, encompassing various landscapes. High and moderate-high precipitation areas are primarily concentrated in Northern coastal and mountainous regions. Moderate-low and low precipitation regions are less represented, primarily found in specific coastal and Sierra Nevada areas.","idsContained":[[13,9],[13,10],[13,11],[14,5],[14,6],[14,7],[14,8],[14,9],[14,10],[14,11],[15,0],[15,1],[15,2],[15,4],[15,5],[15,6],[15,7],[15,8],[15,9],[15,10],[15,11],[16,0],[16,1],[16,2],[16,3],[16,4],[16,5],[16,6],[16,7],[16,8],[16,9],[16,10],[16,11],[17,0],[17,1],[17,2],[17,3],[17,4],[17,5],[17,6],[17,7],[17,8],[17,9],[17,10],[17,11],[18,0],[18,1],[18,2],[18,3],[18,4],[18,5],[18,6],[18,7],[18,8],[18,9],[18,10],[18,11],[19,0],[19,1],[19,2],[19,3],[19,4],[19,5],[19,6],[19,7],[19,8],[19,9],[19,10],[19,11],[19,12],[20,0],[20,1],[20,2],[20,3],[20,4],[20,5],[20,6],[20,7],[20,8],[20,9],[20,10],[20,11],[20,12],[21,0],[21,1],[21,2],[21,3],[21,4],[21,5],[21,6],[21,7],[21,8],[21,9],[21,10],[21,11],[21,12],[21,13],[22,0],[22,1],[22,2],[22,3],[22,4],[22,5],[22,6],[22,7],[22,8],[22,9],[22,10],[22,11],[22,12],[23,0],[23,1],[23,2],[23,3],[23,4],[23,5],[23,6],[23,7],[23,8],[23,9],[23,10],[23,11],[23,12],[24,0],[24,1],[24,2],[24,3],[24,4],[24,5],[24,6],[24,7],[24,8],[24,9],[24,10],[24,11],[25,0],[25,1],[25,2],[25,3],[25,4],[25,5],[25,6],[25,7],[25,8],[25,9],[25,10],[26,0],[26,1],[26,2],[26,3],[26,4],[26,5],[26,6],[26,7],[26,8],[27,0],[27,2],[27,3],[27,4],[27,5],[27,7],[28,1],[28,2],[28,3],[28,4],[28,6],[29,0],[29,1],[29,2],[29,3],[29,4],[29,6]],"name":"Neutral - Wet North"},"geometry":{"type":"Polygon","coordinates":[[[-0.00025633932734308104,0.0004156314999841384],[-0.00013433335418611183,0.00004839959070386408],[0.0001673431069659137,0.00012063198277090776],[0.00019162290254258197,0.00043141336722601724],[-0.0000414631357160557,0.0005364234833444632],[-0.00025633932734308104,0.0004156314999841384]]]}},{"type":"Feature","properties":{"name":"Neutral"},"geometry":{"type":"Polygon","coordinates":[[[-0.00014040330313116778,0.00003929466734989125],[-0.00011794449215404962,-0.0001780095038449787],[0.00018251797921405358,-0.0001434107949523042],[0.0001624871478556689,0.00010970607467744038],[-0.00014040330313116778,0.00003929466734989125]]]}},{"type":"Feature","properties":{"name":"Neutral - Wet South"},"geometry":{"type":"Polygon","coordinates":[[[-0.00013979630811198444,-0.00045237119462975244],[0.00009328973009576437,-0.0005634512596678099],[0.00025717835089983073,-0.0004110955420654497],[0.00017523404051051977,-0.0001561576876325995],[-0.00011551651258620502,-0.00018529344254851251],[-0.00013979630811198444,-0.00045237119462975244]]]}},{"type":"Feature","properties":{"name":"Dry"},"geometry":{"type":"Polygon","coordinates":[[[0.0002672227474625029,-0.00041686233404926486],[0.0006612115901078914,0.00001838492733760712],[0.0006571438588570228,0.000100320660050831],[0.00019458468653605777,0.0004298069045768447],[0.0001713405071454442,0.00010961833176127644],[0.0001847059104120914,-0.00014606764283313923],[0.0002672227474625029,-0.00041686233404926486]]]}},{"type":"Feature","properties":{"name":"Wet"},"geometry":{"type":"Polygon","coordinates":[[[-0.00026332564968796246,0.0004059816205945991],[-0.0006212860140641667,0.00017876976583765174],[-0.0006195427007472706,0.000009668359989793715],[-0.0001482669610276032,-0.00045521523026514384],[-0.00012211725911138516,-0.0001815150165106916],[-0.00014303702079702623,0.000050926778514999455],[-0.00026332564968796246,0.0004059816205945991]]]}}]}
+
+    // NorthWest
+    // state.anchors = {
+    //   ids: [28, 811, 7, 91, 271, 748],
+    //   coords: [
+    //     [-72.85748880979074, 8.1383025187131],
+    //     [71.45609293740023, 10.22695934577841],
+    //     [-42.89154882323549, -19.760184932040367],
+    //     [-20.67799127625965, -39.30404509124947],
+    //     [1.3864819444108167, -48.404621221427384],
+    //     [-0.7006979361638449, 59.757963785137896],
+    //   ],
+    // };
     return state;
   },
   getters: {
@@ -641,6 +713,9 @@ export const useStore = defineStore("main", {
     getVectorFieldData: (state) => {
       return (timeType: timeType) => state.vectorFieldData[timeType];
     },
+    getDiffFieldData() {
+      return this.diffFieldData;
+    },
     getLLMQueryResult() {
       return this.LLMQueries;
     },
@@ -661,6 +736,9 @@ export const useStore = defineStore("main", {
     },
     getContourLevels() {
       return this.contourLevels;
+    },
+    getSFBaySetting() {
+      return this.sfBaySetting;
     },
   },
   actions: {
@@ -703,25 +781,38 @@ export const useStore = defineStore("main", {
       try {
         let vectorField = await API.fetchData("/get_forcing", true, setting);
         vectorFieldData[setting["time_type"]] = vectorField;
-        // let transition = await API.fetchData("/get_forcing_transition", true, {
-        //   zones: setting["zones"],
-        //   u: vectorField["u"],
-        //   v: vectorField["v"],
-        //   x: vectorField["x"],
-        //   y: vectorField["y"],
-        // });
-
-        // Object.keys(transition).forEach((zoneID) => {
-        //   const counted = transition[zoneID].reduce((acc, item) => {
-        //     acc[item] = (acc[item] || 0) + 1;
-        //     return acc;
-        //   }, {});
-        //   console.log("DEBUG UPDATEVECTOR FIELD TRANSITION: ", zoneID, counted);
-        // });
       } catch (error) {
         vectorFieldData[setting["time_type"]] = null;
       }
       this.vectorFieldData = vectorFieldData;
+    },
+    async updateDiffFieldSetting(setting) {
+      try {
+        let diffField = await API.fetchData(
+          "/compare_bmu_distributions",
+          true,
+          {
+            ...setting,
+            dataset_type: this.currentDatasetType,
+          }
+        );
+        // debugger;
+        let errorDistributionField = await API.fetchData(
+          "/compare_bmu_error_distributions",
+          true,
+          {
+            ...setting,
+            dataset_type: this.currentDatasetType,
+          }
+        );
+        this.diffFieldData.hypothesis_test_results =
+          diffField.hypothesis_test_results;
+        this.diffFieldData.observed_diff = diffField.observed_diff;
+
+        console.log("Diff Field Data v2:", this.diffFieldData);
+      } catch (error) {
+        this.diffFieldData = null;
+      }
     },
   },
 });

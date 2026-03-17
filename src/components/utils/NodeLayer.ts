@@ -130,6 +130,7 @@ export class NodeLayer extends AbstractLayerGenerator {
                 imageOrientation: "flipY",
               },
             },
+            opacity: 0.45,
             // pickable: true,
             onClick: (info) => {
               if (info.layer.props.index == this.indexClicked) {

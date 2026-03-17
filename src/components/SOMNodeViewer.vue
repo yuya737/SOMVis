@@ -41,7 +41,7 @@
             </span>
             <div
               id="somNodeViewerLegend"
-              class="my-2 flex w-full flex-col items-center justify-evenly font-normal"
+              class="my-2 flex w-full flex-row items-center justify-evenly font-normal"
             />
           </div>
         </div>
@@ -62,8 +62,7 @@ import { onMounted, reactive, ref, computed, Ref, watch } from "vue";
 import { timeType, approx } from "./utils/utils";
 import { useStore } from "@/store/main";
 
-const token: string =
-  "pk.eyJ1IjoieXV5YTczNyIsImEiOiJjbGY0ZmMzbG4wcjNvM3hxbTVqaWpqaDQ3In0.wkIMGbAn6HaRVqPs2CJSnA";
+const token: string = import.meta.env.VITE_MAPBOX_TOKEN || "";
 
 const mapCenter = reactive([0, 0]);
 const computedMapCenter = computed(() => [mapCenter[0], mapCenter[1]]);
@@ -145,8 +144,10 @@ async function fetchMapData() {
     time_type: props.time_type,
   });
 
-  min /= 2;
-  max /= 2;
+  min /= 3;
+  max /= 3;
+  // min /= 2;
+  // max /= 2;
 
   console.log("sfsf", mapData, min, max);
 

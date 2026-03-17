@@ -1,125 +1,152 @@
 <template>
-  <div class="flex flex-row justify-evenly items-end gap-4">
-    <div class="flex flex-row justify-center items-end gap-4">
-      <span
-        v-if="isShowingComparison"
-        class="text-lg font-bold bg-gray-100 px-4 py-2 rounded-lg"
-        >Selection 1</span
-      >
-      <form class="max-w-sm">
-        <label for="models" class="block mb-2 text-sm font-medium text-gray-900"
-          >Select model(s)</label
+  <div class="flex flex-row items-end justify-evenly gap-4">
+    <div class="flex flex-col items-end justify-center gap-4">
+      <SFBaySelector
+        v-if="store.currentStep == 'Analyze'"
+        :time_type="props.time_type"
+      />
+      <div class="flex flex-row items-center justify-evenly gap-4 text-center">
+        <span
+          v-if="isShowingComparison"
+          class="rounded-lg bg-gray-100 px-4 py-2 text-lg font-bold"
+          >Selection 1</span
         >
+        <form class="max-w-sm">
+          <label
+            for="models"
+            class="mb-2 block text-sm font-medium text-gray-900"
+            >Select Model(s)</label
+          >
 
-        <MultiSelect
-          id="models"
-          v-model="selectedModel"
-          :options="models"
-          :maxSelectedLabels="3"
-          class="w-full"
-          filter
-          display="chip"
-        />
-      </form>
-      <form class="max-w-sm">
-        <label for="types" class="block mb-2 text-sm font-medium text-gray-900"
-          >Select time period(s)</label
-        >
-        <MultiSelect
-          id="types"
-          v-model="selectedType"
-          :options="types"
-          :maxSelectedLabels="3"
-          class="w-full"
-          filter
-          display="chip"
-        />
-      </form>
-      <form class="max-w-sm">
-        <label for="months" class="block mb-2 text-sm font-medium text-gray-900"
-          >Select Month</label
-        >
-        <Dropdown
-          id="months"
-          v-model="selectedMonth"
-          :options="timeTypeMonths[props.time_type]"
-          class="w-full"
-          display="chip"
-        />
-      </form>
-      <div class="flex flex-row justify-center items-center">
-        <div class="flex flex-col justify-center items-center gap-1">
-          <Button
-            :label="
-              isShowingComparison ? 'Remove Comparison' : 'Add Comparison'
-            "
-            class="bg-blue-500 text-white h-fit p-1 hover:bg-blue-600"
-            @click="toggleShowingComparison"
+          <MultiSelect
+            id="models"
+            v-model="selectedModel"
+            :options="models"
+            :maxSelectedLabels="3"
+            class="w-full"
+            filter
+            display="chip"
           />
+        </form>
+        <form class="max-w-sm">
+          <label
+            for="types"
+            class="mb-2 block text-sm font-medium text-gray-900"
+            >Select time period(s)</label
+          >
+          <MultiSelect
+            id="types"
+            v-model="selectedType"
+            :options="types"
+            :maxSelectedLabels="3"
+            class="w-full"
+            filter
+            display="chip"
+          />
+        </form>
+        <form class="max-w-sm">
+          <label
+            for="months"
+            class="mb-2 block text-sm font-medium text-gray-900"
+            >Select Month</label
+          >
+          <Dropdown
+            id="months"
+            v-model="selectedMonth"
+            :options="timeTypeMonths[props.time_type]"
+            class="w-full"
+            display="chip"
+          />
+        </form>
+        <div class="flex flex-row items-center justify-center">
+          <div class="flex flex-col items-center justify-center gap-1">
+            <Button
+              :label="
+                isShowingComparison ? 'Remove Comparison' : 'Add Comparison'
+              "
+              class="h-fit bg-blue-500 p-1 text-white hover:bg-blue-600"
+              @click="toggleShowingComparison"
+            />
 
-          <Button
-            v-if="isShowingComparison"
-            :label="
-              isShowingVectorField
-                ? 'Switch to Side-by-Side'
-                : 'Switch to Vector Field'
-            "
-            class="bg-blue-500 text-white h-fit p-1 hover:bg-blue-600"
-            @click="toggleComparisonMode"
-          />
+            <Button
+              v-if="isShowingComparison"
+              :label="
+                isShowingVectorField
+                  ? 'Switch to Diff Field'
+                  : isShowingDiffField
+                    ? 'Switch to Side-by-Side'
+                    : 'Switch to Vector Field'
+              "
+              class="h-fit bg-blue-500 p-1 text-white hover:bg-blue-600"
+              @click="toggleComparisonMode"
+            />
+          </div>
+          <Menu ref="menu" :model="comparisonModes" :popup="true" />
         </div>
-        <Menu ref="menu" :model="comparisonModes" :popup="true" />
       </div>
     </div>
 
     <div
       v-if="isShowingComparison"
-      class="flex flex-row justify-center items-end gap-4"
+      class="flex flex-col items-end justify-center gap-4"
     >
-      <span class="text-lg font-bold bg-gray-100 px-4 py-2 rounded-lg"
-        >Selection 2</span
-      >
-      <form class="max-w-sm">
-        <label for="models" class="block mb-2 text-sm font-medium text-gray-900"
-          >Select model(s)</label
+      <SFBaySelector
+        v-if="store.currentStep == 'Analyze'"
+        :time_type="props.time_type"
+        isComparison
+      />
+      <div class="flex flex-row items-center justify-evenly gap-4 text-center">
+        <span class="rounded-lg bg-gray-100 px-4 py-2 text-lg font-bold"
+          >Selection 2</span
         >
+        <form class="max-w-sm">
+          <label
+            for="models"
+            class="mb-2 block text-sm font-medium text-gray-900"
+            >Select model(s)</label
+          >
 
-        <MultiSelect
-          id="models"
-          v-model="selectedModelCMP"
-          :options="models"
-          :maxSelectedLabels="3"
-          class="w-full"
-          filter
-          display="chip"
-        />
-      </form>
-      <form class="max-w-sm">
-        <label for="types" class="block mb-2 text-sm font-medium text-gray-900"
-          >Select time period(s)</label
-        >
-        <MultiSelect
-          id="types"
-          v-model="selectedTypeCMP"
-          :options="types"
-          :maxSelectedLabels="3"
-          class="w-full"
-          filter
-          display="chip"
-        />
-      </form>
-      <form class="max-w-sm">
-        <label for="months" class="block mb-2 text-sm font-medium text-gray-900"
-          >Select Month</label
-        >
-        <Dropdown
-          id="months"
-          v-model="selectedMonth"
-          :options="timeTypeMonths[props.time_type]"
-          class="w-full"
-          display="chip"
-        />
-      </form>
+          <MultiSelect
+            id="models"
+            v-model="selectedModelCMP"
+            :options="models"
+            :maxSelectedLabels="3"
+            class="w-full"
+            filter
+            display="chip"
+          />
+        </form>
+        <form class="max-w-sm">
+          <label
+            for="types"
+            class="mb-2 block text-sm font-medium text-gray-900"
+            >Select time period(s)</label
+          >
+          <MultiSelect
+            id="types"
+            v-model="selectedTypeCMP"
+            :options="types"
+            :maxSelectedLabels="3"
+            class="w-full"
+            filter
+            display="chip"
+          />
+        </form>
+        <form class="max-w-sm">
+          <label
+            for="months"
+            class="mb-2 block text-sm font-medium text-gray-900"
+            >Select Month</label
+          >
+          <Dropdown
+            id="months"
+            v-model="selectedMonth"
+            :options="timeTypeMonths[props.time_type]"
+            class="w-full"
+            display="chip"
+          />
+        </form>
+      </div>
     </div>
   </div>
 </template>
@@ -132,6 +159,7 @@ import { isEqual } from "lodash";
 import Dropdown from "primevue/dropdown";
 import Menu from "primevue/menu";
 import TooltipView from "../TooltipView.vue";
+import SFBaySelector from "./SFBaySelector.vue";
 
 const props = defineProps<{
   time_type: timeType;
@@ -148,6 +176,7 @@ const isShowingComparisonButton = computed(
 );
 const isShowingComparison = ref(false);
 const isShowingVectorField = ref(false);
+const isShowingDiffField = ref(false);
 
 // const formatMmeber = (value) => {
 //   return `${value.model_name}-${value.ssp}-${value.ssp}-${value.variant}`;
@@ -167,6 +196,7 @@ const menu = ref();
 const toggle = (type: string) => {
   isShowingComparison.value = !isShowingComparison.value;
   isShowingVectorField.value = type == "vector-field";
+  isShowingDiffField.value = type == "diff-field";
   emit("comparisonModeChanged", type);
 };
 const comparisonModes = ref([
@@ -182,6 +212,11 @@ const comparisonModes = ref([
         label: "As vector field",
         icon: "pi pi-arrow-up-left",
         command: () => toggle("vector-field"),
+      },
+      {
+        label: "As diff field",
+        icon: "pi pi-minus",
+        command: () => toggle("diff-field"),
       },
     ],
   },
@@ -284,13 +319,19 @@ function toggleShowingComparison(event) {
 }
 
 function toggleComparisonMode() {
-  console.log("DEBUG TOGGLE COMPARISON MODE", isShowingVectorField.value);
-  const curShowingVectorField = isShowingVectorField.value;
-  isShowingVectorField.value = !curShowingVectorField;
-  console.log("DEBUG TOGGLE COMPARISON MODE 2", isShowingVectorField.value);
-  emit(
-    "comparisonModeChanged",
-    curShowingVectorField ? "side-by-side" : "vector-field"
-  );
+  if (isShowingVectorField.value) {
+    // Switch from vector field to diff field
+    isShowingVectorField.value = false;
+    isShowingDiffField.value = true;
+    emit("comparisonModeChanged", "diff-field");
+  } else if (isShowingDiffField.value) {
+    // Switch from diff field to side-by-side
+    isShowingDiffField.value = false;
+    emit("comparisonModeChanged", "side-by-side");
+  } else {
+    // Switch from side-by-side to vector field
+    isShowingVectorField.value = true;
+    emit("comparisonModeChanged", "vector-field");
+  }
 }
 </script>

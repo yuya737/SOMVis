@@ -17,7 +17,7 @@
 
       <SplitterPanel
         v-if="store.currentStep == 'Analyze'"
-        class="h-full w-full"
+        class="hidden h-full w-full"
         :size="30"
       >
         <ForcingTimelineViewer

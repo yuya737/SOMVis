@@ -13,7 +13,12 @@
         <!-- <label class="text-sm text-gray-600">Toggle LLM queried region</label> -->
         <Dropdown
           v-model="store.currentDatasetType"
-          :options="['California', 'NorthWest', 'WestCoast']"
+          :options="[
+            'California',
+            'NorthWest',
+            'WestCoastPerPixel',
+            'WestCoastOverall',
+          ]"
           @change="(newValue) => changeDataset(newValue)"
         />
         <div
